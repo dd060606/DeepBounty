@@ -7,51 +7,78 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarSeparator,
+  useSidebar,
 } from "@/components/ui/sidebar";
-import { Bell, Box, Settings, LogOut } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-const items = [
-  {
-    title: "Alerts",
-    url: "#alerts",
-    icon: Bell,
-  },
-  {
-    title: "Modules",
-    url: "#modules",
-    icon: Box,
-  },
-  {
-    title: "Settings",
-    url: "#settings",
-    icon: Settings,
-  },
-];
+import {
+  Settings,
+  LogOut,
+  AlignRight,
+  AlignJustify,
+  Boxes,
+  CircleAlert,
+  Crosshair,
+} from "lucide-react";
+import { useTranslation } from "react-i18next";
 
-function Logo() {
+// Logo component for the expanded sidebar
+function LogoExpanded() {
+  const { toggleSidebar } = useSidebar();
   return (
-    <div className="flex items-center gap-2 px-2 py-1.5">
-      <div className="from-primary to-primary/70 text-primary-foreground flex size-8 items-center justify-center rounded-md bg-gradient-to-br font-semibold">
-        DB
+    <div className="flex items-center justify-between py-1.5">
+      <div className="flex items-center">
+        <img src="/logo.png" alt="Logo" className="h-15 w-15" />
+        <span className="text-md font-semibold tracking-wide">DeepBounty</span>
       </div>
-      <span className="text-sm font-semibold tracking-wide">DeepBounty</span>
+      <AlignRight size={30} className="cursor-pointer" onClick={toggleSidebar} />
     </div>
   );
 }
-export function AppSidebar() {
+
+// Logo component for the collapsed sidebar
+function LogoCollapsed() {
+  const { toggleSidebar } = useSidebar();
   return (
-    <Sidebar>
-      <SidebarHeader>
-        <Logo />
-        <SidebarSeparator className="my-1" />
-      </SidebarHeader>
+    <div className="flex flex-col items-center gap-2">
+      <img src="/logo.png" alt="Logo" className="h-9 w-9" />
+      <AlignJustify size={30} className="cursor-pointer" onClick={toggleSidebar} />
+    </div>
+  );
+}
+
+export function AppSidebar() {
+  const { state } = useSidebar();
+  const { t } = useTranslation();
+  const items = [
+    {
+      title: t("nav.alerts"),
+      url: "#alerts",
+      icon: CircleAlert,
+    },
+    {
+      title: t("nav.targets"),
+      url: "#targets",
+      icon: Crosshair,
+    },
+    {
+      title: t("nav.modules"),
+      url: "#modules",
+      icon: Boxes,
+    },
+    {
+      title: t("nav.settings"),
+      url: "#settings",
+      icon: Settings,
+    },
+  ];
+  return (
+    <Sidebar collapsible="icon">
+      <SidebarHeader>{state === "expanded" ? <LogoExpanded /> : <LogoCollapsed />}</SidebarHeader>
       <SidebarContent>
         <SidebarMenu>
           {items.map((item) => (
             <SidebarMenuItem key={item.title}>
-              <SidebarMenuButton asChild>
-                <a href={item.url}>
+              <SidebarMenuButton asChild tooltip={item.title}>
+                <a href={item.url} className="flex items-center gap-2">
                   {item.icon && <item.icon />}
                   <span>{item.title}</span>
                 </a>
@@ -61,10 +88,11 @@ export function AppSidebar() {
         </SidebarMenu>
       </SidebarContent>
       <SidebarFooter>
+        <SidebarSeparator />
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton asChild>
-              <a href="#">
+            <SidebarMenuButton asChild tooltip="Logout">
+              <a href="#" className="flex items-center gap-2">
                 <LogOut className="size-4" />
                 <span>Logout</span>
               </a>
