@@ -3,6 +3,19 @@
     "alerts": "Alertes",
     "targets": "Cibles",
     "modules": "Modules",
-    "settings": "Paramètres"
+    "settings": "Paramètres",
+    "logout": "Déconnexion",
+    "lightMode": "Mode clair",
+    "darkMode": "Mode sombre"
+  },
+  "auth": {
+    "login": "Connexion",
+    "subtitle": "Entrez votre mot de passe pour continuer",
+    "password": "Mot de passe",
+    "placeholder": "Votre mot de passe",
+    "submit": "Accéder au tableau de bord",
+    "error": "Mot de passe incorrect",
+    "show": "Afficher",
+    "hide": "Masquer"
   }
 }

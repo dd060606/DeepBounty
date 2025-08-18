@@ -3,6 +3,19 @@
     "alerts": "Alerts",
     "targets": "Targets",
     "modules": "Modules",
-    "settings": "Settings"
+    "settings": "Settings",
+    "logout": "Logout",
+    "lightMode": "Light Mode",
+    "darkMode": "Dark Mode"
+  },
+  "auth": {
+    "login": "Sign In",
+    "subtitle": "Enter your password to continue",
+    "password": "Password",
+    "placeholder": "Your password",
+    "submit": "Enter Dashboard",
+    "error": "Wrong password",
+    "show": "Show",
+    "hide": "Hide"
   }
 }
