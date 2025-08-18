@@ -1,23 +1,18 @@
 import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
-import { AppSidebar } from "@/components/sidebar";
-import { ThemeProvider } from "@/components/theme-provider";
+import { AppSidebar } from "@/components/app-sidebar";
+import { Outlet } from "react-router";
 import { useState } from "react";
 
-export default function Layout({ children }: { children: React.ReactNode }) {
+export default function Layout() {
   const [isSidebarOpen, setSidebarOpen] = useState(true);
   return (
-    <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
-      <SidebarProvider open={isSidebarOpen} onOpenChange={setSidebarOpen}>
-        <AppSidebar />
-        <SidebarInset>
-          <header className="flex h-12 items-center gap-2 border-b px-3 md:px-4">
-            {/* Hamburger visible sur mobile et desktop pour basculer */}
-            <SidebarTrigger className="md:hidden" />
-            <h1 className="text-sm font-semibold">DeepBounty</h1>
-          </header>
-          <div className="p-4">{children}</div>
-        </SidebarInset>
-      </SidebarProvider>
-    </ThemeProvider>
+    <SidebarProvider open={isSidebarOpen} onOpenChange={setSidebarOpen}>
+      <AppSidebar />
+      <SidebarInset>
+        {/* SidebarTrigger for mobile */}
+        <SidebarTrigger className="m-1 md:hidden" />
+        <Outlet />
+      </SidebarInset>
+    </SidebarProvider>
   );
 }
