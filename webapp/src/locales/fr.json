@@ -14,8 +14,25 @@
     "password": "Mot de passe",
     "placeholder": "Votre mot de passe",
     "submit": "Accéder au tableau de bord",
-    "error": "Mot de passe incorrect",
     "show": "Afficher",
-    "hide": "Masquer"
+    "hide": "Masquer",
+    "lostPassword": "Mot de passe oublié ?"
+  },
+  "lostPassword": {
+    "title": "Réinitialiser le mot de passe",
+    "subtitle": "Procédure manuelle de réinitialisation",
+    "stepsTitle": "Étapes à suivre :",
+    "step1": "Localisez le fichier config/config.json de l'application (le volume monté sur /config dans le conteneur).",
+    "step2": "Ouvrez-le et trouvez la clé \"password\". Elle contient actuellement une valeur hachée.",
+    "step3": "Effacez la valeur pour qu'elle devienne une chaîne vide (ou supprimez juste le hash en gardant la clé) :",
+    "step4": "Enregistrez le fichier puis redémarrez le conteneur.",
+    "step5": "Au prochain démarrage l'application détectera l'absence de mot de passe et vous demandera d'en créer un nouveau.",
+    "note": "Note sécurité : toute personne ayant accès au système de fichiers peut réinitialiser le mot de passe ainsi. Protégez l'accès hôte.",
+    "back": "Retour à la connexion"
+  },
+  "errors": {
+    "auth": {
+      "wrong-password": "Mot de passe incorrect"
+    }
   }
 }

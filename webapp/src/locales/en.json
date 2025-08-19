@@ -14,8 +14,25 @@
     "password": "Password",
     "placeholder": "Your password",
     "submit": "Enter Dashboard",
-    "error": "Wrong password",
     "show": "Show",
-    "hide": "Hide"
+    "hide": "Hide",
+    "lostPassword": "Forgot password?"
+  },
+  "lostPassword": {
+    "title": "Reset Password",
+    "subtitle": "Manual password reset procedure",
+    "stepsTitle": "Follow these steps:",
+    "step1": "Locate the application configuration file at config/config.json (mapped to /config in the container).",
+    "step2": "Open it and find the \"password\" key. It currently contains a hashed value.",
+    "step3": "Clear the value so it becomes an empty string (or remove the hash, keeping the key):",
+    "step4": "Save the file and restart the container.",
+    "step5": "When the app starts again it will detect no password and will prompt you to create a new one.",
+    "note": "Security note: anyone with filesystem access can reset the password this way. Ensure proper host-level access controls.",
+    "back": "Back to login"
+  },
+  "errors": {
+    "auth": {
+      "wrong-password": "Wrong password"
+    }
   }
 }
