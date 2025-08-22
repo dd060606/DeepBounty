@@ -34,5 +34,23 @@
     "auth": {
       "wrong-password": "Wrong password"
     }
+  },
+  "setup": {
+    "title": "Create Admin Password",
+    "subtitle": "This is required to secure access to your dashboard.",
+    "password": "New password",
+    "placeholder": "Choose a strong password",
+    "confirm": "Confirm password",
+    "confirmPlaceholder": "Re-enter password",
+    "requirementsTitle": "Your password must contain:",
+    "req": {
+      "length": "At least 12 characters",
+      "upper": "At least one uppercase letter",
+      "lower": "At least one lowercase letter",
+      "number": "At least one number",
+      "special": "At least one special character"
+    },
+    "mismatch": "Passwords do not match",
+    "submit": "Save password"
   }
 }
