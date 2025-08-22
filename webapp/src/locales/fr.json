@@ -34,5 +34,23 @@
     "auth": {
       "wrong-password": "Mot de passe incorrect"
     }
+  },
+  "setup": {
+    "title": "Créer le mot de passe administrateur",
+    "subtitle": "Nécessaire pour sécuriser l'accès à votre tableau de bord.",
+    "password": "Nouveau mot de passe",
+    "placeholder": "Choisissez un mot de passe robuste",
+    "confirm": "Confirmez le mot de passe",
+    "confirmPlaceholder": "Saisissez à nouveau le mot de passe",
+    "requirementsTitle": "Votre mot de passe doit contenir :",
+    "req": {
+      "length": "Au moins 12 caractères",
+      "upper": "Au moins une majuscule",
+      "lower": "Au moins une minuscule",
+      "number": "Au moins un chiffre",
+      "special": "Au moins un caractère spécial"
+    },
+    "mismatch": "Les mots de passe ne correspondent pas",
+    "submit": "Enregistrer le mot de passe"
   }
 }

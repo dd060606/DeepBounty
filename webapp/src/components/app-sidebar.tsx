@@ -116,6 +116,7 @@ export function AppSidebar() {
                 className="cursor-pointer"
                 onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
               >
+                {/* Theme Selector */}
                 {theme === "dark" ? <Sun className="size-4" /> : <Moon className="size-4" />}
                 <span>{theme === "dark" ? t("nav.lightMode") : t("nav.darkMode")}</span>
               </button>
