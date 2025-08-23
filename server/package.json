@@ -4,21 +4,26 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "tsx --watch --env-file .env src/server.ts",
-    "start": "node --env-file .env dist/server.js"
+    "dev": "tsx --watch src/server.ts",
+    "start": "node dist/server.js"
   },
   "keywords": [],
   "author": "",
   "license": "GPL-3.0-only",
   "type": "module",
   "dependencies": {
-    "express": "^5.1.0"
+    "express": "^5.1.0",
+    "swagger-ui-express": "^5.0.1",
+    "yaml": "^2.8.1",
+    "zod": "^4.1.0"
   },
   "devDependencies": {
     "@tsconfig/node22": "^22.0.2",
     "@types/express": "^5.0.3",
     "@types/node": "^24.3.0",
+    "@types/swagger-ui-express": "^4.1.8",
     "prettier": "^3.6.2",
+    "tsx": "^4.20.4",
     "typescript": "^5.9.2"
   }
 }

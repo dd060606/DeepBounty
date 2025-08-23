@@ -1,0 +1,46 @@
+openapi: 3.0.0
+info:
+  title: DeepBounty API
+  version: 1.0.0
+  description: DeepBounty API Documentation
+
+paths:
+  /setup/password:
+    post:
+      summary: Set up a password to protect the dashboard
+      tags:
+        - Setup
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - password
+              properties:
+                password:
+                  type: string
+                  minLength: 12
+                  pattern: "^(?=.*[A-Z])(?=.*[a-z])(?=.*[0-9])(?=.*[^A-Za-z0-9]).+$"
+      responses:
+        "200":
+          description: Password setup successful
+        "400":
+          description: Invalid password
+  /setup/complete:
+    get:
+      summary: Check if setup is complete
+      tags:
+        - Setup
+      responses:
+        "200":
+          description: Setup completion status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: boolean
+                    description: Indicates if the setup is complete
