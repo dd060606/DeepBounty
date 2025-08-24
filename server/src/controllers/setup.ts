@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import config from "@/utils/config.js";
 import Logger from "@/utils/logger.js";
+import bcrypt from "bcrypt";
 
 const logger = new Logger("Setup");
 
@@ -9,9 +10,15 @@ export function setupPassword(req: Request, res: Response) {
   const { password } = req.body;
   if (!config.get().password) {
     // If password is not set, create it
-    config.set({ password });
-    logger.info("Password created successfully");
-    res.status(200).json({ message: "Password setup successful" });
+    bcrypt.hash(password, 10, (err, hash) => {
+      if (err) {
+        logger.error("Error hashing password");
+        return res.status(500).json({ message: "Internal server error" });
+      }
+      config.set({ password: hash });
+      logger.info("Password created successfully");
+      res.status(200).json({ message: "Password setup successful" });
+    });
   } else {
     res.status(400).json({ message: "Password is already set" });
   }
