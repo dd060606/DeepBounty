@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Eye, EyeOff, Loader2Icon, CheckCircle2, Circle } from "lucide-react";
+import ApiClient from "@/utils/api";
 
 export default function AuthSetup() {
   const { t } = useTranslation();
@@ -15,6 +16,7 @@ export default function AuthSetup() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Password validation rules
   const rules = useMemo(() => {
@@ -34,12 +36,19 @@ export default function AuthSetup() {
     e.preventDefault();
     if (!allValid || mismatch) return;
     setLoading(true);
-    // Placeholder for backend call to persist the password
-    setTimeout(() => {
-      setLoading(false);
-      // Redirect to login so the user can sign in with the new password
-      navigate("/alerts", { replace: true });
-    }, 600);
+    setError(null);
+
+    ApiClient.post("/setup/password", { password })
+      .then(() => {
+        navigate("/");
+      })
+      .catch((error) => {
+        setError(t("errors.auth.setup-failed"));
+        console.error("Error creating password:", error);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
   }
 
   function RuleItem({ ok, label }: { ok: boolean; label: string }) {
@@ -131,6 +140,11 @@ export default function AuthSetup() {
               {mismatch && (
                 <p className="text-destructive text-xs font-medium" role="alert">
                   {t("setup.mismatch")}
+                </p>
+              )}
+              {error && (
+                <p className="text-destructive text-xs font-medium" role="alert">
+                  {error}
                 </p>
               )}
             </div>

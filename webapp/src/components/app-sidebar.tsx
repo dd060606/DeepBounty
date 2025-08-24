@@ -22,7 +22,8 @@ import {
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "./theme-provider";
-import { Link, useLocation, matchPath } from "react-router";
+import { Link, useLocation, matchPath, useNavigate } from "react-router";
+import ApiClient from "@/utils/api";
 
 function Logo({ isSidebarOpen }: { isSidebarOpen: boolean }) {
   const { toggleSidebar } = useSidebar();
@@ -46,6 +47,7 @@ function Logo({ isSidebarOpen }: { isSidebarOpen: boolean }) {
 export function AppSidebar() {
   const { open } = useSidebar();
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { pathname } = useLocation();
   const { theme, setTheme } = useTheme();
   const items = [
@@ -70,6 +72,11 @@ export function AppSidebar() {
       icon: Settings,
     },
   ];
+
+  function handleLogout() {
+    ApiClient.post("/auth/logout").finally(() => navigate("/"));
+  }
+
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader>
@@ -104,10 +111,10 @@ export function AppSidebar() {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton asChild>
-              <Link to="/" className="flex items-center gap-2">
+              <button className="cursor-pointer" onClick={handleLogout}>
                 <LogOut className="size-4" />
                 <span>{t("nav.logout")}</span>
-              </Link>
+              </button>
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>

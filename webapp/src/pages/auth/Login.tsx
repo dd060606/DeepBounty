@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Eye, EyeOff, Loader2Icon } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Link } from "react-router";
+import ApiClient from "@/utils/api";
 
 export default function Login() {
   const { t } = useTranslation();
@@ -19,16 +20,22 @@ export default function Login() {
     e.preventDefault();
     setError(null);
     setLoading(true);
-    const expected = "test";
-    // Small delay for simulation
-    setTimeout(() => {
-      if (password === expected) {
-        navigate("/alerts", { replace: true });
-      } else {
-        setError(t("errors.auth.wrong-password"));
-      }
-      setLoading(false);
-    }, 400);
+
+    ApiClient.post("/auth/login", { password })
+      .then(() => {
+        navigate("/");
+      })
+      .catch((error) => {
+        if (error.response?.status === 401) {
+          setError(t("errors.auth.wrong-password"));
+        } else {
+          setError(t("errors.auth.login"));
+        }
+        console.error("Error logging in:", error);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
   }
 
   return (

@@ -16,19 +16,11 @@ export function setupPassword(req: Request, res: Response) {
         return res.status(500).json({ message: "Internal server error" });
       }
       config.set({ password: hash });
+      req.session.authenticated = true;
       logger.info("Password created successfully");
       res.status(200).json({ message: "Password setup successful" });
     });
   } else {
     res.status(400).json({ message: "Password is already set" });
   }
-}
-
-// Check if setup is complete
-export function isSetupComplete(req: Request, res: Response) {
-  let complete = false;
-  if (config.get().password) {
-    complete = true;
-  }
-  res.status(200).json({ result: complete });
 }
