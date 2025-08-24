@@ -43,6 +43,7 @@ if (config.get().enableSwaggerUi) {
       "/docs",
       swagger.serve,
       swagger.setup(YAML.parse(fs.readFileSync("./src/docs/swagger.yml", "utf8")), {
+        // Needed for authenticated requests
         swaggerOptions: {
           requestInterceptor: (req: any) => {
             req.credentials = "include";
