@@ -8,12 +8,14 @@ const CONFIG_PATH = path.join(CONFIG_DIR, "config.json");
 export type Config = {
   port: number;
   password: string;
+  enableSwaggerUi: boolean;
   [key: string]: any;
 };
 
 const DEFAULT_CONFIG: Config = {
   port: 3000,
   password: "",
+  enableSwaggerUi: false,
 };
 
 let cachedConfig: Config | null = null;
@@ -32,8 +34,18 @@ function readConfigFromDisk(): Config {
   initConfig();
   try {
     const raw = fs.readFileSync(CONFIG_PATH, "utf-8");
-    const parsed = JSON.parse(raw);
-    return parsed as Config;
+    const parsed = JSON.parse(raw) as Config;
+
+    // Backfill any missing default keys without overwriting user values
+    const merged: Config = { ...DEFAULT_CONFIG, ...parsed };
+
+    // Persist only if new keys were added (i.e., defaults introduced later)
+    const needsWrite = Object.keys(DEFAULT_CONFIG).some((k) => !(k in (parsed as object)));
+    if (needsWrite) {
+      writeConfigToDisk(merged);
+    }
+
+    return merged;
   } catch (err) {
     // If JSON is invalid, create a backup and reset
     const backup = path.join(CONFIG_DIR, `config.bak-${Date.now()}.json`);
@@ -75,7 +87,6 @@ export function updateConfig(patch: Partial<Config>): Config {
   return cachedConfig;
 }
 
-// Expose le chemin pour référence/debug
 export const configPath = CONFIG_PATH;
 
 const config = {

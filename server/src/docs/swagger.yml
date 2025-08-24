@@ -4,6 +4,13 @@ info:
   version: 1.0.0
   description: DeepBounty API Documentation
 
+components:
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: connect.sid
+
 paths:
   /setup/password:
     post:
@@ -44,3 +51,50 @@ paths:
                   result:
                     type: boolean
                     description: Indicates if the setup is complete
+  /auth/login:
+    post:
+      summary: User login
+      tags:
+        - Auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - password
+              properties:
+                password:
+                  type: string
+      responses:
+        "200":
+          description: Login successful
+          headers:
+            Set-Cookie:
+              description: Session cookie set on successful login
+              schema:
+                type: string
+              example: "connect.sid=abc123; Path=/; HttpOnly; SameSite=Lax; Secure"
+        "401":
+          description: Invalid password
+  /auth/logout:
+    post:
+      summary: User logout
+      tags:
+        - Auth
+      responses:
+        "200":
+          description: Logout successful
+  /auth/info:
+    get:
+      summary: Get current authentication info
+      tags:
+        - Auth
+      security:
+        - sessionCookie: []
+      responses:
+        "200":
+          description: Authentication info retrieved successfully
+        "401":
+          description: User not authenticated
