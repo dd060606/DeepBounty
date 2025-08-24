@@ -33,5 +33,12 @@ export function logout(req: Request, res: Response) {
 }
 
 export function authInfo(req: Request, res: Response) {
-  res.status(200).json({ authenticated: true });
+  let status = "";
+  if (config.get().password) {
+    // If setup is complete, check authentication status
+    status = req.session.authenticated ? "authenticated" : "unauthenticated";
+  } else {
+    status = "setup-required";
+  }
+  res.status(200).json({ status });
 }

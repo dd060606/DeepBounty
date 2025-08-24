@@ -3,6 +3,7 @@ import Logger, { initLogger } from "./utils/logger.js";
 import fs from "fs";
 import helmet from "helmet";
 import session from "express-session";
+import cors from "cors";
 import { randomBytes } from "node:crypto";
 import Setup from "./routes/setup.js";
 import Auth from "./routes/auth.js";
@@ -16,6 +17,16 @@ initLogger();
 app.use(express.json());
 
 app.use(helmet());
+
+// CORS (dev only) for Vite
+if (process.env.NODE_ENV !== "production") {
+  app.use(
+    cors({
+      origin: ["http://localhost:5173", "http://127.0.0.1:5173"],
+      credentials: true,
+    })
+  );
+}
 
 // Session
 app.use(

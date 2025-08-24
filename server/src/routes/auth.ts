@@ -13,6 +13,6 @@ router.post("/login", validateBody(setupPasswordSchema), login);
 router.post("/logout", logout);
 
 // GET /auth/info
-router.get("/info", requireAuth, authInfo);
+router.get("/info", authInfo);
 
 export default router;

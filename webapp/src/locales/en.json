@@ -32,7 +32,9 @@
   },
   "errors": {
     "auth": {
-      "wrong-password": "Wrong password"
+      "wrong-password": "Wrong password",
+      "setup-failed": "Failed to create password",
+      "login": "An error occurred during login"
     }
   },
   "setup": {

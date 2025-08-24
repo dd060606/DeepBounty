@@ -33,24 +33,14 @@ paths:
       responses:
         "200":
           description: Password setup successful
+          headers:
+            Set-Cookie:
+              description: Session cookie when the password is set up
+              schema:
+                type: string
+              example: "connect.sid=abc123; Path=/; HttpOnly; SameSite=Lax; Secure"
         "400":
           description: Invalid password
-  /setup/complete:
-    get:
-      summary: Check if setup is complete
-      tags:
-        - Setup
-      responses:
-        "200":
-          description: Setup completion status
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  result:
-                    type: boolean
-                    description: Indicates if the setup is complete
   /auth/login:
     post:
       summary: User login
@@ -91,10 +81,17 @@ paths:
       summary: Get current authentication info
       tags:
         - Auth
-      security:
-        - sessionCookie: []
       responses:
         "200":
-          description: Authentication info retrieved successfully
-        "401":
-          description: User not authenticated
+          description: Authentication status
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - status
+                properties:
+                  status:
+                    type: string
+                    description: Current auth status. Depends on whether setup is complete and whether a valid session cookie is present.
+                    enum: [authenticated, unauthenticated, setup-required]
