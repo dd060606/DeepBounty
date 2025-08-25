@@ -31,6 +31,8 @@
     "back": "Back to login"
   },
   "errors": {
+    "server-unavailable": "Unable to connect to the server. Please try again.",
+    "retry": "Retry",
     "auth": {
       "wrong-password": "Wrong password",
       "setup-failed": "Failed to create password",
