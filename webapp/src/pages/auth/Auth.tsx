@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import ApiClient from "@/utils/api";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
 
@@ -9,9 +9,7 @@ export default function Auth() {
   const { t } = useTranslation();
   const [serverUnavailable, setServerUnavailable] = useState(false);
 
-  useEffect(() => navigateToProperPage());
-
-  const navigateToProperPage = () => {
+  const navigateToProperPage = useCallback(() => {
     setServerUnavailable(false);
     ApiClient.get("/auth/info")
       .then((response) => {
@@ -29,7 +27,11 @@ export default function Auth() {
         console.error("Error while checking setup completion:", err);
         setServerUnavailable(true);
       });
-  };
+  }, [navigate]);
+
+  useEffect(() => {
+    navigateToProperPage();
+  }, [navigateToProperPage]);
 
   return (
     <div className="bg-sidebar dark:bg-background flex min-h-screen w-full items-center justify-center">
