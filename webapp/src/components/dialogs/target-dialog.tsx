@@ -195,7 +195,6 @@ export default function TargetDialog({
                         className="m-0.5 pr-20"
                       />
                       <div className="pointer-events-none absolute inset-y-0 right-1 flex items-center gap-1">
-                        {/* container to keep layout, buttons will enable pointer-events */}
                         <div className="pointer-events-auto flex items-center gap-1">
                           <Button
                             type="button"
