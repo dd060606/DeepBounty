@@ -31,11 +31,11 @@
     "back": "Retour à la connexion"
   },
   "errors": {
-    "server-unavailable": "Impossible de se connecter au serveur. Veuillez réessayer.",
+    "serverUnavailable": "Impossible de se connecter au serveur. Veuillez réessayer.",
     "retry": "Réessayer",
     "auth": {
-      "wrong-password": "Mot de passe incorrect",
-      "setup-failed": "Erreur lors de la création du mot de passe",
+      "wrongPassword": "Mot de passe incorrect",
+      "setupFailed": "Erreur lors de la création du mot de passe",
       "login": "Une erreur est survenue lors de la connexion"
     }
   },
@@ -56,5 +56,26 @@
     },
     "mismatch": "Les mots de passe ne correspondent pas",
     "submit": "Enregistrer le mot de passe"
+  },
+  "targets": {
+    "dialog": {
+      "createTitle": "Ajouter une cible",
+      "editTitle": "Modifier la cible",
+      "createDesc": "Renseignez les informations de l'entreprise à scanner.",
+      "editDesc": "Modifiez les informations de l'entreprise."
+    },
+    "form": {
+      "companyName": "Nom de l'entreprise",
+      "companyPlaceholder": "Entreprise",
+      "mainDomain": "Domaine principal",
+      "subdomains": "Sous-domaines in-scope",
+      "add": "Ajouter",
+      "save": "Enregistrer",
+      "cancel": "Annuler",
+      "addSubdomainTitle": "Ajouter un sous-domaine",
+      "removeSubdomainTitle": "Supprimer ce sous-domaine",
+      "activeScan": "Scan actif",
+      "defaultScope": "Par défaut : <code>*.{{domain}}</code>. Ajoutez des lignes pour préciser les zones in-scope."
+    }
   }
 }

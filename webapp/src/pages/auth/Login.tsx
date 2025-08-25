@@ -27,7 +27,7 @@ export default function Login() {
       })
       .catch((error) => {
         if (error.response?.status === 401) {
-          setError(t("errors.auth.wrong-password"));
+          setError(t("errors.auth.wrongPassword"));
         } else {
           setError(t("errors.auth.login"));
         }
