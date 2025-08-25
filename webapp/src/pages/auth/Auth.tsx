@@ -9,7 +9,7 @@ export default function Auth() {
   const { t } = useTranslation();
   const [serverUnavailable, setServerUnavailable] = useState(false);
 
-  useEffect(() => navigateToProperPage(), []);
+  useEffect(() => navigateToProperPage());
 
   const navigateToProperPage = () => {
     setServerUnavailable(false);
@@ -35,7 +35,7 @@ export default function Auth() {
     <div className="bg-sidebar dark:bg-background flex min-h-screen w-full items-center justify-center">
       {serverUnavailable ? (
         <div className="flex flex-col items-center gap-4 text-center">
-          <p>{t("errors.server-unavailable")}</p>
+          <p>{t("errors.serverUnavailable")}</p>
           <Button onClick={navigateToProperPage}>{t("errors.retry")}</Button>
         </div>
       ) : (

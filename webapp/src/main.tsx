@@ -11,6 +11,7 @@ import { ThemeProvider } from "./components/theme-provider.tsx";
 import Login from "./pages/auth/Login.tsx";
 import AuthSetup from "./pages/auth/AuthSetup.tsx";
 import LostPassword from "./pages/auth/LostPassword.tsx";
+import Targets from "./pages/Targets.tsx";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
@@ -26,6 +27,7 @@ createRoot(document.getElementById("root")!).render(
           <Route element={<Layout />}>
             <Route path="/alerts" element={<Alerts />} />
             <Route path="/modules" element={<Modules />} />
+            <Route path="/targets" element={<Targets />} />
           </Route>
         </Routes>
       </BrowserRouter>

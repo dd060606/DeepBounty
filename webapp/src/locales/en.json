@@ -31,11 +31,11 @@
     "back": "Back to login"
   },
   "errors": {
-    "server-unavailable": "Unable to connect to the server. Please try again.",
+    "serverUnavailable": "Unable to connect to the server. Please try again.",
     "retry": "Retry",
     "auth": {
-      "wrong-password": "Wrong password",
-      "setup-failed": "Failed to create password",
+      "wrongPassword": "Wrong password",
+      "setupFailed": "Failed to create password",
       "login": "An error occurred during login"
     }
   },
@@ -56,5 +56,26 @@
     },
     "mismatch": "Passwords do not match",
     "submit": "Save password"
+  },
+  "targets": {
+    "dialog": {
+      "createTitle": "Add target",
+      "editTitle": "Edit target",
+      "createDesc": "Fill in the company information to scan.",
+      "editDesc": "Modify the company information."
+    },
+    "form": {
+      "companyName": "Company name",
+      "companyPlaceholder": "Company",
+      "mainDomain": "Primary domain",
+      "subdomains": "In-scope subdomains",
+      "add": "Add",
+      "save": "Save",
+      "cancel": "Cancel",
+      "addSubdomainTitle": "Add a subdomain",
+      "removeSubdomainTitle": "Remove this subdomain",
+      "activeScan": "Active scan",
+      "defaultScope": "Default: <code>*.{{domain}}</code>. Add lines to refine in-scope areas."
+    }
   }
 }
