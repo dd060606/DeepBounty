@@ -75,7 +75,7 @@
       "addSubdomainTitle": "Ajouter un sous-domaine",
       "removeSubdomainTitle": "Supprimer ce sous-domaine",
       "activeScan": "Scan actif",
-      "defaultScope": "Par défaut : <code>*.{{domain}}</code>. Ajoutez des lignes pour préciser les zones in-scope."
+      "defaultScope": "Par défaut : <code>*.{{domain}}</code>. Ajoutez des lignes pour préciser les domaines in-scope."
     }
   }
 }
