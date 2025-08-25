@@ -31,6 +31,8 @@
     "back": "Retour à la connexion"
   },
   "errors": {
+    "server-unavailable": "Impossible de se connecter au serveur. Veuillez réessayer.",
+    "retry": "Réessayer",
     "auth": {
       "wrong-password": "Mot de passe incorrect",
       "setup-failed": "Erreur lors de la création du mot de passe",
