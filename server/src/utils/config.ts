@@ -6,14 +6,12 @@ const CONFIG_PATH = path.join(CONFIG_DIR, "config.json");
 
 // Configuration types
 export type Config = {
-  port: number;
   password: string;
   enableSwaggerUi: boolean;
   [key: string]: any;
 };
 
 const DEFAULT_CONFIG: Config = {
-  port: 3000,
   password: "",
   enableSwaggerUi: false,
 };
