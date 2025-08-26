@@ -8,6 +8,6 @@
       "@/*": ["src/*"]
     }
   },
-  "include": ["**/*.ts"],
+  "include": ["**/*.ts", "scripts/migrate.js"],
   "exclude": ["dist"]
 }

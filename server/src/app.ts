@@ -1,5 +1,6 @@
 import express from "express";
 import Logger, { initLogger } from "./utils/logger.js";
+import { initDatabase } from "./utils/db.js";
 import fs from "fs";
 import helmet from "helmet";
 import session from "express-session";
@@ -13,6 +14,7 @@ const app = express();
 
 // Init
 initLogger();
+initDatabase();
 
 app.use(express.json());
 
