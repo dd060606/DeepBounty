@@ -10,7 +10,7 @@ export function setupPassword(req: Request, res: Response) {
   const { password } = req.body;
   if (!config.get().password) {
     // If password is not set, create it
-    bcrypt.hash(password, 10, (err, hash) => {
+    bcrypt.hash(password, 12, (err, hash) => {
       if (err) {
         logger.error("Error hashing password");
         return res.status(500).json({ message: "Internal server error" });

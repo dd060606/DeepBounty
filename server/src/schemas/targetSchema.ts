@@ -5,3 +5,7 @@ export const addTargetSchema = z.object({
   domain: z.string().regex(z.regexes.domain, { error: "Invalid domain format" }),
   activeScan: z.boolean().optional(),
 });
+
+export const addSubdomainsSchema = z.array(
+  z.string().regex(z.regexes.domain, { error: "Invalid domain format" })
+);

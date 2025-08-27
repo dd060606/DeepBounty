@@ -76,3 +76,38 @@ export function deleteTarget(req: Request, res: Response) {
       res.status(500).json({ error: "Internal server error" });
     });
 }
+
+// Get all subdomains for a specific target
+export function getTargetSubdomains(req: Request, res: Response) {
+  const { targetId } = req.params;
+
+  query('SELECT subdomain FROM targets_subdomains WHERE "targetId" = $1', [targetId])
+    .then((subdomains) => {
+      res.json(subdomains.map((sd) => sd.subdomain));
+    })
+    .catch((error) => {
+      logger.error("Error fetching subdomains:", error);
+      res.status(500).json({ error: "Internal server error" });
+    });
+}
+
+// Add / edit subdomains for a specific target
+export function setTargetSubdomains(req: Request, res: Response) {
+  const { targetId } = req.params;
+  // Update subdomains in the database
+  query('DELETE FROM targets_subdomains WHERE "targetId" = $1', [targetId])
+    .then(() => {
+      const promises = req.body.map((sd: string) =>
+        query('INSERT INTO targets_subdomains ("targetId", subdomain) VALUES ($1, $2)', [
+          targetId,
+          sd,
+        ])
+      );
+      return Promise.all(promises);
+    })
+    .then(() => res.sendStatus(200))
+    .catch((error) => {
+      logger.error("Error updating subdomains:", error);
+      res.status(500).json({ error: "Internal server error" });
+    });
+}
