@@ -5,10 +5,12 @@ import fs from "fs";
 import helmet from "helmet";
 import session from "express-session";
 import cors from "cors";
-import { randomBytes } from "node:crypto";
+import config from "./utils/config.js";
+import { requireAuth } from "./middlewares/auth.js";
 import Setup from "./routes/setup.js";
 import Auth from "./routes/auth.js";
-import config from "./utils/config.js";
+import Targets from "./routes/targets.js";
+import { randomBytes } from "crypto";
 
 const app = express();
 
@@ -38,6 +40,7 @@ app.use(
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
+      secure: false,
       sameSite: "lax",
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     },
@@ -72,5 +75,6 @@ if (config.get().enableSwaggerUi) {
 // Routes
 app.use("/setup", Setup);
 app.use("/auth", Auth);
+app.use("/targets", requireAuth, Targets);
 
 export default app;

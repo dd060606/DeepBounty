@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "docker compose up -d && tsx --watch --env-file .env src/server.ts",
+    "dev": "docker compose up -d && npm run migrate up && tsx --watch --env-file .env src/server.ts",
     "migrate": "node --env-file .env scripts/migrate.js"
   },
   "keywords": [],
