@@ -16,7 +16,14 @@
     "submit": "Enter Dashboard",
     "show": "Show",
     "hide": "Hide",
-    "lostPassword": "Forgot password?"
+    "lostPassword": "Forgot password?",
+    "errors": {
+      "serverUnavailable": "Unable to connect to the server. Please try again.",
+      "retry": "Retry",
+      "wrongPassword": "Wrong password",
+      "setupFailed": "Failed to create password",
+      "login": "An error occurred during login"
+    }
   },
   "lostPassword": {
     "title": "Reset Password",
@@ -29,15 +36,6 @@
     "step5": "When the app starts again it will detect no password and will prompt you to create a new one.",
     "note": "Security note: anyone with filesystem access can reset the password this way. Ensure proper host-level access controls.",
     "back": "Back to login"
-  },
-  "errors": {
-    "serverUnavailable": "Unable to connect to the server. Please try again.",
-    "retry": "Retry",
-    "auth": {
-      "wrongPassword": "Wrong password",
-      "setupFailed": "Failed to create password",
-      "login": "An error occurred during login"
-    }
   },
   "setup": {
     "title": "Create Admin Password",
@@ -75,7 +73,16 @@
       "addSubdomainTitle": "Add a subdomain",
       "removeSubdomainTitle": "Remove this subdomain",
       "activeScan": "Active scan",
-      "defaultScope": "Default: <code>*.{{domain}}</code>. Add lines to refine in-scope domains."
+      "defaultScope": "Default: <code>*.{{domain}}</code>. Add lines to refine in-scope domains.",
+      "errors": {
+        "nameRequired": "A name is required.",
+        "domainRequired": "A primary domain is required.",
+        "domainInvalid": "Please enter a valid domain (e.g., example.com).",
+        "subdomainInvalid": "Invalid subdomain format. Use example.com, api.example.com or *.example.com."
+      }
+    },
+    "errors": {
+      "newTarget": "Failed to add new target"
     }
   }
 }

@@ -16,7 +16,14 @@
     "submit": "Accéder au tableau de bord",
     "show": "Afficher",
     "hide": "Masquer",
-    "lostPassword": "Mot de passe oublié ?"
+    "lostPassword": "Mot de passe oublié ?",
+    "errors": {
+      "serverUnavailable": "Impossible de se connecter au serveur. Veuillez réessayer.",
+      "retry": "Réessayer",
+      "wrongPassword": "Mot de passe incorrect",
+      "setupFailed": "Erreur lors de la création du mot de passe",
+      "login": "Une erreur est survenue lors de la connexion"
+    }
   },
   "lostPassword": {
     "title": "Réinitialiser le mot de passe",
@@ -29,15 +36,6 @@
     "step5": "Au prochain démarrage l'application détectera l'absence de mot de passe et vous demandera d'en créer un nouveau.",
     "note": "Note sécurité : toute personne ayant accès au système de fichiers peut réinitialiser le mot de passe ainsi. Protégez l'accès hôte.",
     "back": "Retour à la connexion"
-  },
-  "errors": {
-    "serverUnavailable": "Impossible de se connecter au serveur. Veuillez réessayer.",
-    "retry": "Réessayer",
-    "auth": {
-      "wrongPassword": "Mot de passe incorrect",
-      "setupFailed": "Erreur lors de la création du mot de passe",
-      "login": "Une erreur est survenue lors de la connexion"
-    }
   },
   "setup": {
     "title": "Créer le mot de passe administrateur",
@@ -75,7 +73,16 @@
       "addSubdomainTitle": "Ajouter un sous-domaine",
       "removeSubdomainTitle": "Supprimer ce sous-domaine",
       "activeScan": "Scan actif",
-      "defaultScope": "Par défaut : <code>*.{{domain}}</code>. Ajoutez des lignes pour préciser les domaines in-scope."
+      "defaultScope": "Par défaut : <code>*.{{domain}}</code>. Ajoutez des lignes pour préciser les domaines in-scope.",
+      "errors": {
+        "nameRequired": "Un nom est requis.",
+        "domainRequired": "Un domaine principal est requis.",
+        "domainInvalid": "Veuillez saisir un domaine valide (ex. : example.com).",
+        "subdomainInvalid": "Format de sous-domaine invalide. Utilisez example.com, api.example.com ou *.example.com."
+      }
+    },
+    "errors": {
+      "newTarget": "Erreur lors de l'ajout de la nouvelle cible"
     }
   }
 }

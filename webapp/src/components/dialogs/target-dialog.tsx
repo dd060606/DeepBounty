@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import {
   Dialog,
@@ -14,14 +14,14 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Plus, Trash2, Loader2Icon, Globe2 } from "lucide-react";
-import { defaultWildcard, faviconUrl, normalizeDomain } from "@/utils/domains";
-
-type TargetData = {
-  name: string;
-  domain: string;
-  subdomains: string[];
-  activeScan: boolean;
-};
+import {
+  defaultWildcard,
+  faviconUrl,
+  normalizeDomain,
+  isValidDomain,
+  isValidSubdomainEntry,
+} from "@/utils/domains";
+import type { TargetData } from "@/utils/types";
 
 type TargetDialogProps = {
   mode?: "create" | "edit";
@@ -39,6 +39,11 @@ export default function TargetDialog({
   const { t } = useTranslation();
   const [isOpen, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [touched, setTouched] = useState<{
+    name?: boolean;
+    domain?: boolean;
+    subs?: Record<number, boolean>;
+  }>({});
 
   //Target data
   const [name, setName] = useState(initial?.name ?? "");
@@ -52,24 +57,28 @@ export default function TargetDialog({
         : []
   );
 
-  // When domain changes, ensure at least one wildcard exists for fresh create
-  useEffect(() => {
-    if (mode === "create") {
-      if (subdomains.length === 0) {
-        const d = defaultWildcard(domain);
-        setSubdomains(d ? [d] : [""]);
-      } else if (subdomains.length === 1 && subdomains[0].startsWith("*.")) {
-        // If first subdomain looks like wildcard for old domain, update it dynamically
-        const d = defaultWildcard(domain);
-        if (d && subdomains[0] !== d) {
-          setSubdomains([d]);
-        }
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [domain]);
+  // Remove auto-fill behavior; keep user control. Placeholder will indicate default.
 
   const icon = useMemo(() => faviconUrl(domain), [domain]);
+
+  // Validation helpers
+  const nameError = !name.trim() ? t("targets.form.errors.nameRequired") : null;
+  const domainRequired = !normalizeDomain(domain);
+  const domainInvalid = !domainRequired && !isValidDomain(domain);
+  const domainError = domainRequired
+    ? t("targets.form.errors.domainRequired")
+    : domainInvalid
+      ? t("targets.form.errors.domainInvalid")
+      : null;
+  // Subdomain validation: flag invalid non-empty rows
+  const subdomainErrors: Record<number, string> = {};
+  subdomains.forEach((sd, idx) => {
+    const v = sd.trim();
+    if (v && !isValidSubdomainEntry(v)) {
+      subdomainErrors[idx] = t("targets.form.errors.subdomainInvalid");
+    }
+  });
+  const hasErrors = Boolean(nameError || domainError || Object.keys(subdomainErrors).length > 0);
 
   function handleAddRow(index?: number) {
     const next = [...subdomains];
@@ -92,6 +101,16 @@ export default function TargetDialog({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (saving) return;
+    // Mark fields as touched to show errors if any
+    setTouched((s) => ({
+      name: true,
+      domain: true,
+      subs: {
+        ...(s.subs || {}),
+        ...Object.fromEntries(subdomains.map((_, i) => [i, true])),
+      },
+    }));
+    if (hasErrors) return;
     setSaving(true);
     const normalizedDomain = normalizeDomain(domain);
     // Ensure we have at least one in-scope subdomain before sending (default: *.<domain>)
@@ -108,12 +127,7 @@ export default function TargetDialog({
     };
     try {
       await onSubmit?.(data);
-      // Clear form
-      setName("");
-      setDomain("");
-      setActiveScan(true);
-      setSubdomains([]);
-      setOpen(false);
+      handleOpenChange(false);
     } finally {
       setSaving(false);
     }
@@ -123,8 +137,38 @@ export default function TargetDialog({
   const description =
     mode === "create" ? t("targets.dialog.createDesc") : t("targets.dialog.editDesc");
 
+  function initFromInitial() {
+    // Initialize form state from initial values
+    setName(initial?.name ?? "");
+    setDomain(initial?.domain ?? "");
+    setActiveScan(initial?.activeScan ?? true);
+    const subs = initial?.subdomains && initial.subdomains.length > 0 ? initial.subdomains : [""];
+    setSubdomains(subs);
+    setTouched({});
+    setSaving(false);
+  }
+
+  function resetForm() {
+    // Clear form state
+    setName("");
+    setDomain("");
+    setActiveScan(true);
+    setSubdomains([]);
+    setTouched({});
+    setSaving(false);
+  }
+
+  function handleOpenChange(next: boolean) {
+    setOpen(next);
+    if (next) {
+      initFromInitial();
+    } else {
+      resetForm();
+    }
+  }
+
   return (
-    <Dialog open={isOpen} onOpenChange={setOpen}>
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       {trigger ? <DialogTrigger asChild>{trigger}</DialogTrigger> : null}
       <DialogContent className="sm:max-w-[560px]">
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -135,7 +179,7 @@ export default function TargetDialog({
 
           {/* Target name and icon */}
           <div className="grid grid-cols-1 gap-5">
-            <div className="grid gap-3">
+            <div className="grid gap-2">
               <Label htmlFor="target-name">{t("targets.form.companyName")}</Label>
               <div className="flex items-center gap-3">
                 <div className="border-border bg-muted relative h-10 w-10 flex-shrink-0 overflow-hidden rounded-md border">
@@ -159,21 +203,34 @@ export default function TargetDialog({
                   placeholder={t("targets.form.companyPlaceholder")}
                   value={name}
                   onChange={(e) => setName(e.target.value)}
+                  onBlur={() => setTouched((s) => ({ ...s, name: true }))}
                   required
                 />
               </div>
+              {touched.name && nameError ? (
+                <p className="text-destructive text-xs font-medium" role="alert">
+                  {nameError}
+                </p>
+              ) : null}
             </div>
 
             {/* Target domain */}
-            <div className="grid gap-3">
+            <div className="grid gap-2">
               <Label htmlFor="target-domain">{t("targets.form.mainDomain")}</Label>
               <Input
                 id="target-domain"
-                placeholder="domain.com"
+                placeholder="example.com"
                 value={domain}
                 onChange={(e) => setDomain(e.target.value)}
+                onBlur={() => setTouched((s) => ({ ...s, domain: true }))}
+                aria-invalid={touched.domain && Boolean(domainError)}
                 required
               />
+              {touched.domain && domainError ? (
+                <p className="text-destructive text-xs font-medium" role="alert">
+                  {domainError}
+                </p>
+              ) : null}
             </div>
 
             {/* Target subdomains */}
@@ -186,41 +243,63 @@ export default function TargetDialog({
               </div>
               <div className="border-border rounded-lg border p-2">
                 <div className="max-h-56 space-y-2 overflow-y-auto pr-1">
-                  {subdomains.map((sd, idx) => (
-                    <div key={idx} className="relative">
-                      <Input
-                        value={sd}
-                        onChange={(e) => handleChangeRow(idx, e.target.value)}
-                        placeholder={domain ? `*.${normalizeDomain(domain)}` : "*.domain.com"}
-                        className="m-0.5 pr-20"
-                      />
-                      <div className="pointer-events-none absolute inset-y-0 right-1 flex items-center gap-1">
-                        <div className="pointer-events-auto flex items-center gap-1">
-                          <Button
-                            type="button"
-                            size="icon"
-                            variant="ghostNoHover"
-                            className="text-muted-foreground hover:text-foreground h-7 w-7"
-                            onClick={() => handleAddRow(idx)}
-                            title={t("targets.form.addSubdomainTitle")}
-                          >
-                            <Plus className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            type="button"
-                            size="icon"
-                            variant="ghostNoHover"
-                            className="text-muted-foreground hover:text-destructive h-7 w-7"
-                            onClick={() => handleRemoveRow(idx)}
-                            title={t("targets.form.removeSubdomainTitle")}
-                            disabled={subdomains.length <= 1}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                  {/* Subdomain list */}
+                  {subdomains.map((sd, idx) => {
+                    const err = subdomainErrors[idx];
+                    const isTouched = touched.subs?.[idx];
+                    return (
+                      <div key={idx} className="space-y-1">
+                        <div className="relative">
+                          {/* Subdomain input */}
+                          <Input
+                            value={sd}
+                            onChange={(e) => handleChangeRow(idx, e.target.value)}
+                            onBlur={() =>
+                              setTouched((s) => ({
+                                ...s,
+                                subs: { ...(s.subs || {}), [idx]: true },
+                              }))
+                            }
+                            placeholder={domain ? `*.${normalizeDomain(domain)}` : "*.example.com"}
+                            className="m-0.5 pr-20"
+                            aria-invalid={Boolean(isTouched && err)}
+                          />
+                          {/* Subdomain actions */}
+                          <div className="pointer-events-none absolute top-0 right-1 flex h-9 items-center gap-1">
+                            <div className="pointer-events-auto flex items-center gap-1">
+                              <Button
+                                type="button"
+                                size="icon"
+                                variant="ghostNoHover"
+                                className="text-muted-foreground hover:text-foreground h-7 w-7"
+                                onClick={() => handleAddRow(idx)}
+                                title={t("targets.form.addSubdomainTitle")}
+                              >
+                                <Plus className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                type="button"
+                                size="icon"
+                                variant="ghostNoHover"
+                                className="text-muted-foreground hover:text-destructive h-7 w-7"
+                                onClick={() => handleRemoveRow(idx)}
+                                title={t("targets.form.removeSubdomainTitle")}
+                                disabled={subdomains.length <= 1}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
                         </div>
+                        {/* Subdomain error message */}
+                        {isTouched && err ? (
+                          <p className="text-destructive text-xs font-medium" role="alert">
+                            {err}
+                          </p>
+                        ) : null}
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
               <p className="text-muted-foreground text-xs">
@@ -256,11 +335,7 @@ export default function TargetDialog({
             >
               {t("targets.form.cancel")}
             </Button>
-            <Button
-              type="submit"
-              disabled={saving || !name.trim() || !normalizeDomain(domain)}
-              className="min-w-[120px]"
-            >
+            <Button type="submit" disabled={saving || hasErrors} className="min-w-[120px]">
               {saving ? (
                 <span className="inline-flex items-center gap-2">
                   <Loader2Icon className="h-4 w-4 animate-spin" />

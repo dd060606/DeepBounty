@@ -2,6 +2,7 @@ import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/s
 import { AppSidebar } from "@/components/app-sidebar";
 import { Outlet } from "react-router";
 import { useState } from "react";
+import { Toaster } from "@/components/ui/sonner";
 
 export default function Layout() {
   const [isSidebarOpen, setSidebarOpen] = useState(true);
@@ -13,6 +14,7 @@ export default function Layout() {
         <SidebarTrigger className="m-1 md:hidden" />
         <Outlet />
       </SidebarInset>
+      <Toaster position="bottom-center" richColors closeButton />
     </SidebarProvider>
   );
 }

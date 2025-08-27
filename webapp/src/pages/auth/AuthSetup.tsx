@@ -43,7 +43,7 @@ export default function AuthSetup() {
         navigate("/");
       })
       .catch((error) => {
-        setError(t("errors.auth.setupFailed"));
+        setError(t("auth.errors.setupFailed"));
         console.error("Error creating password:", error);
       })
       .finally(() => {
