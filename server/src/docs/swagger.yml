@@ -247,3 +247,51 @@ paths:
           description: Target not found
         "401":
           description: Unauthorized
+  /targets/subdomains/{targetId}:
+    parameters:
+      - name: targetId
+        in: path
+        required: true
+        schema:
+          type: integer
+        description: Target ID
+    get:
+      summary: Get subdomains for a target
+      tags:
+        - Targets
+      security:
+        - sessionCookie: []
+      responses:
+        "200":
+          description: A list of subdomains for the target
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+                  example: "sub.example.com"
+        "401":
+          description: Unauthorized
+    post:
+      summary: Add subdomains to a target
+      tags:
+        - Targets
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                type: string
+                example: "sub.example.com"
+      responses:
+        "200":
+          description: Subdomains added successfully
+        "400":
+          description: Invalid request
+        "401":
+          description: Unauthorized
