@@ -37,8 +37,8 @@ export default function Auth() {
     <div className="bg-sidebar dark:bg-background flex min-h-screen w-full items-center justify-center">
       {serverUnavailable ? (
         <div className="flex flex-col items-center gap-4 text-center">
-          <p>{t("errors.serverUnavailable")}</p>
-          <Button onClick={navigateToProperPage}>{t("errors.retry")}</Button>
+          <p>{t("auth.errors.serverUnavailable")}</p>
+          <Button onClick={navigateToProperPage}>{t("auth.errors.retry")}</Button>
         </div>
       ) : (
         <div className="border-t-primary border-primary/30 h-12 w-12 animate-spin rounded-full border-4" />
