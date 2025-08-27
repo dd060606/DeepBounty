@@ -12,6 +12,7 @@ components:
       name: connect.sid
 
 paths:
+  #Setup
   /setup/password:
     post:
       summary: Set up a password to protect the dashboard
@@ -41,6 +42,7 @@ paths:
               example: "connect.sid=abc123; Path=/; HttpOnly; SameSite=Lax; Secure"
         "400":
           description: Invalid password
+  #Auth
   /auth/login:
     post:
       summary: User login
@@ -95,3 +97,153 @@ paths:
                     type: string
                     description: Current auth status. Depends on whether setup is complete and whether a valid session cookie is present.
                     enum: [authenticated, unauthenticated, setup-required]
+  #Targets
+  /targets:
+    get:
+      summary: Retrieve a list of targets
+      tags:
+        - Targets
+      security:
+        - sessionCookie: []
+      responses:
+        "200":
+          description: A list of targets
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                      example: 1
+                    name:
+                      type: string
+                      example: "Target Name"
+                    domain:
+                      type: string
+                      example: "example.com"
+                    activeScan:
+                      type: boolean
+                      example: true
+        "401":
+          description: Unauthorized
+    post:
+      summary: Add a new target
+      tags:
+        - Targets
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - domain
+              properties:
+                name:
+                  type: string
+                  example: "New Target"
+                domain:
+                  type: string
+                  example: "example.com"
+                activeScan:
+                  type: boolean
+                  example: true
+      responses:
+        "201":
+          description: Target created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    example: 2
+                  name:
+                    type: string
+                    example: "New Target"
+                  domain:
+                    type: string
+                    example: "example.com"
+                  activeScan:
+                    type: boolean
+                    example: true
+        "400":
+          description: Invalid request
+        "401":
+          description: Unauthorized
+  /targets/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+        description: Target ID
+    patch:
+      summary: Update an existing target
+      tags:
+        - Targets
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  example: "Updated Target"
+                domain:
+                  type: string
+                  example: "example.com"
+                activeScan:
+                  type: boolean
+                  example: true
+      responses:
+        "200":
+          description: Target updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    example: 1
+                  name:
+                    type: string
+                    example: "Updated Target"
+                  domain:
+                    type: string
+                    example: "example.com"
+                  activeScan:
+                    type: boolean
+                    example: true
+        "400":
+          description: Invalid request
+        "404":
+          description: Target not found
+        "401":
+          description: Unauthorized
+    delete:
+      summary: Delete an existing target
+      tags:
+        - Targets
+      security:
+        - sessionCookie: []
+      responses:
+        "200":
+          description: Target deleted successfully
+        "404":
+          description: Target not found
+        "401":
+          description: Unauthorized
