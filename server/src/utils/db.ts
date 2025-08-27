@@ -13,15 +13,17 @@ const pool = new Pool({
 
 export function initDatabase() {
   // Test connection on startup
-  pool
-    .connect()
-    .then((client) => {
-      client.release();
-      logger.info("Connection to the database succeeded");
-    })
-    .catch((err) => {
-      logger.error("Connection to the database failed", err);
-    });
+  setTimeout(() => {
+    pool
+      .connect()
+      .then((client) => {
+        client.release();
+        logger.info("Connection to the database succeeded");
+      })
+      .catch((err) => {
+        logger.error("Connection to the database failed", err);
+      });
+  }, 2000);
 }
 
 export async function query<T extends QueryResultRow = QueryResultRow>(
