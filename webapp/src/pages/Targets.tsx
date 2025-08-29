@@ -23,8 +23,9 @@ export default function Targets() {
     setLoading(true);
     try {
       const res = await ApiClient.get<Target[]>("/targets");
-      const list = res.data || [];
-      // Optionally hydrate subdomains per target (parallel)
+      // Sort targets by id
+      const list = res.data.sort((a, b) => a.id - b.id) || [];
+      // Fetch subdomains for each target in parallel
       const hydrated = await Promise.all(
         list.map(async (t) => {
           try {
