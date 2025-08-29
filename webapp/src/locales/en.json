@@ -8,6 +8,10 @@
     "lightMode": "Light Mode",
     "darkMode": "Dark Mode"
   },
+  "alerts": {
+    "cancel": "Cancel",
+    "confirm": "Confirm"
+  },
   "auth": {
     "login": "Sign In",
     "subtitle": "Enter your password to continue",
@@ -81,8 +85,34 @@
         "subdomainInvalid": "Invalid subdomain format. Use example.com, api.example.com or *.example.com."
       }
     },
+    "success": {
+      "newTarget": "Successfully added new target",
+      "updated": "Target updated",
+      "deleted": "Target deleted"
+    },
     "errors": {
-      "newTarget": "Failed to add new target"
-    }
+      "newTarget": "Failed to add new target",
+      "subdomains": "Failed to add subdomains",
+      "loadTargets": "Failed to load targets",
+      "loadSubdomains": "Failed to load subdomains",
+      "updateTarget": "Failed to update target",
+      "deleteTarget": "Failed to delete target"
+    },
+    "actions": {
+      "edit": "Edit",
+      "delete": "Delete",
+      "confirmDelete": "Delete this target?",
+      "confirmDeleteDesc": "This action cannot be undone. This target and all its subdomains will be permanently deleted.",
+      "confirm": "Confirm",
+      "cancel": "Cancel"
+    },
+    "empty": {
+      "title": "No targets yet",
+      "hint": "Add your first target to get started."
+    },
+    "newTarget": "New target",
+    "searchPlaceholder": "Search by name, domain or subdomain...",
+    "activeScan": "Active scan",
+    "inactiveScan": "Inactive scan"
   }
 }

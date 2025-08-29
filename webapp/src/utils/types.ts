@@ -1,4 +1,5 @@
-export type TargetData = {
+export type Target = {
+  id: number;
   name: string;
   domain: string;
   subdomains: string[];

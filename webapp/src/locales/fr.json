@@ -8,6 +8,10 @@
     "lightMode": "Mode clair",
     "darkMode": "Mode sombre"
   },
+  "alerts": {
+    "cancel": "Annuler",
+    "confirm": "Confirmer"
+  },
   "auth": {
     "login": "Connexion",
     "subtitle": "Entrez votre mot de passe pour continuer",
@@ -81,8 +85,34 @@
         "subdomainInvalid": "Format de sous-domaine invalide. Utilisez example.com, api.example.com ou *.example.com."
       }
     },
+    "success": {
+      "newTarget": "Nouvelle cible ajoutée avec succès",
+      "updated": "Cible mise à jour",
+      "deleted": "Cible supprimée"
+    },
     "errors": {
-      "newTarget": "Erreur lors de l'ajout de la nouvelle cible"
-    }
+      "newTarget": "Impossible d'ajouter la nouvelle cible",
+      "subdomains": "Impossible d'ajouter les sous-domaines",
+      "loadTargets": "Impossible de charger les cibles",
+      "loadSubdomains": "Impossible de charger les sous-domaines",
+      "updateTarget": "Impossible de mettre à jour la cible",
+      "deleteTarget": "Impossible de supprimer la cible"
+    },
+    "actions": {
+      "edit": "Modifier",
+      "delete": "Supprimer",
+      "confirmDelete": "Supprimer cette cible ?",
+      "confirmDeleteDesc": "Cette action ne peut pas être annulée. Cette cible et tous ses sous-domaines seront définitivement supprimés.",
+      "confirm": "Confirmer",
+      "cancel": "Annuler"
+    },
+    "empty": {
+      "title": "Aucune cible",
+      "hint": "Ajoutez votre première cible pour commencer."
+    },
+    "newTarget": "Nouvelle cible",
+    "searchPlaceholder": "Rechercher par nom, domaine ou sous-domaine...",
+    "activeScan": "Scan actif",
+    "inactiveScan": "Scan inactif"
   }
 }

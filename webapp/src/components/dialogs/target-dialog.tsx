@@ -21,13 +21,15 @@ import {
   isValidDomain,
   isValidSubdomainEntry,
 } from "@/utils/domains";
-import type { TargetData } from "@/utils/types";
+import type { Target } from "@/utils/types";
 
 type TargetDialogProps = {
   mode?: "create" | "edit";
   trigger?: React.ReactNode;
-  initial?: Partial<TargetData>;
-  onSubmit?: (data: TargetData) => Promise<void> | void;
+  initial?: Partial<Target>;
+  onSubmit?: (data: Partial<Target>) => Promise<void> | void;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 };
 
 export default function TargetDialog({
@@ -35,9 +37,13 @@ export default function TargetDialog({
   trigger,
   initial,
   onSubmit,
+  open: openProp,
+  onOpenChange,
 }: TargetDialogProps) {
   const { t } = useTranslation();
-  const [isOpen, setOpen] = useState(false);
+  const isControlled = typeof openProp === "boolean";
+  const [internalOpen, setInternalOpen] = useState(false);
+  const isOpen = isControlled ? (openProp as boolean) : internalOpen;
   const [saving, setSaving] = useState(false);
   const [touched, setTouched] = useState<{
     name?: boolean;
@@ -56,8 +62,6 @@ export default function TargetDialog({
         ? [defaultWildcard(initial.domain)]
         : []
   );
-
-  // Remove auto-fill behavior; keep user control. Placeholder will indicate default.
 
   const icon = useMemo(() => faviconUrl(domain), [domain]);
 
@@ -119,14 +123,14 @@ export default function TargetDialog({
       const d = defaultWildcard(normalizedDomain || domain);
       if (d) cleanedSubdomains = [d];
     }
-    const data: TargetData = {
-      name: name.trim(),
-      domain: normalizedDomain,
-      subdomains: cleanedSubdomains,
-      activeScan,
-    };
     try {
-      await onSubmit?.(data);
+      // Submit the form data
+      await onSubmit?.({
+        name: name.trim(),
+        domain: normalizedDomain,
+        subdomains: cleanedSubdomains,
+        activeScan,
+      });
       handleOpenChange(false);
     } finally {
       setSaving(false);
@@ -159,7 +163,11 @@ export default function TargetDialog({
   }
 
   function handleOpenChange(next: boolean) {
-    setOpen(next);
+    // If uncontrolled, update internal state
+    if (!isControlled) {
+      setInternalOpen(next);
+    }
+    onOpenChange?.(next);
     if (next) {
       initFromInitial();
     } else {
@@ -330,7 +338,7 @@ export default function TargetDialog({
             <Button
               type="button"
               variant="outline"
-              onClick={() => setOpen(false)}
+              onClick={() => handleOpenChange(false)}
               disabled={saving}
             >
               {t("targets.form.cancel")}
