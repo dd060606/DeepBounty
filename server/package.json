@@ -4,8 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "docker compose up -d db && docker compose run --rm migrate up && tsx --watch --env-file .env src/server.ts",
-    "migrate": "docker compose run --rm migrate up"
+    "dev": "docker compose build migrate && docker compose up -d db && docker compose run --rm migrate up && tsx --watch --env-file .env src/server.ts",
+    "migrate": "docker compose run --rm migrate",
+    "create-migration": "npx node-pg-migrate -j ts create"
   },
   "keywords": [],
   "author": "",

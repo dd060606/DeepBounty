@@ -5,6 +5,9 @@ import {
   deleteTarget,
   getTargetSubdomains,
   setTargetSubdomains,
+  getTargetSettings,
+  setTargetSettings,
+  getTargetsFull,
 } from "@/controllers/targets.js";
 import { validateBody, validateParams } from "@/middlewares/validate.js";
 import { idParamSchema, targetIdParamSchema } from "@/schemas/commonSchema.js";
@@ -15,6 +18,9 @@ const router = Router();
 
 // GET /targets
 router.get("/", getTargets);
+
+// GET /targets/full
+router.get("/full", getTargetsFull);
 
 // POST /targets
 router.post("/", validateBody(addTargetSchema), addTarget);
@@ -35,5 +41,11 @@ router.post(
   validateBody(addSubdomainsSchema),
   setTargetSubdomains
 );
+
+// GET /targets/settings/:targetId
+router.get("/settings/:targetId", validateParams(targetIdParamSchema), getTargetSettings);
+
+// POST /targets/settings/:targetId
+router.post("/settings/:targetId", validateParams(targetIdParamSchema), setTargetSettings);
 
 export default router;

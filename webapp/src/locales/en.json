@@ -8,6 +8,10 @@
     "lightMode": "Light Mode",
     "darkMode": "Dark Mode"
   },
+  "tabs": {
+    "general": "General",
+    "advanced": "Advanced"
+  },
   "alerts": {
     "cancel": "Cancel",
     "confirm": "Confirm"
@@ -78,6 +82,7 @@
       "removeSubdomainTitle": "Remove this subdomain",
       "activeScan": "Active scan",
       "defaultScope": "Default: <code>*.{{domain}}</code>. Add lines to refine in-scope domains.",
+      "customHeader": "Custom HTTP Header",
       "errors": {
         "nameRequired": "A name is required.",
         "domainRequired": "A primary domain is required.",
