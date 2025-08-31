@@ -16,6 +16,43 @@ export function getTargets(req: Request, res: Response) {
     });
 }
 
+// Get all targets with their subdomains and settings
+export async function getTargetsFull(req: Request, res: Response) {
+  try {
+    const rows = await query(
+      `
+      SELECT
+        t.*,
+        -- Subdomains array
+        COALESCE(sd.subdomains, '{}'::text[]) AS subdomains,
+        -- Settings object
+        ts.settings
+      FROM targets t
+      -- Join with subdomains
+      LEFT JOIN LATERAL (
+        SELECT array_agg(s.subdomain ORDER BY s.subdomain) AS subdomains
+        FROM targets_subdomains s
+        WHERE s."targetId" = t.id
+      ) sd ON true
+      -- Join with settings
+      LEFT JOIN LATERAL (
+        SELECT s.settings
+        FROM targets_settings s
+        WHERE s."targetId" = t.id
+        ORDER BY s."targetId" DESC
+        LIMIT 1
+      ) ts ON true
+      ORDER BY t.id
+      `
+    );
+
+    res.json(rows);
+  } catch (error) {
+    logger.error("Error fetching targets (full):", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+}
+
 // Add a new target
 export function addTarget(req: Request, res: Response) {
   const { name, domain, activeScan } = req.body;
@@ -108,6 +145,42 @@ export function setTargetSubdomains(req: Request, res: Response) {
     .then(() => res.sendStatus(200))
     .catch((error) => {
       logger.error("Error updating subdomains:", error);
+      res.status(500).json({ error: "Internal server error" });
+    });
+}
+
+// Get all settings for a specific target
+export function getTargetSettings(req: Request, res: Response) {
+  const { targetId } = req.params;
+
+  query('SELECT * FROM targets_settings WHERE "targetId" = $1', [targetId])
+    .then((settings) => {
+      res.json(settings);
+    })
+    .catch((error) => {
+      logger.error("Error fetching target settings:", error);
+      res.status(500).json({ error: "Internal server error" });
+    });
+}
+
+// Add / edit settings for a specific target
+export function setTargetSettings(req: Request, res: Response) {
+  const { targetId } = req.params;
+  const settings = req.body;
+  if (!settings) {
+    return res.status(400).json({ error: "Settings are required" });
+  }
+  // Update settings in the database
+  query('DELETE FROM targets_settings WHERE "targetId" = $1', [targetId])
+    .then(() => {
+      return query('INSERT INTO targets_settings ("targetId", settings) VALUES ($1, $2)', [
+        targetId,
+        settings,
+      ]);
+    })
+    .then(() => res.sendStatus(200))
+    .catch((error) => {
+      logger.error("Error updating settings:", error);
       res.status(500).json({ error: "Internal server error" });
     });
 }

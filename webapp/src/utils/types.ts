@@ -4,4 +4,9 @@ export type Target = {
   domain: string;
   subdomains: string[];
   activeScan: boolean;
+  settings?: {
+    userAgent?: string;
+    headerName?: string;
+    headerValue?: string;
+  };
 };

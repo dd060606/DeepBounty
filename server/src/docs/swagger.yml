@@ -178,6 +178,46 @@ paths:
           description: Invalid request
         "401":
           description: Unauthorized
+  /targets/full:
+    get:
+      summary: Retrieve all targets with their subdomains and settings
+      tags:
+        - Targets
+      security:
+        - sessionCookie: []
+      responses:
+        "200":
+          description: A list of targets with relations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                      example: 1
+                    name:
+                      type: string
+                      example: "Target Name"
+                    domain:
+                      type: string
+                      example: "example.com"
+                    activeScan:
+                      type: boolean
+                      example: true
+                    subdomains:
+                      type: array
+                      items:
+                        type: string
+                      example: ["a.example.com", "b.example.com"]
+                    settings:
+                      type: object
+                      nullable: true
+                      description: Arbitrary JSON settings for the target
+        "401":
+          description: Unauthorized
   /targets/{id}:
     parameters:
       - name: id
@@ -291,6 +331,60 @@ paths:
       responses:
         "200":
           description: Subdomains added successfully
+        "400":
+          description: Invalid request
+        "401":
+          description: Unauthorized
+  /targets/settings/{targetId}:
+    parameters:
+      - name: targetId
+        in: path
+        required: true
+        schema:
+          type: integer
+        description: Target ID
+    get:
+      summary: Get settings for a target
+      tags:
+        - Targets
+      security:
+        - sessionCookie: []
+      responses:
+        "200":
+          description: Settings rows for the target
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    targetId:
+                      type: integer
+                      example: 1
+                    settings:
+                      type: object
+                      additionalProperties: true
+                      example: { scanDepth: 2, notify: true }
+        "401":
+          description: Unauthorized
+    post:
+      summary: Replace settings for a target
+      tags:
+        - Targets
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+              example: { userAgent: "Mozilla/5.0", customHeader: "X-BugBounty: <username>" }
+      responses:
+        "200":
+          description: Settings saved successfully
         "400":
           description: Invalid request
         "401":

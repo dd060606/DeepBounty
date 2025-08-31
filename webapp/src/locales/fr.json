@@ -8,6 +8,10 @@
     "lightMode": "Mode clair",
     "darkMode": "Mode sombre"
   },
+  "tabs": {
+    "general": "Général",
+    "advanced": "Avancé"
+  },
   "alerts": {
     "cancel": "Annuler",
     "confirm": "Confirmer"
@@ -78,6 +82,7 @@
       "removeSubdomainTitle": "Supprimer ce sous-domaine",
       "activeScan": "Scan actif",
       "defaultScope": "Par défaut : <code>*.{{domain}}</code>. Ajoutez des lignes pour préciser les domaines in-scope.",
+      "customHeader": "En-tête HTTP personnalisé",
       "errors": {
         "nameRequired": "Un nom est requis.",
         "domainRequired": "Un domaine principal est requis.",
