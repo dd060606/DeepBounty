@@ -22,21 +22,10 @@ export default function Targets() {
   async function fetchTargets() {
     setLoading(true);
     try {
-      const res = await ApiClient.get<Target[]>("/targets");
+      const res = await ApiClient.get<Target[]>("/targets/full");
       // Sort targets by id
       const list = res.data.sort((a, b) => a.id - b.id) || [];
-      // Fetch subdomains for each target in parallel
-      const hydrated = await Promise.all(
-        list.map(async (t) => {
-          try {
-            const sd = await ApiClient.get<string[]>(`/targets/subdomains/${t.id}`);
-            return { ...t, subdomains: sd.data || [] } as Target;
-          } catch {
-            return { ...t, subdomains: [] } as Target;
-          }
-        })
-      );
-      setTargets(hydrated);
+      setTargets(list);
     } catch {
       toast.error(t("targets.errors.loadTargets"));
       setTargets([]);
@@ -67,6 +56,7 @@ export default function Targets() {
   async function addNewTarget(data: Partial<Target>) {
     let res;
     let success = true;
+    // First, create the target
     try {
       res = await ApiClient.post("/targets", {
         name: data.name,
@@ -77,6 +67,7 @@ export default function Targets() {
       success = false;
       toast.error(t("targets.errors.newTarget"));
     }
+    // Then, create the subdomains
     try {
       if (res?.data.id) {
         await ApiClient.post(`/targets/subdomains/${res.data.id}`, data.subdomains);
@@ -87,6 +78,20 @@ export default function Targets() {
       success = false;
       toast.error(t("targets.errors.subdomains"));
     }
+    // Finally, add optional settings
+    if (data.settings) {
+      try {
+        if (res?.data.id) {
+          await ApiClient.post(`/targets/settings/${res.data.id}`, data.settings);
+        } else {
+          throw new Error("No target ID returned from server");
+        }
+      } catch {
+        success = false;
+        toast.error(t("targets.errors.settings"));
+      }
+    }
+
     if (success) {
       toast.success(t("targets.success.newTarget"));
       fetchTargets();
@@ -94,13 +99,33 @@ export default function Targets() {
   }
 
   async function updateTarget(id: number, data: Partial<Target>) {
+    let success = true;
+    // Update target
     try {
       await ApiClient.patch(`/targets/${id}`, data);
-      toast.success(t("targets.success.updated"));
-      setEdit(null);
-      fetchTargets();
     } catch {
+      success = false;
       toast.error(t("targets.errors.updateTarget"));
+    }
+    // Then, update subdomains
+    try {
+      await ApiClient.post(`/targets/subdomains/${edit!.id}`, data.subdomains);
+    } catch {
+      success = false;
+      toast.error(t("targets.errors.subdomains"));
+    }
+    // Finally, update settings
+    try {
+      await ApiClient.post(`/targets/settings/${edit!.id}`, data.settings);
+    } catch {
+      success = false;
+      toast.error(t("targets.errors.settings"));
+    }
+
+    setEdit(null);
+    if (success) {
+      toast.success(t("targets.success.updated"));
+      fetchTargets();
     }
   }
 
@@ -170,22 +195,7 @@ export default function Targets() {
           onOpenChange={(o) => {
             if (!o) setEdit(null);
           }}
-          onSubmit={async (data) => {
-            // Update target
-            await updateTarget(edit.id, {
-              name: data.name,
-              domain: data.domain,
-              activeScan: data.activeScan,
-            });
-            // Then, update subdomains
-            try {
-              await ApiClient.post(`/targets/subdomains/${edit.id}`, data.subdomains);
-            } catch {
-              toast.error(t("targets.errors.subdomains"));
-            }
-            setEdit(null);
-            fetchTargets();
-          }}
+          onSubmit={(data) => updateTarget(edit.id, data)}
         />
       ) : null}
 

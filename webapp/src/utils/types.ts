@@ -6,7 +6,6 @@ export type Target = {
   activeScan: boolean;
   settings?: {
     userAgent?: string;
-    headerName?: string;
-    headerValue?: string;
+    customHeader?: string;
   };
 };

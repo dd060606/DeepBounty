@@ -24,17 +24,11 @@ import {
 } from "@/utils/domains";
 import type { Target } from "@/utils/types";
 
-type TargetAdvanced = {
-  userAgent?: string;
-  headerName?: string;
-  headerValue?: string;
-};
-
 type TargetDialogProps = {
   mode?: "create" | "edit";
   trigger?: React.ReactNode;
-  initial?: Partial<Target> & TargetAdvanced;
-  onSubmit?: (data: Partial<Target> & TargetAdvanced) => Promise<void> | void;
+  initial?: Partial<Target>;
+  onSubmit?: (data: Partial<Target>) => Promise<void> | void;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
 };
@@ -71,8 +65,12 @@ export default function TargetDialog({
   );
   // Advanced settings
   const [userAgent, setUserAgent] = useState<string>(initial?.settings?.userAgent ?? "");
-  const [headerName, setHeaderName] = useState<string>(initial?.settings?.headerName ?? "");
-  const [headerValue, setHeaderValue] = useState<string>(initial?.settings?.headerValue ?? "");
+  const [headerName, setHeaderName] = useState<string>(
+    initial?.settings?.customHeader?.split(":")[0] ?? ""
+  );
+  const [headerValue, setHeaderValue] = useState<string>(
+    initial?.settings?.customHeader?.split(":")[1] ?? ""
+  );
 
   const icon = useMemo(() => faviconUrl(domain), [domain]);
 
@@ -143,8 +141,10 @@ export default function TargetDialog({
         activeScan,
         settings: {
           userAgent: userAgent.trim() || undefined,
-          headerName: headerName.trim() || undefined,
-          headerValue: headerValue.trim() || undefined,
+          customHeader:
+            headerName.trim() && headerValue.trim()
+              ? `${headerName.trim()}: ${headerValue.trim()}`
+              : undefined,
         },
       });
       handleOpenChange(false);
@@ -162,9 +162,9 @@ export default function TargetDialog({
     setName(initial?.name ?? "");
     setDomain(initial?.domain ?? "");
     setActiveScan(initial?.activeScan ?? true);
-    setUserAgent(initial?.userAgent ?? "");
-    setHeaderName(initial?.headerName ?? "");
-    setHeaderValue(initial?.headerValue ?? "");
+    setUserAgent(initial?.settings?.userAgent ?? "");
+    setHeaderName(initial?.settings?.customHeader?.split(":")[0] ?? "");
+    setHeaderValue(initial?.settings?.customHeader?.split(":")[1] ?? "");
     const subs = initial?.subdomains && initial.subdomains.length > 0 ? initial.subdomains : [""];
     setSubdomains(subs);
     setTouched({});
