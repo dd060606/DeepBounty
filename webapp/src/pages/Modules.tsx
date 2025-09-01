@@ -1,3 +1,3 @@
 export default function Modules() {
-  return <div>Modules Page</div>;
+  return <div>Modules</div>;
 }
