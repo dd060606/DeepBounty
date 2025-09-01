@@ -97,7 +97,8 @@
     },
     "errors": {
       "newTarget": "Failed to add new target",
-      "subdomains": "Failed to add subdomains",
+      "subdomains": "Failed to add target subdomains",
+      "settings": "Failed to add target settings",
       "loadTargets": "Failed to load targets",
       "loadSubdomains": "Failed to load subdomains",
       "updateTarget": "Failed to update target",

@@ -97,7 +97,8 @@
     },
     "errors": {
       "newTarget": "Impossible d'ajouter la nouvelle cible",
-      "subdomains": "Impossible d'ajouter les sous-domaines",
+      "subdomains": "Impossible d'ajouter les sous-domaines de la cible",
+      "settings": "Impossible d'ajouter les paramètres de la cible",
       "loadTargets": "Impossible de charger les cibles",
       "loadSubdomains": "Impossible de charger les sous-domaines",
       "updateTarget": "Impossible de mettre à jour la cible",
