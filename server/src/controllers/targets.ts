@@ -153,9 +153,9 @@ export function setTargetSubdomains(req: Request, res: Response) {
 export function getTargetSettings(req: Request, res: Response) {
   const { targetId } = req.params;
 
-  query('SELECT * FROM targets_settings WHERE "targetId" = $1', [targetId])
-    .then((settings) => {
-      res.json(settings);
+  query('SELECT settings FROM targets_settings WHERE "targetId" = $1', [targetId])
+    .then((rows) => {
+      res.json(rows[0]?.settings || {});
     })
     .catch((error) => {
       logger.error("Error fetching target settings:", error);
