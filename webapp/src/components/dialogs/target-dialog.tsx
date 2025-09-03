@@ -237,7 +237,7 @@ export default function TargetDialog({
                     </div>
                     <Input
                       id="target-name"
-                      placeholder={t("targets.form.companyPlaceholder")}
+                      placeholder={t("common.company")}
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       onBlur={() => setTouched((s) => ({ ...s, name: true }))}

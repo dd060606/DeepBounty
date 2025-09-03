@@ -15,9 +15,8 @@ export function defaultWildcard(domain: string): string {
   return d ? `*.${d}` : "";
 }
 
-export function faviconUrl(domain: string): string | null {
+export function faviconUrl(domain: string): string {
   const d = normalizeDomain(domain);
-  if (!d) return null;
   // Use Google S2 favicons
   return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(d)}&sz=64`;
 }

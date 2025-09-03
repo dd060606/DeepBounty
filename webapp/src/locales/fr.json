@@ -1,4 +1,12 @@
 {
+  "common": {
+    "cancel": "Annuler",
+    "confirm": "Confirmer",
+    "filter": "Filtrer",
+    "name": "Nom",
+    "company": "Entreprise",
+    "date": "Date"
+  },
   "nav": {
     "alerts": "Alertes",
     "targets": "Cibles",
@@ -13,8 +21,22 @@
     "advanced": "Avancé"
   },
   "alerts": {
-    "cancel": "Annuler",
-    "confirm": "Confirmer"
+    "searchPlaceholder": "Rechercher une alerte, une entreprise ou un domaine...",
+    "informational": "Informatif",
+    "low": "Faible",
+    "medium": "Moyen",
+    "high": "Élevé",
+    "critical": "Critique",
+    "status": "Statut",
+    "confirmed": "Confirmé",
+    "unconfirmed": "Non confirmé",
+    "empty": {
+      "title": "Aucune alerte",
+      "hint": "Les nouvelles alertes apparaîtront ici."
+    },
+    "errors": {
+      "loadAlerts": "Impossible de charger les alertes"
+    }
   },
   "auth": {
     "login": "Connexion",
@@ -72,7 +94,6 @@
     },
     "form": {
       "companyName": "Nom de l'entreprise",
-      "companyPlaceholder": "Entreprise",
       "mainDomain": "Domaine principal",
       "subdomains": "Sous-domaines in-scope",
       "add": "Ajouter",
