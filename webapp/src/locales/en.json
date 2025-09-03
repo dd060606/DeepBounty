@@ -1,4 +1,12 @@
 {
+  "common": {
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "filter": "Filter",
+    "name": "Name",
+    "company": "Company",
+    "date": "Date"
+  },
   "nav": {
     "alerts": "Alerts",
     "targets": "Targets",
@@ -13,8 +21,23 @@
     "advanced": "Advanced"
   },
   "alerts": {
-    "cancel": "Cancel",
-    "confirm": "Confirm"
+    "searchPlaceholder": "Search an alert, company or domain...",
+    "informational": "Informational",
+    "low": "Low",
+    "medium": "Medium",
+    "high": "High",
+    "critical": "Critical",
+    "score": "Score",
+    "status": "Status",
+    "confirmed": "Confirmed",
+    "unconfirmed": "Unconfirmed",
+    "empty": {
+      "title": "No alerts",
+      "hint": "New alerts will appear here."
+    },
+    "errors": {
+      "loadAlerts": "Failed to load alerts"
+    }
   },
   "auth": {
     "login": "Sign In",
@@ -72,7 +95,6 @@
     },
     "form": {
       "companyName": "Company name",
-      "companyPlaceholder": "Company",
       "mainDomain": "Primary domain",
       "subdomains": "In-scope subdomains",
       "add": "Add",
