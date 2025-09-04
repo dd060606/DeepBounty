@@ -4,7 +4,7 @@ import { Request, Response } from "express";
 
 const logger = new Logger("Targets");
 
-// Return an array of all targets
+// GET /targets - return an array of all targets
 export function getTargets(req: Request, res: Response) {
   query("SELECT * FROM targets")
     .then((targets) => {
@@ -16,7 +16,7 @@ export function getTargets(req: Request, res: Response) {
     });
 }
 
-// Get all targets with their subdomains and settings
+// GET /targets/full - get all targets with their subdomains and settings
 export async function getTargetsFull(req: Request, res: Response) {
   try {
     const rows = await query(
@@ -53,7 +53,7 @@ export async function getTargetsFull(req: Request, res: Response) {
   }
 }
 
-// Add a new target
+// POST /targets - add a new target
 export function addTarget(req: Request, res: Response) {
   const { name, domain, activeScan } = req.body;
 
@@ -72,7 +72,7 @@ export function addTarget(req: Request, res: Response) {
     });
 }
 
-// Edit an existing target
+// PATCH /targets/:id - Edit an existing target
 export function editTarget(req: Request, res: Response) {
   const { id } = req.params;
   const { name, domain, activeScan } = req.body;
@@ -96,7 +96,7 @@ export function editTarget(req: Request, res: Response) {
     });
 }
 
-// Delete an existing target
+// DELETE /targets/:id - delete an existing target
 export function deleteTarget(req: Request, res: Response) {
   const { id } = req.params;
 
@@ -114,7 +114,7 @@ export function deleteTarget(req: Request, res: Response) {
     });
 }
 
-// Get all subdomains for a specific target
+// GET /targets/subdomains/:targetId - get all subdomains for a specific target
 export function getTargetSubdomains(req: Request, res: Response) {
   const { targetId } = req.params;
 
@@ -128,7 +128,7 @@ export function getTargetSubdomains(req: Request, res: Response) {
     });
 }
 
-// Add / edit subdomains for a specific target
+// POST /targets/subdomains/:targetId - add / edit subdomains for a specific target
 export function setTargetSubdomains(req: Request, res: Response) {
   const { targetId } = req.params;
   // Update subdomains in the database
@@ -149,7 +149,7 @@ export function setTargetSubdomains(req: Request, res: Response) {
     });
 }
 
-// Get all settings for a specific target
+// GET /targets/settings/:targetId - get all settings for a specific target
 export function getTargetSettings(req: Request, res: Response) {
   const { targetId } = req.params;
 
@@ -163,7 +163,7 @@ export function getTargetSettings(req: Request, res: Response) {
     });
 }
 
-// Add / edit settings for a specific target
+// POST /targets/settings/:targetId - add / edit settings for a specific target
 export function setTargetSettings(req: Request, res: Response) {
   const { targetId } = req.params;
   const settings = req.body;

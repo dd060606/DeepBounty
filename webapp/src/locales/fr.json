@@ -2,10 +2,10 @@
   "common": {
     "cancel": "Annuler",
     "confirm": "Confirmer",
-    "filter": "Filtrer",
     "name": "Nom",
     "company": "Entreprise",
-    "date": "Date"
+    "date": "Date",
+    "filter": "Filtrer"
   },
   "nav": {
     "alerts": "Alertes",

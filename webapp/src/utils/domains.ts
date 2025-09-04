@@ -15,10 +15,10 @@ export function defaultWildcard(domain: string): string {
   return d ? `*.${d}` : "";
 }
 
-export function faviconUrl(domain: string): string {
+export function faviconUrl(domain: string): string | null {
   const d = normalizeDomain(domain);
   // Use Google S2 favicons
-  return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(d)}&sz=64`;
+  return d ? `https://www.google.com/s2/favicons?domain=${encodeURIComponent(d)}&sz=64` : null;
 }
 
 // Validate a domain name (ASCII) with a simple, robust check:

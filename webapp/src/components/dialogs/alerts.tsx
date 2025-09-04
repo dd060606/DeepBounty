@@ -28,8 +28,8 @@ export function ConfirmDialog({ open, onOpenChange, title, desc, onConfirm }: Di
           <AlertDialogDescription>{desc}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>{t("alerts.cancel")}</AlertDialogCancel>
-          <AlertDialogAction onClick={onConfirm}>{t("alerts.confirm")}</AlertDialogAction>
+          <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+          <AlertDialogAction onClick={onConfirm}>{t("common.confirm")}</AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

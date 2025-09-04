@@ -1,33 +1,31 @@
 import { Badge } from "@/components/ui/badge";
-import type { SeverityScore } from "@/utils/types";
-import i18next from "i18next";
+import { useTranslation } from "react-i18next";
 
-function classesForSeverity(s: SeverityScore): { label: string; className: string } {
-  const t = (key: string) => i18next.t(key);
+function classesForSeverity(s: number): { label: string; className: string } {
   switch (s) {
-    case "informational":
+    case 0:
       return {
-        label: t("alerts.informational"),
+        label: "alerts.informational",
         className: "border-transparent bg-foreground/20 dark:bg-foreground/60 text-foreground",
       };
-    case "low":
+    case 1:
       return {
-        label: t("alerts.low"),
+        label: "alerts.low",
         className: "border-transparent bg-emerald-500/20 dark:bg-emerald-500/60 text-emerald-500",
       };
-    case "medium":
+    case 2:
       return {
-        label: t("alerts.medium"),
+        label: "alerts.medium",
         className: "border-transparent bg-amber-500/20 dark:bg-amber-500/60 text-amber-500",
       };
-    case "high":
+    case 3:
       return {
-        label: t("alerts.high"),
+        label: "alerts.high",
         className: "border-transparent bg-red-500/20 dark:bg-red-500/60 text-red-500",
       };
-    case "critical":
+    case 4:
       return {
-        label: t("alerts.critical"),
+        label: "alerts.critical",
         className: "border-transparent bg-red-600/20 dark:bg-red-600/60 text-red-600",
       };
     default:
@@ -38,7 +36,8 @@ function classesForSeverity(s: SeverityScore): { label: string; className: strin
   }
 }
 
-export default function SeverityBadge({ severity }: { severity: SeverityScore }) {
-  const { label, className } = classesForSeverity(severity);
-  return <Badge className={`${className} dark:text-foreground/90`}>{label}</Badge>;
+export default function SeverityBadge({ score }: { score: number }) {
+  const { label, className } = classesForSeverity(score);
+  const { t } = useTranslation();
+  return <Badge className={`${className} dark:text-foreground/90`}>{t(label)}</Badge>;
 }
