@@ -5,7 +5,7 @@ import bcrypt from "bcrypt";
 
 const logger = new Logger("Setup");
 
-// Create a password to protect the dashboard
+// POST /setup/password - create a password to protect the dashboard
 export function setupPassword(req: Request, res: Response) {
   const { password } = req.body;
   if (!config.get().password) {

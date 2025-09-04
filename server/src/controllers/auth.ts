@@ -5,6 +5,7 @@ import Logger from "@/utils/logger.js";
 
 const logger = new Logger("Auth");
 
+// POST /auth/login - login
 export async function login(req: Request, res: Response) {
   const { password } = req.body;
 
@@ -25,6 +26,7 @@ export async function login(req: Request, res: Response) {
   }
 }
 
+// POST /auth/logout - logout
 export function logout(req: Request, res: Response) {
   req.session.destroy(() => {
     res.clearCookie("connect.sid");
@@ -32,6 +34,7 @@ export function logout(req: Request, res: Response) {
   });
 }
 
+// GET /auth/info - get authentication status
 export function authInfo(req: Request, res: Response) {
   let status = "";
   if (config.get().password) {

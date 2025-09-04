@@ -10,6 +10,7 @@ import { requireAuth } from "./middlewares/auth.js";
 import Setup from "./routes/setup.js";
 import Auth from "./routes/auth.js";
 import Targets from "./routes/targets.js";
+import Alerts from "./routes/alerts.js";
 import { randomBytes } from "crypto";
 
 const app = express();
@@ -76,5 +77,6 @@ if (config.get().enableSwaggerUi) {
 app.use("/setup", Setup);
 app.use("/auth", Auth);
 app.use("/targets", requireAuth, Targets);
+app.use("/alerts", requireAuth, Alerts);
 
 export default app;

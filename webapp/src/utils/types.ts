@@ -11,7 +11,6 @@ export type Target = {
 };
 
 // Alerts
-export type SeverityScore = "informational" | "low" | "medium" | "high" | "critical";
 
 export type Alert = {
   id: number;
@@ -19,9 +18,9 @@ export type Alert = {
   targetName: string;
   domain: string;
   subdomain: string;
-  score: SeverityScore;
+  score: number;
   confirmed: boolean;
   description: string;
-  path: string;
+  endpoint: string;
   createdAt: string;
 };
