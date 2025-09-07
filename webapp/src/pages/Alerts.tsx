@@ -5,11 +5,13 @@ import AlertsSkeleton from "@/components/alerts/AlertsSkeleton";
 import type { Alert } from "@/utils/types";
 import { toast } from "sonner";
 import ApiClient from "@/utils/api";
+import AlertDetailsDialog from "@/components/alerts/AlertDetailsDialog";
 
 export default function Alerts() {
   const { t } = useTranslation();
   const [alerts, setAlerts] = useState<Alert[] | null>(null);
   const [loading, setLoading] = useState(false);
+  const [selected, setSelected] = useState<Alert | null>(null);
 
   async function fetchAlerts() {
     setLoading(true);
@@ -40,8 +42,21 @@ export default function Alerts() {
       {loading || alerts === null ? (
         <AlertsSkeleton />
       ) : (
-        <AlertsTable alerts={alerts} onRowClick={() => {}} />
+        <AlertsTable
+          alerts={alerts}
+          onRowClick={(alert) => {
+            setSelected(alert);
+          }}
+        />
       )}
+
+      <AlertDetailsDialog
+        alert={selected}
+        open={Boolean(selected)}
+        onOpenChange={(o) => {
+          if (!o) setSelected(null);
+        }}
+      />
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Input } from "@/components/ui/input";
-import { faviconUrl, normalizeDomain } from "@/utils/domains";
+import { faviconUrl } from "@/utils/domains";
 import type { Alert } from "@/utils/types";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "react-i18next";
@@ -9,6 +9,7 @@ import type { Column, ColumnDef } from "@tanstack/react-table";
 import { DataTable } from "@/components/ui/data-table";
 import SeverityBadge from "./SeverityBadge";
 import { Badge } from "@/components/ui/badge";
+import { formatDate } from "@/utils/date";
 
 type Props = {
   alerts: Alert[];
@@ -25,7 +26,7 @@ function TableHeader({ column, title }: { column: Column<Alert>; title: string }
   );
 }
 
-export default function AlertsTable({ alerts }: Props) {
+export default function AlertsTable({ alerts, onRowClick }: Props) {
   const { t } = useTranslation();
   const [query, setQuery] = useState("");
 
@@ -92,17 +93,7 @@ export default function AlertsTable({ alerts }: Props) {
         return <TableHeader column={column} title={t("common.date")} />;
       },
       cell: ({ row }) => {
-        return (
-          <div>
-            {new Date(row.original.createdAt).toLocaleString(undefined, {
-              year: "numeric",
-              month: "numeric",
-              day: "numeric",
-              hour: "2-digit",
-              minute: "2-digit",
-            })}
-          </div>
-        );
+        return <div>{formatDate(row.original.createdAt)}</div>;
       },
     },
   ];
@@ -141,7 +132,7 @@ export default function AlertsTable({ alerts }: Props) {
       </div>
 
       {filtered.length !== 0 ? (
-        <DataTable columns={alertsColumns} data={filtered} />
+        <DataTable columns={alertsColumns} data={filtered} onRowClick={onRowClick} />
       ) : (
         // Empty message
         <div className="text-muted-foreground border-border bg-card/60 mx-auto max-w-2xl rounded-xl border p-8 text-center">

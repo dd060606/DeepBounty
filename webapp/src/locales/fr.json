@@ -5,7 +5,10 @@
     "name": "Nom",
     "company": "Entreprise",
     "date": "Date",
-    "filter": "Filtrer"
+    "filter": "Filtrer",
+    "domain": "Domaine",
+    "subdomain": "Sous-domaine",
+    "close": "Fermer"
   },
   "nav": {
     "alerts": "Alertes",
@@ -27,9 +30,12 @@
     "medium": "Moyen",
     "high": "Élevé",
     "critical": "Critique",
+    "score": "Score",
     "status": "Statut",
     "confirmed": "Confirmé",
     "unconfirmed": "Non confirmé",
+    "endpoint": "Endpoint",
+    "description": "Description",
     "empty": {
       "title": "Aucune alerte",
       "hint": "Les nouvelles alertes apparaîtront ici."
