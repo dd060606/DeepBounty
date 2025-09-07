@@ -5,7 +5,10 @@
     "name": "Name",
     "company": "Company",
     "date": "Date",
-    "filter": "Filter"
+    "filter": "Filter",
+    "domain": "Domain",
+    "subdomain": "Subdomain",
+    "close": "Close"
   },
   "nav": {
     "alerts": "Alerts",
@@ -27,10 +30,13 @@
     "medium": "Medium",
     "high": "High",
     "critical": "Critical",
+    "details": "Alert details",
     "score": "Score",
     "status": "Status",
     "confirmed": "Confirmed",
     "unconfirmed": "Unconfirmed",
+    "endpoint": "Endpoint",
+    "description": "Description",
     "empty": {
       "title": "No alerts",
       "hint": "New alerts will appear here."

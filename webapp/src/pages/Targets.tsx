@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import TargetDialog from "@/components/dialogs/target-dialog";
+import TargetDialog from "@/components/dialogs/TargetDialog";
 import TargetCard from "@/components/targets/TargetCard";
 import TargetSkeleton from "@/components/targets/TargetSkeleton";
 import ApiClient from "@/utils/api";
