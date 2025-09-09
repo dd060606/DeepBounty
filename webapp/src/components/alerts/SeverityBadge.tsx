@@ -26,7 +26,7 @@ function classesForSeverity(s: number): { label: string; className: string } {
     case 4:
       return {
         label: "alerts.critical",
-        className: "border-transparent bg-red-600/20 dark:bg-red-600/60 text-red-600",
+        className: "border-transparent bg-red-700/20 dark:bg-red-700/60 text-red-700",
       };
     default:
       return {

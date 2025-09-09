@@ -31,7 +31,8 @@ export default function Auth() {
 
   useEffect(() => {
     navigateToProperPage();
-  }, [navigateToProperPage]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div className="bg-sidebar dark:bg-background flex min-h-screen w-full items-center justify-center">
