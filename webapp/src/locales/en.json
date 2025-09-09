@@ -5,7 +5,6 @@
     "name": "Name",
     "company": "Company",
     "date": "Date",
-    "filter": "Filter",
     "domain": "Domain",
     "subdomain": "Subdomain",
     "close": "Close"
@@ -37,6 +36,7 @@
     "unconfirmed": "Unconfirmed",
     "endpoint": "Endpoint",
     "description": "Description",
+    "filter": "Filter",
     "empty": {
       "title": "No alerts",
       "hint": "New alerts will appear here."
