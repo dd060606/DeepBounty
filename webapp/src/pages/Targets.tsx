@@ -9,7 +9,7 @@ import TargetSkeleton from "@/components/targets/TargetSkeleton";
 import ApiClient from "@/utils/api";
 import type { Target } from "@/utils/types";
 import { normalizeDomain } from "@/utils/domains";
-import { ConfirmDialog } from "@/components/dialogs/alerts";
+import { ConfirmDialog } from "@/components/dialogs/ConfirmDialog";
 
 export default function Targets() {
   const { t } = useTranslation();
