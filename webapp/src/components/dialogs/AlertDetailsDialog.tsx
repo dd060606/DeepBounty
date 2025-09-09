@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import SeverityBadge from "./SeverityBadge";
+import SeverityBadge from "../alerts/SeverityBadge";
 import type { Alert } from "@/utils/types";
 import { faviconUrl } from "@/utils/domains";
 import { useTranslation } from "react-i18next";

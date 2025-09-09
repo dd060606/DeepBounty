@@ -5,7 +5,7 @@ import AlertsSkeleton from "@/components/alerts/AlertsSkeleton";
 import type { Alert } from "@/utils/types";
 import { toast } from "sonner";
 import ApiClient from "@/utils/api";
-import AlertDetailsDialog from "@/components/alerts/AlertDetailsDialog";
+import AlertDetailsDialog from "@/components/dialogs/AlertDetailsDialog";
 
 export default function Alerts() {
   const { t } = useTranslation();
