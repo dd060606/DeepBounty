@@ -3,7 +3,7 @@ import path from "path";
 import yaml from "yaml";
 import { createRequire } from "module";
 import Logger from "@/utils/logger.js";
-import type { ServerAPI } from "../../sdk/index.js";
+import type { ServerAPI } from "../../sdk/src/index.js";
 
 const logger = new Logger("Modules-Loader");
 
@@ -41,7 +41,7 @@ function validateManifest(m: any): m is Manifest {
 function buildModuleSDK(moduleName: string): ServerAPI {
   return Object.freeze({
     version: "1.0.0",
-    logger: new Logger(`Mod-${moduleName}`),
+    logger: new Logger(`Module-${moduleName}`),
   });
 }
 

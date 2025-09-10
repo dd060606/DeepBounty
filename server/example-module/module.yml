@@ -1,0 +1,5 @@
+name: Example Module
+id: example
+version: 1.0.0
+entry: index.js
+author: Your name

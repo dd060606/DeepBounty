@@ -1,0 +1,20 @@
+{
+  "name": "@deepbounty/sdk",
+  "version": "1.0.0",
+  "description": "DeepBounty SDK for module development",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc"
+  },
+  "keywords": [
+    "deepbounty",
+    "sdk",
+    "module"
+  ],
+  "author": "dd_06",
+  "license": "GPL-3.0-only",
+  "devDependencies": {
+    "typescript": "^5.9.2"
+  }
+}
