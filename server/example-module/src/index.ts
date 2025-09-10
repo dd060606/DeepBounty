@@ -1,6 +1,6 @@
-import type { ServerAPI } from "../../sdk/index.js";
+import type { ServerAPI, PluginLifecycle } from "@deepbounty/sdk";
 
-export default class ExamplePlugin {
+export default class ExamplePlugin implements PluginLifecycle {
   constructor(private api: ServerAPI) {}
 
   async run() {

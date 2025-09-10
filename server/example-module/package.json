@@ -1,0 +1,24 @@
+{
+  "name": "example-module",
+  "version": "1.0.0",
+  "description": "Example module for DeepBounty",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc"
+  },
+  "keywords": [
+    "deepbounty",
+    "module"
+  ],
+  "author": "Your name",
+  "license": "GPL-3.0-only",
+  "dependencies": {
+    "@deepbounty/sdk": "^1.0.0"
+  },
+  "devDependencies": {
+    "@tsconfig/node22": "^22.0.2",
+    "typescript": "^5.9.2",
+    "@types/node": "^24.3.0"
+  }
+}
