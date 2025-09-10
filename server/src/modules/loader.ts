@@ -48,6 +48,8 @@ function buildModuleSDK(moduleName: string): ServerAPI {
 export function loadModules(baseDir: string): LoadedModule[] {
   const modules: LoadedModule[] = [];
 
+  logger.info(`Loading modules...`);
+
   if (!fs.existsSync(baseDir)) {
     logger.warn(`Module directory not found: ${baseDir}`);
     return modules;
@@ -109,6 +111,8 @@ export function loadModules(baseDir: string): LoadedModule[] {
       logger.error(`Failed to load '${dir}': ${msg}`);
     }
   }
+
+  logger.info(`Total modules loaded: ${modules.length}`);
 
   return modules;
 }
