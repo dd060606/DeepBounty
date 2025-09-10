@@ -4,8 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "docker compose build migrate && docker compose up -d db && docker compose run --rm migrate up && npm run build:plugins && tsx --watch --env-file .env src/server.ts",
-    "build:plugins": "node ./scripts/build-plugins.mjs",
+    "dev": "docker compose build migrate && docker compose up -d db && docker compose run --rm migrate up && tsx --watch --env-file .env src/server.ts",
     "migrate": "docker compose run --rm migrate",
     "create-migration": "npx node-pg-migrate -j ts create"
   },
@@ -34,7 +33,6 @@
     "@types/pg": "^8.15.5",
     "@types/swagger-ui-express": "^4.1.8",
     "node-pg-migrate": "^8.0.3",
-    "esbuild": "^0.24.0",
     "prettier": "^3.6.2",
     "tsx": "^4.20.4",
     "typescript": "^5.9.2"
