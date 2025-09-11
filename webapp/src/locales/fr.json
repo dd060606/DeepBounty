@@ -147,5 +147,19 @@
     "searchPlaceholder": "Rechercher par nom, domaine ou sous-domaine...",
     "activeScan": "Scan actif",
     "inactiveScan": "Scan inactif"
+  },
+  "modules": {
+    "searchPlaceholder": "Rechercher un module par nom, identifiant ou description...",
+    "name": "Nom",
+    "identifier": "Identifiant",
+    "version": "Version",
+    "description": "Description",
+    "empty": {
+      "title": "Aucun module",
+      "hint": "Les modules chargés apparaîtront ici."
+    },
+    "errors": {
+      "loadModules": "Impossible de charger les modules"
+    }
   }
 }
