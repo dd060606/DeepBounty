@@ -1,5 +1,6 @@
 name: Example Module
 id: example
+description: This is an example module for demonstration purposes.
 version: 1.0.0
 entry: dist/index.js
 author: Your name

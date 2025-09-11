@@ -10,6 +10,7 @@ const logger = new Logger("Modules-Loader");
 export interface LoadedModule {
   id: string;
   name: string;
+  description?: string;
   version: string;
   run: () => Promise<any>;
 }
@@ -17,6 +18,7 @@ export interface LoadedModule {
 type Manifest = {
   id: string;
   name: string;
+  description?: string;
   version: string;
   entry: string;
 };
@@ -43,6 +45,13 @@ function buildModuleSDK(moduleName: string): ServerAPI {
     version: "1.0.0",
     logger: new Logger(`Module-${moduleName}`),
   });
+}
+
+// Cache of loaded modules, accessible via getLoadedModules()
+let loadedModulesCache: LoadedModule[] = [];
+
+export function getLoadedModules(): LoadedModule[] {
+  return loadedModulesCache;
 }
 
 export function loadModules(baseDir: string): LoadedModule[] {
@@ -101,6 +110,7 @@ export function loadModules(baseDir: string): LoadedModule[] {
       modules.push({
         id: parsed.id,
         name: parsed.name,
+        description: parsed.description,
         version: parsed.version,
         run,
       });
@@ -127,5 +137,7 @@ export async function initModules(baseDir: string): Promise<LoadedModule[]> {
       logger.error(`Error while loading module ${m.id}`, e);
     }
   }
+  // Update loaded modules cache
+  loadedModulesCache = modules;
   return modules;
 }

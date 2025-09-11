@@ -489,3 +489,32 @@ paths:
           description: Alert not found
         "401":
           description: Unauthorized
+  /modules:
+    get:
+      summary: Retrieve a list of loaded modules
+      tags:
+        - Modules
+      security:
+        - sessionCookie: []
+      responses:
+        "200":
+          description: A list of loaded modules
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      example: "module-1"
+                    name:
+                      type: string
+                      example: "Module One"
+                    version:
+                      type: string
+                      example: "1.0.0"
+                    description:
+                      type: string
+                      example: "This is a sample module."
