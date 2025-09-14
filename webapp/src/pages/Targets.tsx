@@ -142,20 +142,24 @@ export default function Targets() {
 
   return (
     <div className="px-4 py-6 md:px-6">
-      <div className="mb-5 flex flex-row items-center justify-between gap-3 md:mb-2 md:px-3">
+      <div className="mb-5 flex items-center justify-between md:mb-6">
         <h1 className="text-foreground text-xl font-semibold">{t("nav.targets")}</h1>
-        <TargetDialog
-          mode="create"
-          trigger={<Button className="shrink-0">{t("targets.newTarget")}</Button>}
-          onSubmit={addNewTarget}
-        />
       </div>
-      <div className="mb-6 flex justify-center">
+      <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <Input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder={t("targets.searchPlaceholder")}
-          className="w-lg"
+          className="sm:max-w-xl"
+        />
+        <TargetDialog
+          mode="create"
+          trigger={
+            <Button className="flex w-full items-center justify-center gap-2 sm:w-auto">
+              {t("targets.newTarget")}
+            </Button>
+          }
+          onSubmit={addNewTarget}
         />
       </div>
 
