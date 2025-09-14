@@ -4,9 +4,17 @@ export interface Logger {
   error: (...args: any[]) => void;
 }
 
+export interface ConfigAPI {
+  get<T = any>(key: string, defaultValue?: T): Promise<T>;
+  set<T = any>(key: string, value: T): Promise<void>;
+  remove(key: string): Promise<void>;
+  getAll(): Promise<Record<string, any>>;
+}
+
 export interface ServerAPI {
   version: string; // SDK version
   logger: Logger;
+  config: ConfigAPI;
 }
 
 export interface PluginLifecycle {

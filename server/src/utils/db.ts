@@ -11,19 +11,15 @@ const pool = new Pool({
   database: process.env.DB_NAME,
 });
 
-export function initDatabase() {
+export async function initDatabase() {
   // Test connection on startup
-  setTimeout(() => {
-    pool
-      .connect()
-      .then((client) => {
-        client.release();
-        logger.info("Connection to the database succeeded");
-      })
-      .catch((err) => {
-        logger.error("Connection to the database failed", err);
-      });
-  }, 2000);
+  await new Promise((resolve) => setTimeout(resolve, 2000));
+  try {
+    await pool.connect();
+    logger.info("Connection to the database succeeded");
+  } catch (err) {
+    logger.error("Connection to the database failed", err);
+  }
 }
 
 export async function query<T extends QueryResultRow = QueryResultRow>(
