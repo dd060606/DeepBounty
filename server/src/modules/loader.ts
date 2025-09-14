@@ -3,7 +3,7 @@ import path from "path";
 import yaml from "yaml";
 import { createRequire } from "module";
 import Logger from "@/utils/logger.js";
-import type { ServerAPI } from "../../sdk/src/index.js";
+import { ModuleConfig } from "./moduleConfig.js";
 
 const logger = new Logger("Modules-Loader");
 
@@ -40,11 +40,12 @@ function validateManifest(m: any): m is Manifest {
 }
 
 // Build the SDK object passed to modules
-function buildModuleSDK(moduleName: string): ServerAPI {
+function buildModuleSDK(moduleId: string, moduleName: string) {
   return Object.freeze({
     version: "1.0.0",
     logger: new Logger(`Module-${moduleName}`),
-  });
+    config: new ModuleConfig(moduleId),
+  } as any);
 }
 
 // Cache of loaded modules, accessible via getLoadedModules()
@@ -94,7 +95,7 @@ export function loadModules(baseDir: string): LoadedModule[] {
       const mod = require(entry);
       const exported = mod?.default ?? mod;
 
-      const api = buildModuleSDK(parsed.name);
+      const api = buildModuleSDK(parsed.id, parsed.name);
       let instance = new exported(api);
 
       // Normalize run() method

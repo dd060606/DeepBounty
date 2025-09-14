@@ -13,12 +13,18 @@ import Targets from "./routes/targets.js";
 import Alerts from "./routes/alerts.js";
 import Modules from "./routes/modules.js";
 import { randomBytes } from "crypto";
+import path from "path";
+import { initModules } from "./modules/loader.js";
 
 const app = express();
 
 // Init
 initLogger();
-initDatabase();
+initDatabase().then(() => {
+  // Init modules asynchronously after database is ready
+  const modulesDir = path.join(process.cwd(), "modules");
+  initModules(modulesDir);
+});
 
 app.use(express.json());
 
