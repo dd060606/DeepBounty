@@ -4,11 +4,22 @@ export interface Logger {
   error: (...args: any[]) => void;
 }
 
+interface Setting {
+  name: string;
+  type: "checkbox" | "text" | "select" | "info";
+  default: any;
+  label: string;
+  value: any;
+}
+
 export interface ConfigAPI {
   get<T = any>(key: string, defaultValue?: T): Promise<T>;
   set<T = any>(key: string, value: T): Promise<void>;
   remove(key: string): Promise<void>;
   getAll(): Promise<Record<string, any>>;
+  getSetting(name: string): Promise<Setting>;
+  setSetting(name: string, value: any): Promise<void>;
+  getAllSettings(): Promise<Setting[]>;
 }
 
 export interface ServerAPI {
