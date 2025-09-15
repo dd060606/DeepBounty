@@ -3,7 +3,7 @@ import path from "path";
 import yaml from "yaml";
 import { createRequire } from "module";
 import Logger from "@/utils/logger.js";
-import { ModuleConfig } from "./moduleConfig.js";
+import { ModuleConfig, Setting } from "./moduleConfig.js";
 
 const logger = new Logger("Modules-Loader");
 
@@ -21,6 +21,7 @@ type Manifest = {
   description?: string;
   version: string;
   entry: string;
+  settings?: Setting[];
 };
 
 function readFirstExistingFile(files: string[]): string | null {
@@ -94,6 +95,9 @@ export function loadModules(baseDir: string): LoadedModule[] {
       const require = createRequire(import.meta.url);
       const mod = require(entry);
       const exported = mod?.default ?? mod;
+
+      // Initialize module settings (if any)
+      new ModuleConfig(parsed.id).initSettings(parsed.settings);
 
       const api = buildModuleSDK(parsed.id, parsed.name);
       let instance = new exported(api);
