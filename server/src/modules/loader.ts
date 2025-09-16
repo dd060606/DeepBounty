@@ -3,7 +3,7 @@ import path from "path";
 import yaml from "yaml";
 import { createRequire } from "module";
 import Logger from "@/utils/logger.js";
-import { ModuleConfig, Setting } from "./moduleConfig.js";
+import { ModuleConfig, Setting, validateSettings } from "./moduleConfig.js";
 
 const logger = new Logger("Modules-Loader");
 
@@ -46,7 +46,7 @@ function buildModuleSDK(moduleId: string, moduleName: string) {
     version: "1.0.0",
     logger: new Logger(`Module-${moduleName}`),
     config: new ModuleConfig(moduleId),
-  } as any);
+  });
 }
 
 // Cache of loaded modules, accessible via getLoadedModules()
@@ -56,7 +56,7 @@ export function getLoadedModules(): LoadedModule[] {
   return loadedModulesCache;
 }
 
-export function loadModules(baseDir: string): LoadedModule[] {
+export async function loadModules(baseDir: string): Promise<LoadedModule[]> {
   const modules: LoadedModule[] = [];
 
   logger.info(`Loading modules...`);
@@ -96,8 +96,14 @@ export function loadModules(baseDir: string): LoadedModule[] {
       const mod = require(entry);
       const exported = mod?.default ?? mod;
 
+      // Validate settings structure if any
+      if (parsed.settings && !validateSettings(parsed.settings)) {
+        logger.warn(`Invalid settings structure in module '${parsed.id}'`);
+        continue;
+      }
+
       // Initialize module settings (if any)
-      new ModuleConfig(parsed.id).initSettings(parsed.settings);
+      await new ModuleConfig(parsed.id).initSettings(parsed.settings);
 
       const api = buildModuleSDK(parsed.id, parsed.name);
       let instance = new exported(api);
@@ -133,7 +139,7 @@ export function loadModules(baseDir: string): LoadedModule[] {
 }
 
 export async function initModules(baseDir: string): Promise<LoadedModule[]> {
-  const modules = loadModules(baseDir);
+  const modules = await loadModules(baseDir);
   for (const m of modules) {
     try {
       // Initialize the module

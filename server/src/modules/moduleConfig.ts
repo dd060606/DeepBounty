@@ -1,4 +1,7 @@
 import { query } from "@/utils/db.js";
+import Logger from "@/utils/logger.js";
+
+const logger = new Logger("ModuleConfig");
 
 export interface Setting {
   name: string;
@@ -51,39 +54,39 @@ export class ModuleConfig {
 
   // Initialize settings (only if they don't exist yet)
   async initSettings(settings?: Setting[]): Promise<void> {
-    if (settings?.length === 0) {
-      const existingSettings = (await this.get<Record<string, any>[]>("settings", [])) || [];
-      const mergedSettings = [...existingSettings];
-
-      // Add new settings that don't exist yet
-      for (const s of settings) {
-        if (!existingSettings.find((es) => es.name === s.name)) {
-          mergedSettings.push({ ...s, value: s.default });
-        }
-      }
-
-      // Remove unused settings
-      for (let i = mergedSettings.length - 1; i >= 0; i--) {
-        if (!settings.find((s) => s.name === mergedSettings[i].name)) {
-          mergedSettings.splice(i, 1);
-        }
-      }
-      await this.set("settings", mergedSettings);
+    if (!settings || settings.length === 0) {
+      // If no settings provided, remove existing settings
+      await this.remove("settings");
+      return;
     }
+    const existingSettings = (await this.get<Record<string, any>[]>("settings", [])) || [];
+    const mergedSettings = [...existingSettings];
+
+    // Add new settings that don't exist yet
+    for (const s of settings) {
+      if (!existingSettings.find((es) => es.name === s.name)) {
+        mergedSettings.push({ ...s, value: s.default });
+      }
+    }
+
+    // Remove unused settings
+    for (let i = mergedSettings.length - 1; i >= 0; i--) {
+      if (!settings.find((s) => s.name === mergedSettings[i].name)) {
+        mergedSettings.splice(i, 1);
+      }
+    }
+    await this.set("settings", mergedSettings);
   }
 
   // Get a specific setting (with its metadata)
-  async getSetting(name: string): Promise<Setting> {
+  async getSetting(name: string): Promise<Setting | null> {
     const settings = (await this.get<Record<string, any>[]>("settings", [])) || [];
     const setting = settings.find((s) => s.name === name);
-    if (!setting) throw new Error(`Setting with name "${name}" not found`);
-    return {
-      name: setting.name,
-      type: setting.type,
-      default: setting.default,
-      label: setting.label,
-      value: setting.value,
-    };
+    if (!setting) {
+      logger.error(`Setting with name "${name}" not found`);
+      return null;
+    }
+    return setting as Setting;
   }
 
   // Update an existing setting
@@ -94,7 +97,7 @@ export class ModuleConfig {
       setting.value = value;
       return this.set("settings", settings);
     }
-    throw new Error(`Setting with name "${name}" not found`);
+    logger.error(`Setting with name "${name}" not found`);
   }
 
   // Get all settings (with their metadata)
@@ -108,4 +111,30 @@ export class ModuleConfig {
       value: s.value,
     }));
   }
+}
+
+// Check settings structure
+export function validateSettings(settings: any): settings is Setting[] {
+  if (!Array.isArray(settings)) return false;
+  for (const s of settings) {
+    if (!validateSingleSetting(s)) return false;
+  }
+  return true;
+}
+
+// Validate a single setting structure
+function validateSingleSetting(setting: any): setting is Setting {
+  if (typeof setting !== "object" || setting === null) return false;
+  if (typeof setting.name !== "string") return false;
+  if (!["checkbox", "text", "select", "info"].includes(setting.type)) return false;
+  if (typeof setting.label !== "string") return false;
+  if (setting.type === "checkbox" && typeof setting.default !== "boolean") return false;
+  if (setting.type === "text" && typeof setting.default !== "string") return false;
+  if (
+    setting.type === "select" &&
+    (!Array.isArray(setting.options) || typeof setting.default !== "string")
+  ) {
+    return false;
+  }
+  return true;
 }
