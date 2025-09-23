@@ -1,6 +1,11 @@
-import type { Module } from "@/utils/types";
+import type { Module, ModuleSetting } from "@/utils/types";
 import { Button } from "@/components/ui/button";
 import { Settings } from "lucide-react";
+import { useState } from "react";
+import ModuleDialog from "@/components/dialogs/ModuleDialog";
+import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
+import ApiClient from "@/utils/api";
 
 type Props = {
   module: Module;
@@ -8,6 +13,18 @@ type Props = {
 };
 
 export default function ModuleCard({ module, onClick }: Props) {
+  const { t } = useTranslation();
+  const [open, setOpen] = useState(false);
+
+  async function saveSettings(settings: ModuleSetting[]) {
+    try {
+      await ApiClient.post(`/modules/${module.id}/settings`, { settings });
+      toast.success(t("modules.dialog.saved"));
+    } catch {
+      toast.error(t("modules.errors.saveSettings"));
+      throw new Error("save failed");
+    }
+  }
   return (
     <div
       onClick={() => onClick?.(module)}
@@ -28,9 +45,25 @@ export default function ModuleCard({ module, onClick }: Props) {
           </div>
         </div>
         {/* Settings button */}
-        <Button size="icon" variant="ghost" className="p-2">
-          <Settings className="size-5" />
-        </Button>
+        <ModuleDialog
+          module={module}
+          open={open}
+          onOpenChange={setOpen}
+          onSubmit={saveSettings}
+          trigger={
+            <Button
+              size="icon"
+              variant="ghost"
+              className="p-2"
+              onClick={(e) => {
+                e.stopPropagation();
+                setOpen(true);
+              }}
+            >
+              <Settings className="size-5" />
+            </Button>
+          }
+        />
       </div>
 
       {module.description ? (

@@ -518,3 +518,26 @@ paths:
                     description:
                       type: string
                       example: "This is a sample module."
+                    settings:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          name:
+                            type: string
+                            example: "feature1"
+                          type:
+                            type: string
+                            enum: [checkbox, text, select, info]
+                            example: "checkbox"
+                          label:
+                            type: string
+                            example: "Enable Feature 1"
+                          default:
+                            type: string
+                            example: "true"
+                          options:
+                            type: array
+                            items:
+                              type: string
+                            example: ["option1", "option2", "option3"]

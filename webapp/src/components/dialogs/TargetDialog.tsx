@@ -280,7 +280,7 @@ export default function TargetDialog({
                       variant="outline"
                       onClick={() => handleAddRow()}
                     >
-                      <Plus className="mr-1 h-4 w-4" /> {t("targets.form.add")}
+                      <Plus className="mr-1 h-4 w-4" /> {t("common.add")}
                     </Button>
                   </div>
                   <div className="border-border rounded-lg border p-2">
@@ -413,7 +413,7 @@ export default function TargetDialog({
               onClick={() => handleOpenChange(false)}
               disabled={saving}
             >
-              {t("targets.form.cancel")}
+              {t("common.cancel")}
             </Button>
             <Button type="submit" disabled={saving || hasErrors} className="min-w-[120px]">
               {saving ? (
@@ -421,9 +421,9 @@ export default function TargetDialog({
                   <Loader2Icon className="h-4 w-4 animate-spin" />
                 </span>
               ) : mode === "create" ? (
-                t("targets.form.add")
+                t("common.add")
               ) : (
-                t("targets.form.save")
+                t("common.save")
               )}
             </Button>
           </DialogFooter>

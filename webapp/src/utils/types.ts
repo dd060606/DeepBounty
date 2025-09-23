@@ -36,4 +36,16 @@ export type Module = {
   version: string;
   // Short description
   description?: string;
+  // Settings
+  settings: ModuleSetting[];
+};
+
+export type ModuleSetting = {
+  name: string;
+  type: "checkbox" | "text" | "select" | "info";
+  default: string | boolean;
+  label: string;
+  value: string | boolean;
+  // Optional options for select-type settings
+  options?: string[];
 };

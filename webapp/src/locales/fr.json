@@ -7,7 +7,9 @@
     "date": "Date",
     "domain": "Domaine",
     "subdomain": "Sous-domaine",
-    "close": "Fermer"
+    "close": "Fermer",
+    "add": "Ajouter",
+    "save": "Enregistrer"
   },
   "nav": {
     "alerts": "Alertes",
@@ -102,9 +104,6 @@
       "companyName": "Nom de l'entreprise",
       "mainDomain": "Domaine principal",
       "subdomains": "Sous-domaines in-scope",
-      "add": "Ajouter",
-      "save": "Enregistrer",
-      "cancel": "Annuler",
       "addSubdomainTitle": "Ajouter un sous-domaine",
       "removeSubdomainTitle": "Supprimer ce sous-domaine",
       "activeScan": "Scan actif",
@@ -158,8 +157,14 @@
       "title": "Aucun module",
       "hint": "Les modules chargés apparaîtront ici."
     },
+    "dialog": {
+      "description": "Configurez le comportement de ce module.",
+      "save": "Enregistrer les paramètres",
+      "saved": "Paramètres du module enregistrés"
+    },
     "errors": {
-      "loadModules": "Impossible de charger les modules"
+      "loadModules": "Impossible de charger les modules",
+      "saveSettings": "Impossible d'enregistrer les paramètres du module"
     }
   }
 }
