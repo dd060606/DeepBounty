@@ -12,7 +12,18 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2Icon } from "lucide-react";
+import { InfoIcon, Loader2Icon } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 
 type ModuleDialogProps = {
   module: Module;
@@ -78,55 +89,64 @@ export default function ModuleDialog({
           </DialogHeader>
 
           {/* Scrollable content */}
-          <div className="border-border/60 bg-card/50 scrollbar-thin mt-4 flex-1 overflow-y-auto rounded-md border p-4">
+          <div className="scrollbar-thin mt-4 flex-1 overflow-y-auto p-4">
             <div className="space-y-4">
               {settings.map((s) => {
                 if (s.type === "info") {
+                  // Info
                   return (
-                    <div key={s.name} className="text-muted-foreground text-sm">
-                      <div className="text-foreground mb-1 text-xs font-medium">{s.label}</div>
-                      <div className="bg-muted/40 rounded-md p-3 text-xs">
-                        {String(s.value ?? s.default)}
-                      </div>
-                    </div>
+                    <Alert>
+                      <InfoIcon />
+                      <AlertTitle>{s.label}</AlertTitle>
+                      <AlertDescription>{s.value as string}</AlertDescription>
+                    </Alert>
                   );
                 }
 
                 if (s.type === "checkbox") {
-                  // No custom style yet, keep minimal native checkbox
+                  // Checkbox
                   return (
-                    <label key={s.name} className="flex items-center gap-2 text-sm">
-                      <input
-                        type="checkbox"
+                    <div className="flex items-center gap-3">
+                      <Checkbox
+                        id={s.name}
+                        className="size-5"
                         checked={Boolean(s.value)}
-                        onChange={(e) => updateSetting(s.name, e.target.checked)}
+                        onCheckedChange={(checked) => updateSetting(s.name, checked)}
                       />
-                      <span className="text-foreground">{s.label}</span>
-                    </label>
-                  );
-                }
-
-                if (s.type === "select") {
-                  // Keep unstyled native select for now
-                  return (
-                    <div key={s.name} className="space-y-1">
-                      <div className="text-foreground text-xs font-medium">{s.label}</div>
-                      <select
-                        className="border-border bg-background w-full rounded-md border px-3 py-2 text-sm"
-                        value={String(s.value)}
-                        onChange={(e) => updateSetting(s.name, e.target.value)}
-                      >
-                        {(s.options || []).map((opt) => (
-                          <option key={opt} value={opt}>
-                            {opt}
-                          </option>
-                        ))}
-                      </select>
+                      <Label htmlFor={s.name} className="cursor-pointer">
+                        {s.label}
+                      </Label>
                     </div>
                   );
                 }
 
-                // text
+                if (s.type === "select") {
+                  // Select
+                  return (
+                    <div key={s.name} className="space-y-1">
+                      <Label className="text-foreground text-xs font-medium">{s.label}</Label>
+                      <Select
+                        defaultValue={s.value as string}
+                        onValueChange={(val) => updateSetting(s.name, val)}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder={s.label} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectGroup>
+                            {s.options?.map((opt) => (
+                              <SelectItem key={opt} value={opt}>
+                                {opt}
+                              </SelectItem>
+                            ))}
+                          </SelectGroup>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  );
+                }
+
+                // Input
                 return (
                   <div key={s.name} className="space-y-1">
                     <div className="text-foreground text-xs font-medium">{s.label}</div>
