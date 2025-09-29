@@ -287,9 +287,9 @@ paths:
           description: Target not found
         "401":
           description: Unauthorized
-  /targets/subdomains/{targetId}:
+  /targets/{id}/subdomains:
     parameters:
-      - name: targetId
+      - name: id
         in: path
         required: true
         schema:
@@ -335,9 +335,9 @@ paths:
           description: Invalid request
         "401":
           description: Unauthorized
-  /targets/settings/{targetId}:
+  /targets/{id}/settings:
     parameters:
-      - name: targetId
+      - name: id
         in: path
         required: true
         schema:
@@ -541,3 +541,56 @@ paths:
                             items:
                               type: string
                             example: ["option1", "option2", "option3"]
+  /modules/{id}/settings:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Module ID
+    post:
+      summary: Update settings for a module
+      tags:
+        - Modules
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                type: object
+                properties:
+                  name:
+                    type: string
+                    example: "feature1"
+                  type:
+                    type: string
+                    enum: [checkbox, text, select, info]
+                    example: "checkbox"
+                  label:
+                    type: string
+                    example: "Enable Feature 1"
+                  default:
+                    type: string
+                    example: "true"
+                  value:
+                    type: string
+                    example: "false"
+                  options:
+                    type: array
+                    items:
+                      type: string
+                    example: ["option1", "option2", "option3"]
+      responses:
+        "200":
+          description: Module settings updated successfully
+        "400":
+          description: Invalid request
+        "404":
+          description: Module not found
+        "401":
+          description: Unauthorized

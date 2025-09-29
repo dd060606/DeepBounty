@@ -10,16 +10,18 @@ import ApiClient from "@/utils/api";
 type Props = {
   module: Module;
   onClick?: (m: Module) => void;
+  onSettingsChange?: (newSettings: ModuleSetting[]) => void;
 };
 
-export default function ModuleCard({ module, onClick }: Props) {
+export default function ModuleCard({ module, onClick, onSettingsChange }: Props) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
 
   async function saveSettings(settings: ModuleSetting[]) {
     try {
-      await ApiClient.post(`/modules/${module.id}/settings`, { settings });
+      await ApiClient.post(`/modules/${module.id}/settings`, settings);
       toast.success(t("modules.dialog.saved"));
+      onSettingsChange?.(settings);
     } catch {
       toast.error(t("modules.errors.saveSettings"));
       throw new Error("save failed");

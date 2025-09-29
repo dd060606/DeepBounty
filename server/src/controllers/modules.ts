@@ -26,3 +26,23 @@ export const getModules = async (req: Request, res: Response) => {
     res.status(500).json({ error: "Internal server error" });
   }
 };
+
+export const updateModuleSettings = async (req: Request, res: Response) => {
+  const moduleId = req.params.id;
+
+  try {
+    // Update the module settings in the database
+    const result = await query(
+      'UPDATE modules_configs SET "value" = $1 WHERE "moduleId" = $2 AND "key" = \'settings\' RETURNING "moduleId"',
+      [JSON.stringify(req.body), moduleId]
+    );
+    if (result.length === 0) {
+      return res.status(404).json({ error: "Target not found" });
+    }
+    logger.info(`Updated settings for module ID ${moduleId}`);
+    res.status(204).send();
+  } catch (error) {
+    logger.error("Error updating module settings", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};

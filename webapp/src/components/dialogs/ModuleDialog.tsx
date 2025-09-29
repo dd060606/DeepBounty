@@ -95,7 +95,7 @@ export default function ModuleDialog({
                 if (s.type === "info") {
                   // Info
                   return (
-                    <Alert>
+                    <Alert key={s.name}>
                       <InfoIcon />
                       <AlertTitle>{s.label}</AlertTitle>
                       <AlertDescription>{s.value as string}</AlertDescription>
@@ -106,7 +106,7 @@ export default function ModuleDialog({
                 if (s.type === "checkbox") {
                   // Checkbox
                   return (
-                    <div className="flex items-center gap-3">
+                    <div key={s.name} className="flex items-center gap-3">
                       <Checkbox
                         id={s.name}
                         className="size-5"
@@ -162,6 +162,7 @@ export default function ModuleDialog({
           </div>
 
           <DialogFooter className="mt-4">
+            {/* Action buttons */}
             <Button
               type="button"
               variant="outline"
