@@ -70,7 +70,7 @@ export default function Targets() {
     // Then, create the subdomains
     try {
       if (res?.data.id) {
-        await ApiClient.post(`/targets/subdomains/${res.data.id}`, data.subdomains);
+        await ApiClient.post(`/targets/${res.data.id}/subdomains`, data.subdomains);
       } else {
         throw new Error("No target ID returned from server");
       }
@@ -82,7 +82,7 @@ export default function Targets() {
     if (data.settings) {
       try {
         if (res?.data.id) {
-          await ApiClient.post(`/targets/settings/${res.data.id}`, data.settings);
+          await ApiClient.post(`/targets/${res.data.id}/settings`, data.settings);
         } else {
           throw new Error("No target ID returned from server");
         }
@@ -109,14 +109,14 @@ export default function Targets() {
     }
     // Then, update subdomains
     try {
-      await ApiClient.post(`/targets/subdomains/${edit!.id}`, data.subdomains);
+      await ApiClient.post(`/targets/${edit!.id}/subdomains`, data.subdomains);
     } catch {
       success = false;
       toast.error(t("targets.errors.subdomains"));
     }
     // Finally, update settings
     try {
-      await ApiClient.post(`/targets/settings/${edit!.id}`, data.settings);
+      await ApiClient.post(`/targets/${edit!.id}/settings`, data.settings);
     } catch {
       success = false;
       toast.error(t("targets.errors.settings"));

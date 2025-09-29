@@ -10,7 +10,7 @@ import {
   getTargetsFull,
 } from "@/controllers/targets.js";
 import { validateBody, validateParams } from "@/middlewares/validate.js";
-import { idParamSchema, targetIdParamSchema } from "@/schemas/commonSchema.js";
+import { idParamSchema } from "@/schemas/commonSchema.js";
 import { addSubdomainsSchema, addTargetSchema } from "@/schemas/targetSchema.js";
 import { Router } from "express";
 
@@ -31,21 +31,21 @@ router.patch("/:id", validateParams(idParamSchema), validateBody(addTargetSchema
 // DELETE /targets/:id
 router.delete("/:id", validateParams(idParamSchema), deleteTarget);
 
-// GET /targets/subdomains/:targetId
-router.get("/subdomains/:targetId", validateParams(targetIdParamSchema), getTargetSubdomains);
+// GET /targets/:id/subdomains
+router.get("/:id/subdomains", validateParams(idParamSchema), getTargetSubdomains);
 
-// POST /targets/subdomains/:targetId
+// POST /targets/:id/subdomains
 router.post(
-  "/subdomains/:targetId",
-  validateParams(targetIdParamSchema),
+  "/:id/subdomains",
+  validateParams(idParamSchema),
   validateBody(addSubdomainsSchema),
   setTargetSubdomains
 );
 
-// GET /targets/settings/:targetId
-router.get("/settings/:targetId", validateParams(targetIdParamSchema), getTargetSettings);
+// GET /targets/:id/settings
+router.get("/:id/settings", validateParams(idParamSchema), getTargetSettings);
 
-// POST /targets/settings/:targetId
-router.post("/settings/:targetId", validateParams(targetIdParamSchema), setTargetSettings);
+// POST /targets/:id/settings
+router.post("/:id/settings", validateParams(idParamSchema), setTargetSettings);
 
 export default router;

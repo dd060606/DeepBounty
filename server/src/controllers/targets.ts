@@ -114,11 +114,11 @@ export function deleteTarget(req: Request, res: Response) {
     });
 }
 
-// GET /targets/subdomains/:targetId - get all subdomains for a specific target
+// GET /targets/:id/subdomains - get all subdomains for a specific target
 export function getTargetSubdomains(req: Request, res: Response) {
-  const { targetId } = req.params;
+  const { id } = req.params;
 
-  query('SELECT subdomain FROM targets_subdomains WHERE "targetId" = $1', [targetId])
+  query('SELECT subdomain FROM targets_subdomains WHERE "targetId" = $1', [id])
     .then((subdomains) => {
       res.json(subdomains.map((sd) => sd.subdomain));
     })
@@ -128,32 +128,32 @@ export function getTargetSubdomains(req: Request, res: Response) {
     });
 }
 
-// POST /targets/subdomains/:targetId - add / edit subdomains for a specific target
+// POST /targets/:id/subdomains  add / edit subdomains for a specific target
 export function setTargetSubdomains(req: Request, res: Response) {
-  const { targetId } = req.params;
+  const { id } = req.params;
   // Update subdomains in the database
-  query('DELETE FROM targets_subdomains WHERE "targetId" = $1', [targetId])
+  query('DELETE FROM targets_subdomains WHERE "targetId" = $1', [id])
     .then(() => {
       const promises = req.body.map((sd: string) =>
-        query('INSERT INTO targets_subdomains ("targetId", subdomain) VALUES ($1, $2)', [
-          targetId,
-          sd,
-        ])
+        query('INSERT INTO targets_subdomains ("targetId", subdomain) VALUES ($1, $2)', [id, sd])
       );
       return Promise.all(promises);
     })
-    .then(() => res.sendStatus(200))
+    .then(() => {
+      logger.info(`Updated subdomains for target ID ${id}`);
+      res.sendStatus(200);
+    })
     .catch((error) => {
       logger.error("Error updating subdomains:", error);
       res.status(500).json({ error: "Internal server error" });
     });
 }
 
-// GET /targets/settings/:targetId - get all settings for a specific target
+// GET /targets/:id/settings - get all settings for a specific target
 export function getTargetSettings(req: Request, res: Response) {
-  const { targetId } = req.params;
+  const { id } = req.params;
 
-  query('SELECT settings FROM targets_settings WHERE "targetId" = $1', [targetId])
+  query('SELECT settings FROM targets_settings WHERE "targetId" = $1', [id])
     .then((rows) => {
       res.json(rows[0]?.settings || {});
     })
@@ -163,22 +163,25 @@ export function getTargetSettings(req: Request, res: Response) {
     });
 }
 
-// POST /targets/settings/:targetId - add / edit settings for a specific target
+// POST /targets/:id/settings - add / edit settings for a specific target
 export function setTargetSettings(req: Request, res: Response) {
-  const { targetId } = req.params;
+  const { id } = req.params;
   const settings = req.body;
   if (!settings) {
     return res.status(400).json({ error: "Settings are required" });
   }
   // Update settings in the database
-  query('DELETE FROM targets_settings WHERE "targetId" = $1', [targetId])
+  query('DELETE FROM targets_settings WHERE "targetId" = $1', [id])
     .then(() => {
       return query('INSERT INTO targets_settings ("targetId", settings) VALUES ($1, $2)', [
-        targetId,
+        id,
         settings,
       ]);
     })
-    .then(() => res.sendStatus(200))
+    .then(() => {
+      logger.info(`Updated settings for target ID ${id}`);
+      res.sendStatus(200);
+    })
     .catch((error) => {
       logger.error("Error updating settings:", error);
       res.status(500).json({ error: "Internal server error" });

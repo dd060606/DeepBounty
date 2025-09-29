@@ -76,7 +76,19 @@ export default function Modules() {
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((m) => (
-            <ModuleCard key={m.id} module={m} />
+            <ModuleCard
+              key={m.id}
+              module={m}
+              onSettingsChange={(newSettings) => {
+                // Update the module settings in the list
+                setModules(
+                  (modules) =>
+                    modules?.map((mod) =>
+                      mod.id === m.id ? { ...mod, settings: newSettings } : mod
+                    ) || null
+                );
+              }}
+            />
           ))}
         </div>
       )}

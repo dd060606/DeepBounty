@@ -6,9 +6,9 @@ const logger = new Logger("ModuleConfig");
 export interface Setting {
   name: string;
   type: "checkbox" | "text" | "select" | "info";
-  default: any;
+  default: string | boolean;
   label: string;
-  value: any;
+  value?: string | boolean;
 }
 
 export class ModuleConfig {

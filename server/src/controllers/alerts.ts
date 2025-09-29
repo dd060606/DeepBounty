@@ -77,6 +77,7 @@ export async function addAlert(req: Request, res: Response) {
     );
     const t = target[0];
 
+    logger.info(`New alert ${a.id} (${a.name}) for target ID ${a.targetId}`);
     res.status(201).json({
       id: a.id,
       name: a.name,
