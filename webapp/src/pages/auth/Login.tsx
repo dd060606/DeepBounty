@@ -28,6 +28,8 @@ export default function Login() {
       .catch((error) => {
         if (error.response?.status === 401) {
           setError(t("auth.errors.wrongPassword"));
+        } else if (error.response?.status === 429) {
+          setError(t("auth.errors.tooManyRequests"));
         } else {
           setError(t("auth.errors.login"));
         }

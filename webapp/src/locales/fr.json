@@ -60,7 +60,8 @@
       "retry": "Réessayer",
       "wrongPassword": "Mot de passe incorrect",
       "setupFailed": "Erreur lors de la création du mot de passe",
-      "login": "Une erreur est survenue lors de la connexion"
+      "login": "Une erreur est survenue lors de la connexion",
+      "tooManyRequests": "Trop de tentatives de connexion. Veuillez patienter et réessayer plus tard."
     }
   },
   "lostPassword": {
