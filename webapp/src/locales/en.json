@@ -61,7 +61,8 @@
       "retry": "Retry",
       "wrongPassword": "Wrong password",
       "setupFailed": "Failed to create password",
-      "login": "An error occurred during login"
+      "login": "An error occurred during login",
+      "tooManyRequests": "Too many login attempts. Please wait and try again later."
     }
   },
   "lostPassword": {
