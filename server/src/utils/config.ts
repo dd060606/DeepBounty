@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import { randomBytes } from "crypto";
 
 const CONFIG_DIR = path.join(process.cwd(), "config");
 const CONFIG_PATH = path.join(CONFIG_DIR, "config.json");
@@ -8,12 +9,14 @@ const CONFIG_PATH = path.join(CONFIG_DIR, "config.json");
 export type Config = {
   password: string;
   enableSwaggerUi: boolean;
+  secretWorkerKey: string;
   [key: string]: any;
 };
 
 const DEFAULT_CONFIG: Config = {
   password: "",
   enableSwaggerUi: false,
+  secretWorkerKey: randomBytes(20).toString("hex"),
 };
 
 let cachedConfig: Config | null = null;
