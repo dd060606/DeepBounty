@@ -1,4 +1,5 @@
 {
   "password": "BCRYPT_HASHED_PASSWORD",
-  "enableSwaggerUi": false
+  "enableSwaggerUi": false,
+  "secretWorkerKey": "RANDOMLY_GENERATED_20_CHARACTER_HEX_STRING"
 }
