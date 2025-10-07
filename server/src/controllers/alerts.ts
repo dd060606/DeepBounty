@@ -1,40 +1,16 @@
 import { query } from "@/utils/db.js";
 import Logger from "@/utils/logger.js";
+import { Alert } from "@deepbounty/types";
+import { sql } from "drizzle-orm";
 import { Request, Response } from "express";
 
 const logger = new Logger("Alerts");
 
-/* Shape expected by frontend
-type Alert = {
-  id: number;
-  name: string;
-  targetName: string;
-  domain: string;
-  subdomain: string;
-  score: number;
-  confirmed: boolean;
-  description: string;
-  endpoint: string;
-  createdAt: string;
-};
-*/
-
 // GET /alerts - list all alerts joined with target name and domain
 export async function getAlerts(req: Request, res: Response) {
   try {
-    const rows = await query<{
-      id: number;
-      name: string;
-      targetName: string;
-      domain: string;
-      subdomain: string;
-      score: number;
-      confirmed: boolean;
-      description: string;
-      endpoint: string;
-      createdAt: string;
-    }>(
-      `SELECT 
+    const rows = await query<Alert>(
+      sql`SELECT 
         a.id,
         a.name,
         t.name AS "targetName",
@@ -62,33 +38,31 @@ export async function addAlert(req: Request, res: Response) {
   try {
     const { targetId, name, subdomain, score, confirmed = false, description, endpoint } = req.body;
 
-    const inserted = await query(
-      `INSERT INTO alerts ("targetId", name, subdomain, score, confirmed, description, endpoint)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
-       RETURNING id, "targetId", name, subdomain, score, confirmed, description, endpoint, "createdAt"`,
-      [targetId, name, subdomain, score, confirmed, description, endpoint]
+    const inserted = await query<Alert & { targetId: number }>(
+      sql`INSERT INTO alerts ("targetId", name, subdomain, score, confirmed, description, endpoint)
+       VALUES (${targetId}, ${name}, ${subdomain}, ${score}, ${confirmed}, ${description}, ${endpoint})
+       RETURNING id, "targetId", name, subdomain, score, confirmed, description, endpoint, "createdAt"`
     );
 
-    const a = inserted[0];
+    const alert = inserted[0];
     // Enrich with target details for response
     const target = await query<{ name: string; domain: string }>(
-      `SELECT name, domain FROM targets WHERE id = $1`,
-      [a.targetId]
+      sql`SELECT name, domain FROM targets WHERE id = ${alert.targetId}`
     );
     const t = target[0];
 
-    logger.info(`New alert ${a.id} (${a.name}) for target ID ${a.targetId}`);
+    logger.info(`New alert ${alert.id} (${alert.name}) for target ID ${alert.targetId}`);
     res.status(201).json({
-      id: a.id,
-      name: a.name,
+      id: alert.id,
+      name: alert.name,
       targetName: t?.name ?? "",
       domain: t?.domain ?? "",
-      subdomain: a.subdomain,
-      score: a.score,
-      confirmed: a.confirmed,
-      description: a.description,
-      endpoint: a.endpoint,
-      createdAt: new Date(a.createdAt).toISOString(),
+      subdomain: alert.subdomain,
+      score: alert.score,
+      confirmed: alert.confirmed,
+      description: alert.description,
+      endpoint: alert.endpoint,
+      createdAt: new Date(alert.createdAt).toISOString(),
     });
   } catch (error) {
     logger.error("Error adding alert:", error);
@@ -100,7 +74,9 @@ export async function addAlert(req: Request, res: Response) {
 export async function deleteAlert(req: Request, res: Response) {
   try {
     const { id } = req.params as { id: string };
-    const deleted = await query(`DELETE FROM alerts WHERE id = $1 RETURNING id, name`, [id]);
+    const deleted = await query<{ id: number; name: string }>(
+      sql`DELETE FROM alerts WHERE id = ${id} RETURNING id, name`
+    );
     if (deleted.length === 0) {
       return res.status(404).json({ error: "Alert not found" });
     }

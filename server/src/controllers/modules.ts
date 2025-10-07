@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import Logger from "@/utils/logger.js";
 import { getLoadedModules } from "@/modules/loader.js";
 import { query } from "@/utils/db.js";
+import { sql } from "drizzle-orm";
 
 const logger = new Logger("Modules");
 
@@ -9,8 +10,8 @@ const logger = new Logger("Modules");
 export const getModules = async (req: Request, res: Response) => {
   try {
     // Get settings for all modules
-    const settings = await query(
-      'SELECT "moduleId", "value" FROM modules_configs WHERE "key" = \'settings\''
+    const settings = await query<{ moduleId: string; value: string }>(
+      sql`SELECT "moduleId", "value" FROM modules_configs WHERE "key" = 'settings'`
     );
     // Modules with their info and settings
     const modules = getLoadedModules().map((m) => ({
@@ -33,8 +34,7 @@ export const updateModuleSettings = async (req: Request, res: Response) => {
   try {
     // Update the module settings in the database
     const result = await query(
-      'UPDATE modules_configs SET "value" = $1 WHERE "moduleId" = $2 AND "key" = \'settings\' RETURNING "moduleId"',
-      [JSON.stringify(req.body), moduleId]
+      sql`UPDATE modules_configs SET "value" = ${JSON.stringify(req.body)} WHERE "moduleId" = ${moduleId} AND "key" = 'settings' RETURNING "moduleId"`
     );
     if (result.length === 0) {
       return res.status(404).json({ error: "Target not found" });
