@@ -4,9 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "docker compose build migrate && docker compose up -d db && docker compose run --rm migrate up && tsx --watch --env-file .env src/server.ts",
-    "migrate": "docker compose run --rm migrate",
-    "create-migration": "npx node-pg-migrate -j ts create"
+    "dev": "docker compose up -d && tsx --watch --env-file .env src/server.ts"
   },
   "keywords": [],
   "author": "",
@@ -16,6 +14,8 @@
     "@deepbounty/types": "*",
     "bcrypt": "^6.0.0",
     "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "drizzle-orm": "^0.44.6",
     "express": "^5.1.0",
     "express-rate-limit": "^8.1.0",
     "express-session": "^1.18.2",
@@ -36,7 +36,7 @@
     "@types/pg": "^8.15.5",
     "@types/swagger-ui-express": "^4.1.8",
     "@types/ws": "^8.18.1",
-    "node-pg-migrate": "^8.0.3",
+    "drizzle-kit": "^0.31.5",
     "prettier": "^3.6.2",
     "tsx": "^4.20.4",
     "typescript": "^5.9.2"

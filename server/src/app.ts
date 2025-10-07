@@ -20,11 +20,15 @@ const app = express();
 
 // Init
 initLogger();
-initDatabase().then(() => {
-  // Init modules asynchronously after database is ready
-  const modulesDir = path.join(process.cwd(), "modules");
-  initModules(modulesDir);
-});
+initDatabase()
+  .then(() => {
+    // Init modules asynchronously after database is ready
+    const modulesDir = path.join(process.cwd(), "modules");
+    initModules(modulesDir);
+  })
+  .catch((err) => {
+    process.exit(1);
+  });
 
 app.use(express.json());
 

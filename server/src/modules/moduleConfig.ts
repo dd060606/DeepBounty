@@ -1,6 +1,7 @@
 import { query } from "@/utils/db.js";
 import Logger from "@/utils/logger.js";
 import { ModuleSetting } from "@deepbounty/types";
+import { sql } from "drizzle-orm";
 
 const logger = new Logger("ModuleConfig");
 
@@ -8,9 +9,8 @@ export class ModuleConfig {
   constructor(private moduleId: string) {}
 
   async get<T = any>(key: string, defaultValue?: T): Promise<T> {
-    const rows = await query(
-      'SELECT "value" FROM modules_configs WHERE "moduleId" = $1 AND "key" = $2 LIMIT 1',
-      [this.moduleId, key]
+    const rows = await query<{ value: any }>(
+      sql`SELECT "value" FROM modules_configs WHERE "moduleId" = ${this.moduleId} AND "key" = ${key} LIMIT 1`
     );
     if (!rows || rows.length === 0) return defaultValue as T;
     return rows[0].value as T;
@@ -18,27 +18,28 @@ export class ModuleConfig {
 
   async set<T = any>(key: string, value: T): Promise<void> {
     await query(
-      `INSERT INTO modules_configs ("moduleId", "key", "value")
-       VALUES ($1, $2, $3::jsonb)
+      sql`INSERT INTO modules_configs ("moduleId", "key", "value")
+       VALUES (${this.moduleId}, ${key}, ${JSON.stringify(value)}::jsonb)
        ON CONFLICT ("moduleId", "key")
-       DO UPDATE SET "value" = EXCLUDED."value"`,
-      [this.moduleId, key, JSON.stringify(value)]
+       DO UPDATE SET "value" = EXCLUDED."value"`
     );
   }
 
   async remove(key: string): Promise<void> {
-    await query('DELETE FROM modules_configs WHERE "moduleId" = $1 AND "key" = $2', [
-      this.moduleId,
-      key,
-    ]);
+    await query(
+      sql`DELETE FROM modules_configs WHERE "moduleId" = ${this.moduleId} AND "key" = ${key}`
+    );
   }
 
+  // Get all settings for this module
   async getAll(): Promise<Record<string, any>> {
-    const rows = await query('SELECT "key", "value" FROM modules_configs WHERE "moduleId" = $1', [
-      this.moduleId,
-    ]);
+    const rows = await query<{ key: string; value: any }>(
+      sql`SELECT "key", "value" FROM modules_configs WHERE "moduleId" = ${this.moduleId}`
+    );
     const out: Record<string, any> = {};
-    for (const r of rows) out[r.key] = r.value;
+    for (const r of rows) {
+      out[r.key] = r.value;
+    }
     return out;
   }
 

@@ -1,12 +1,14 @@
 import { query } from "@/utils/db.js";
 import Logger from "@/utils/logger.js";
+import { Target } from "@deepbounty/types";
+import { sql } from "drizzle-orm";
 import { Request, Response } from "express";
 
 const logger = new Logger("Targets");
 
 // GET /targets - return an array of all targets
 export function getTargets(req: Request, res: Response) {
-  query("SELECT * FROM targets")
+  query(sql`SELECT * FROM targets`)
     .then((targets) => {
       res.json(targets);
     })
@@ -20,7 +22,7 @@ export function getTargets(req: Request, res: Response) {
 export async function getTargetsFull(req: Request, res: Response) {
   try {
     const rows = await query(
-      `
+      sql`
       SELECT
         t.*,
         -- Subdomains array
@@ -57,11 +59,9 @@ export async function getTargetsFull(req: Request, res: Response) {
 export function addTarget(req: Request, res: Response) {
   const { name, domain, activeScan } = req.body;
 
-  query('INSERT INTO targets (name, domain, "activeScan") VALUES ($1, $2, $3) RETURNING *', [
-    name,
-    domain,
-    activeScan,
-  ])
+  query(
+    sql`INSERT INTO targets (name, domain, "activeScan") VALUES (${name}, ${domain}, ${activeScan}) RETURNING *`
+  )
     .then((result) => {
       logger.info(`Added new target: ${name} (${domain})`);
       res.status(201).json(result[0]);
@@ -77,12 +77,9 @@ export function editTarget(req: Request, res: Response) {
   const { id } = req.params;
   const { name, domain, activeScan } = req.body;
 
-  query('UPDATE targets SET name = $1, domain = $2, "activeScan" = $3 WHERE id = $4 RETURNING *', [
-    name,
-    domain,
-    activeScan,
-    id,
-  ])
+  query(
+    sql`UPDATE targets SET name = ${name}, domain = ${domain}, "activeScan" = ${activeScan} WHERE id = ${id} RETURNING *`
+  )
     .then((result) => {
       if (result.length === 0) {
         return res.status(404).json({ error: "Target not found" });
@@ -100,7 +97,7 @@ export function editTarget(req: Request, res: Response) {
 export function deleteTarget(req: Request, res: Response) {
   const { id } = req.params;
 
-  query("DELETE FROM targets WHERE id = $1 RETURNING *", [id])
+  query<Target>(sql`DELETE FROM targets WHERE id = ${id} RETURNING *`)
     .then((result) => {
       if (result.length === 0) {
         return res.status(404).json({ error: "Target not found" });
@@ -118,7 +115,9 @@ export function deleteTarget(req: Request, res: Response) {
 export function getTargetSubdomains(req: Request, res: Response) {
   const { id } = req.params;
 
-  query('SELECT subdomain FROM targets_subdomains WHERE "targetId" = $1', [id])
+  query<{ subdomain: string }>(
+    sql`SELECT subdomain FROM targets_subdomains WHERE "targetId" = ${id}`
+  )
     .then((subdomains) => {
       res.json(subdomains.map((sd) => sd.subdomain));
     })
@@ -132,10 +131,10 @@ export function getTargetSubdomains(req: Request, res: Response) {
 export function setTargetSubdomains(req: Request, res: Response) {
   const { id } = req.params;
   // Update subdomains in the database
-  query('DELETE FROM targets_subdomains WHERE "targetId" = $1', [id])
+  query(sql`DELETE FROM targets_subdomains WHERE "targetId" = ${id}`)
     .then(() => {
       const promises = req.body.map((sd: string) =>
-        query('INSERT INTO targets_subdomains ("targetId", subdomain) VALUES ($1, $2)', [id, sd])
+        query(sql`INSERT INTO targets_subdomains ("targetId", subdomain) VALUES (${id}, ${sd})`)
       );
       return Promise.all(promises);
     })
@@ -153,7 +152,9 @@ export function setTargetSubdomains(req: Request, res: Response) {
 export function getTargetSettings(req: Request, res: Response) {
   const { id } = req.params;
 
-  query('SELECT settings FROM targets_settings WHERE "targetId" = $1', [id])
+  query<{ settings: Record<string, any> }>(
+    sql`SELECT settings FROM targets_settings WHERE "targetId" = ${id}`
+  )
     .then((rows) => {
       res.json(rows[0]?.settings || {});
     })
@@ -171,12 +172,11 @@ export function setTargetSettings(req: Request, res: Response) {
     return res.status(400).json({ error: "Settings are required" });
   }
   // Update settings in the database
-  query('DELETE FROM targets_settings WHERE "targetId" = $1', [id])
+  query(sql`DELETE FROM targets_settings WHERE "targetId" = ${id}`)
     .then(() => {
-      return query('INSERT INTO targets_settings ("targetId", settings) VALUES ($1, $2)', [
-        id,
-        settings,
-      ]);
+      return query(
+        sql`INSERT INTO targets_settings ("targetId", settings) VALUES (${id}, ${settings})`
+      );
     })
     .then(() => {
       logger.info(`Updated settings for target ID ${id}`);
