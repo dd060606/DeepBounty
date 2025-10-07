@@ -11,6 +11,7 @@
   "license": "GPL-3.0-only",
   "type": "module",
   "dependencies": {
+    "@deepbounty/types": "*",
     "ws": "^8.18.3"
   },
   "devDependencies": {

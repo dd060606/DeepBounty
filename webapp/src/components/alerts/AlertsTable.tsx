@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { faviconUrl } from "@/utils/domains";
-import type { Alert } from "@/utils/types";
+import type { Alert } from "@deepbounty/types";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "react-i18next";
 import { ArrowUpDown, ListFilter } from "lucide-react";

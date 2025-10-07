@@ -15,6 +15,7 @@
   "author": "dd_06",
   "license": "GPL-3.0-only",
   "devDependencies": {
+    "@deepbounty/types": "*",
     "typescript": "^5.9.2"
   }
 }

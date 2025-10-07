@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { Module, ModuleSetting } from "@/utils/types";
+import type { ModuleSetting, Module } from "@deepbounty/types";
 import {
   Dialog,
   DialogContent,
