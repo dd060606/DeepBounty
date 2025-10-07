@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Pencil, Trash2 } from "lucide-react";
 import { faviconUrl, normalizeDomain } from "@/utils/domains";
-import type { Target } from "@/utils/types";
+import type { Target } from "@deepbounty/types";
 import { useTranslation } from "react-i18next";
 
 type Props = {

@@ -60,8 +60,6 @@ const attachEventHandlers = (socket: WebSocket) => {
   });
 
   socket.on("error", (err) => {
-    console.error("WebSocket error:", err);
-
     // Only attempt to reconnect if the socket is not already closed or closing
     if (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING) {
       scheduleReconnect("socket error");

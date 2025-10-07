@@ -3,17 +3,10 @@ import path from "path";
 import yaml from "yaml";
 import { createRequire } from "module";
 import Logger from "@/utils/logger.js";
-import { ModuleConfig, Setting, validateSettings } from "./moduleConfig.js";
+import { ModuleConfig, validateSettings } from "./moduleConfig.js";
+import { LoadedModule, ModuleSetting } from "@deepbounty/types";
 
 const logger = new Logger("Modules-Loader");
-
-export interface LoadedModule {
-  id: string;
-  name: string;
-  description?: string;
-  version: string;
-  run: () => Promise<any>;
-}
 
 type Manifest = {
   id: string;
@@ -21,7 +14,7 @@ type Manifest = {
   description?: string;
   version: string;
   entry: string;
-  settings?: Setting[];
+  settings?: ModuleSetting[];
 };
 
 function readFirstExistingFile(files: string[]): string | null {

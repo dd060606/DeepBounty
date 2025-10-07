@@ -1,0 +1,15 @@
+{
+	"extends": "@tsconfig/node22/tsconfig.json",
+	"compilerOptions": {
+		"strict": true,
+		"composite": true,
+		"declaration": true,
+		"emitDeclarationOnly": true,
+		"outDir": "dist",
+		"module": "NodeNext",
+		"moduleResolution": "NodeNext",
+		"baseUrl": "./src"
+	},
+	"include": ["src"],
+	"exclude": ["dist"]
+}

@@ -1,0 +1,12 @@
+{
+	"name": "deepbounty",
+	"private": true,
+	"workspaces": [
+		"server",
+		"server/sdk",
+		"worker",
+		"webapp",
+		"types"
+	],
+	"license": "GPL-3.0-only"
+}

@@ -7,7 +7,7 @@ import TargetDialog from "@/components/dialogs/TargetDialog";
 import TargetCard from "@/components/targets/TargetCard";
 import TargetSkeleton from "@/components/targets/TargetSkeleton";
 import ApiClient from "@/utils/api";
-import type { Target } from "@/utils/types";
+import type { Target } from "@deepbounty/types";
 import { normalizeDomain } from "@/utils/domains";
 import { ConfirmDialog } from "@/components/dialogs/ConfirmDialog";
 

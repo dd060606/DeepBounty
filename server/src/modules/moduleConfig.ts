@@ -1,15 +1,8 @@
 import { query } from "@/utils/db.js";
 import Logger from "@/utils/logger.js";
+import { ModuleSetting } from "@deepbounty/types";
 
 const logger = new Logger("ModuleConfig");
-
-export interface Setting {
-  name: string;
-  type: "checkbox" | "text" | "select" | "info";
-  default: string | boolean;
-  label: string;
-  value?: string | boolean;
-}
 
 export class ModuleConfig {
   constructor(private moduleId: string) {}
@@ -53,7 +46,7 @@ export class ModuleConfig {
   // Settings is an array of JSON objects stored under the "settings" key
 
   // Initialize settings (only if they don't exist yet)
-  async initSettings(settings?: Setting[]): Promise<void> {
+  async initSettings(settings?: ModuleSetting[]): Promise<void> {
     if (!settings || settings.length === 0) {
       // If no settings provided, remove existing settings
       await this.remove("settings");
@@ -79,14 +72,14 @@ export class ModuleConfig {
   }
 
   // Get a specific setting (with its metadata)
-  async getSetting(name: string): Promise<Setting | null> {
+  async getSetting(name: string): Promise<ModuleSetting | null> {
     const settings = (await this.get<Record<string, any>[]>("settings", [])) || [];
     const setting = settings.find((s) => s.name === name);
     if (!setting) {
       logger.error(`Setting with name "${name}" not found`);
       return null;
     }
-    return setting as Setting;
+    return setting as ModuleSetting;
   }
 
   // Update an existing setting
@@ -101,7 +94,7 @@ export class ModuleConfig {
   }
 
   // Get all settings (with their metadata)
-  async getAllSettings(): Promise<Setting[]> {
+  async getAllSettings(): Promise<ModuleSetting[]> {
     const settings = (await this.get<Record<string, any>[]>("settings", [])) || [];
     return settings.map((s) => ({
       name: s.name,
@@ -114,7 +107,7 @@ export class ModuleConfig {
 }
 
 // Check settings structure
-export function validateSettings(settings: any): settings is Setting[] {
+export function validateSettings(settings: any): settings is ModuleSetting[] {
   if (!Array.isArray(settings)) return false;
   for (const s of settings) {
     if (!validateSingleSetting(s)) return false;
@@ -123,7 +116,7 @@ export function validateSettings(settings: any): settings is Setting[] {
 }
 
 // Validate a single setting structure
-function validateSingleSetting(setting: any): setting is Setting {
+function validateSingleSetting(setting: any): setting is ModuleSetting {
   if (typeof setting !== "object" || setting === null) return false;
   if (typeof setting.name !== "string") return false;
   if (!["checkbox", "text", "select", "info"].includes(setting.type)) return false;

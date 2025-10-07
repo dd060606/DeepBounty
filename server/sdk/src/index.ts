@@ -1,15 +1,9 @@
+import { ModuleSetting } from "@deepbounty/types";
+
 export interface Logger {
   info: (...args: any[]) => void;
   warn: (...args: any[]) => void;
   error: (...args: any[]) => void;
-}
-
-interface Setting {
-  name: string;
-  type: "checkbox" | "text" | "select" | "info";
-  default: string | boolean;
-  label: string;
-  value?: string | boolean;
 }
 
 export interface ConfigAPI {
@@ -17,9 +11,9 @@ export interface ConfigAPI {
   set<T = any>(key: string, value: T): Promise<void>;
   remove(key: string): Promise<void>;
   getAll(): Promise<Record<string, any>>;
-  getSetting(name: string): Promise<Setting>;
+  getSetting(name: string): Promise<ModuleSetting>;
   setSetting(name: string, value: any): Promise<void>;
-  getAllSettings(): Promise<Setting[]>;
+  getAllSettings(): Promise<ModuleSetting[]>;
 }
 
 export interface ServerAPI {
