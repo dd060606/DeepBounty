@@ -13,11 +13,9 @@ export interface Module {
 	id: string;
 	// Human readable name
 	name: string;
-	// Version string
 	version: string;
 	// Short description
 	description?: string;
-	// Settings
 	settings?: ModuleSetting[];
 }
 
