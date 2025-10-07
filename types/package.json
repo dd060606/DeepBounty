@@ -3,7 +3,7 @@
 	"version": "0.1.0",
 	"private": true,
 	"type": "module",
-	"description": "Shared TypeScript domain & DTO types for DeepBounty projects (internal workspace package)",
+	"description": "Shared TypeScript types for DeepBounty",
 	"main": "src/index.ts",
 	"types": "src/index.ts",
 	"exports": {
@@ -14,9 +14,6 @@
 	},
 	"sideEffects": false,
 	"license": "GPL-3.0-only",
-	"scripts": {
-		"build": "echo No build needed (type-only package)"
-	},
 	"devDependencies": {
 		"@tsconfig/node22": "^22.0.2",
 		"typescript": "^5.9.2"
