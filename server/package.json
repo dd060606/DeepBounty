@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "docker compose up -d && tsx --watch --env-file .env src/server.ts"
+    "dev": "docker compose up -d && tsx --watch --env-file .env src/server.ts",
+    "db:generate": "npx drizzle-kit generate"
   },
   "keywords": [],
   "author": "",
