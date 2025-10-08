@@ -132,15 +132,22 @@ export async function loadModules(baseDir: string): Promise<LoadedModule[]> {
 }
 
 export async function initModules(baseDir: string): Promise<LoadedModule[]> {
-  const modules = await loadModules(baseDir);
-  for (const m of modules) {
-    try {
-      // Initialize the module
-      await m.run();
-    } catch (e) {
-      logger.error(`Error while loading module ${m.id}`, e);
-    }
+  let modules: LoadedModule[] = [];
+
+  try {
+    // Load modules from disk
+    modules = await loadModules(baseDir);
+  } catch (e) {
+    logger.error("Error while loading modules", e);
+    return [];
   }
+  for (const m of modules) {
+    // Initialize the module
+    m.run().catch((e) => {
+      logger.error(`Error running module (${m.id})`, e);
+    });
+  }
+
   // Update loaded modules cache
   loadedModulesCache = modules;
   return modules;

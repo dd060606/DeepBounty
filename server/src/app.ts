@@ -1,6 +1,5 @@
 import express from "express";
 import Logger, { initLogger } from "./utils/logger.js";
-import { initDatabase } from "./utils/db.js";
 import fs from "fs";
 import helmet from "helmet";
 import session from "express-session";
@@ -13,22 +12,23 @@ import Targets from "./routes/targets.js";
 import Alerts from "./routes/alerts.js";
 import Modules from "./routes/modules.js";
 import { randomBytes } from "crypto";
+import { initDatabase } from "./utils/db.js";
 import path from "path";
 import { initModules } from "./modules/loader.js";
 
-const app = express();
-
-// Init
-initLogger();
-initDatabase()
-  .then(() => {
-    // Init modules asynchronously after database is ready
+// Initialize the app
+function initApp() {
+  initLogger();
+  // Initialize the database
+  initDatabase().then(() => {
+    // Once the DB is ready, initialize modules
     const modulesDir = path.join(process.cwd(), "modules");
     initModules(modulesDir);
-  })
-  .catch((err) => {
-    process.exit(1);
   });
+}
+initApp();
+
+const app = express();
 
 app.use(express.json());
 

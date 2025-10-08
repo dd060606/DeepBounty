@@ -29,6 +29,8 @@ export default class ExamplePlugin implements PluginLifecycle {
         this.api.logger.info(` - Label: ${s.label}`);
       }
     });
+    // Error test
+    throw new Error("Test error from ExamplePlugin");
   }
 
   async stop() {
