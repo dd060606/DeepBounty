@@ -10,10 +10,10 @@ DeepBounty helps security researchers automate common bug bounty hunting tasks u
 
 -   Modular by design: extend the core with TypeScript modules via an SDK.
 -   Scalable workers: execute scans in sandboxed Docker environments, horizontally scalable.
--   Signal first: stream actionable alerts to a modern web UI.
+-   Web UI: modern interface to manage targets and view alerts.
 -   Planned: a Burp Suite extension to feed captured requests/JS and build a complete sitemap, enhancing module analyses.
 
-## Architecture at a glance
+## Architecture
 
 ```text
 +-----------------------+                        +--------------------------+
