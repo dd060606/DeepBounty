@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import ModulesSkeleton from "@/components/modules/ModulesSkeleton";
 import ApiClient from "@/utils/api";
-import type { Module } from "@deepbounty/types";
+import type { Module } from "@deepbounty/sdk/types";
 import { Input } from "@/components/ui/input";
 import { useMemo, useState as useReactState } from "react";
 import ModuleCard from "@/components/modules/ModuleCard";

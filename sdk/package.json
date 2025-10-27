@@ -1,0 +1,50 @@
+{
+	"name": "@deepbounty/sdk",
+	"version": "1.0.2",
+	"description": "DeepBounty SDK for module development",
+	"main": "dist/index.js",
+	"types": "dist/index.d.ts",
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js",
+			"require": "./dist/index.js"
+		},
+		"./types": {
+			"types": "./dist/types/index.d.ts"
+		},
+		"./types/*": {
+			"types": "./dist/types/*.d.ts"
+		}
+	},
+	"files": [
+		"dist",
+		"README.md",
+		"LICENSE"
+	],
+	"scripts": {
+		"build": "tsc",
+		"prepublishOnly": "npm run build"
+	},
+	"keywords": [
+		"deepbounty",
+		"sdk",
+		"types",
+		"module",
+		"plugin"
+	],
+	"author": "dd_06",
+	"license": "GPL-3.0-only",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/dd060606/DeepBounty.git",
+		"directory": "sdk"
+	},
+	"homepage": "https://github.com/dd060606/DeepBounty#readme",
+	"bugs": {
+		"url": "https://github.com/dd060606/DeepBounty/issues"
+	},
+	"devDependencies": {
+		"typescript": "^5.9.2"
+	}
+}

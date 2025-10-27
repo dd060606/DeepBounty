@@ -1,4 +1,4 @@
-import { Task, TaskResult } from "@deepbounty/types";
+import { Task, TaskResult } from "@deepbounty/sdk/types";
 
 // Transport interface for TaskManager to interact with workers
 interface TaskTransport {

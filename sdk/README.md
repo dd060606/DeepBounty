@@ -8,13 +8,8 @@ The official SDK for developing modules for the DeepBounty project.
 npm install @deepbounty/sdk
 ```
 
-## 🔧 Build & Publish
+## 📤 Publish
 
-1. Build the SDK:
-   ```bash
-   npm run build
-   ```
-2. Publish to npm:
-   ```bash
-   npm publish --access public
-   ```
+```bash
+npm publish --access public
+```

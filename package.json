@@ -3,10 +3,9 @@
 	"private": true,
 	"workspaces": [
 		"server",
-		"server/sdk",
+		"sdk",
 		"worker",
-		"webapp",
-		"types"
+		"webapp"
 	],
 	"license": "GPL-3.0-only"
 }

@@ -2,7 +2,7 @@ name: Example Module
 id: example
 description: This is an example module for demonstration purposes.
 version: 1.0.0
-entry: dist/index.js
+entry: index.js
 author: Your name
 settings:
   - name: feature1

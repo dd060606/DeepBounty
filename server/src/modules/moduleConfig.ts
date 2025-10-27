@@ -1,6 +1,6 @@
 import { query } from "@/utils/db.js";
 import Logger from "@/utils/logger.js";
-import { ModuleSetting } from "@deepbounty/types";
+import { ModuleSetting } from "@deepbounty/sdk/types";
 import { sql } from "drizzle-orm";
 
 const logger = new Logger("ModuleConfig");

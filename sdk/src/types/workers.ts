@@ -1,4 +1,4 @@
-import { Task } from "tasks.js";
+import { Task } from "./tasks";
 
 export interface Worker {
 	id: number;

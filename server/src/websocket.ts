@@ -2,7 +2,7 @@ import { IncomingMessage, Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import Logger from "./utils/logger.js";
 import config from "./utils/config.js";
-import { Task, TaskResult, Worker } from "@deepbounty/types";
+import { Task, TaskResult, Worker } from "@deepbounty/sdk/types";
 import TaskManager from "./tasks/taskManager.js";
 
 const logger = new Logger("WS");
