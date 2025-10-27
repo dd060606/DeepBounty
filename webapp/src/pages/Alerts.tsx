@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import AlertsTable from "@/components/alerts/AlertsTable";
 import AlertsSkeleton from "@/components/alerts/AlertsSkeleton";
-import type { Alert } from "@deepbounty/types";
+import type { Alert } from "@deepbounty/sdk/types";
 import { toast } from "sonner";
 import ApiClient from "@/utils/api";
 import AlertDetailsDialog from "@/components/dialogs/AlertDetailsDialog";

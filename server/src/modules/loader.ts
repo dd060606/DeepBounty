@@ -4,7 +4,7 @@ import yaml from "yaml";
 import { createRequire } from "module";
 import Logger from "@/utils/logger.js";
 import { ModuleConfig, validateSettings } from "./moduleConfig.js";
-import { LoadedModule, ModuleSetting } from "@deepbounty/types";
+import { LoadedModule, ModuleSetting } from "@deepbounty/sdk/types";
 
 const logger = new Logger("Modules-Loader");
 

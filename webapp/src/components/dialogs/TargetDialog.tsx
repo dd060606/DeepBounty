@@ -22,7 +22,7 @@ import {
   isValidDomain,
   isValidSubdomainEntry,
 } from "@/utils/domains";
-import type { Target } from "@deepbounty/types";
+import type { Target } from "@deepbounty/sdk/types";
 
 type TargetDialogProps = {
   mode?: "create" | "edit";

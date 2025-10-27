@@ -1,6 +1,6 @@
 import { query } from "@/utils/db.js";
 import Logger from "@/utils/logger.js";
-import { Alert } from "@deepbounty/types";
+import { Alert } from "@deepbounty/sdk/types";
 import { sql } from "drizzle-orm";
 import { Request, Response } from "express";
 

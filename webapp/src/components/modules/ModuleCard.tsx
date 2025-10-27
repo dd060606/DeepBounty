@@ -1,4 +1,4 @@
-import type { ModuleSetting, Module } from "@deepbounty/types";
+import type { ModuleSetting, Module } from "@deepbounty/sdk/types";
 import { Button } from "@/components/ui/button";
 import { Settings } from "lucide-react";
 import { useState } from "react";
