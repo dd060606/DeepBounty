@@ -1,6 +1,6 @@
 {
 	"name": "@deepbounty/sdk",
-	"version": "1.0.2",
+	"version": "1.0.6",
 	"description": "DeepBounty SDK for module development",
 	"main": "dist/index.js",
 	"types": "dist/index.d.ts",

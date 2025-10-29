@@ -33,5 +33,6 @@ tools:
       preInstallCommands:
           - echo "Preparing to install Subfinder"
       postInstallCommands:
-          - unzip subfinder_2.9.0_linux_amd64.zip /tools/subfinder_2.9.0/
+          - unzip -o subfinder_2.9.0_linux_amd64.zip
+          - rm subfinder_2.9.0_linux_amd64.zip
           - echo "Subfinder installation complete"

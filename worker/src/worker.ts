@@ -1,4 +1,5 @@
 import { WebSocket } from "ws";
+import { handleMessage } from "./taskHandler.js";
 
 // Check for required environment variables
 const wsUrl = process.env.SERVER_WS_URL;
@@ -42,7 +43,13 @@ const attachEventHandlers = (socket: WebSocket) => {
   });
 
   socket.on("message", (data) => {
-    console.log("Received:", data.toString());
+    // Handle incoming messages
+    handleMessage(data, (type, payload) => {
+      if (socket.readyState === WebSocket.OPEN) {
+        // Send response back to server
+        socket.send(JSON.stringify({ type, data: payload }));
+      }
+    });
   });
 
   socket.on("close", (code, reason) => {

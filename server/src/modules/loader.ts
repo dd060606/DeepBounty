@@ -4,8 +4,9 @@ import yaml from "yaml";
 import { createRequire } from "module";
 import Logger from "@/utils/logger.js";
 import { ModuleConfig, validateSettings } from "./moduleConfig.js";
-import { LoadedModule, Module } from "@deepbounty/sdk/types";
-import { validateTools } from "./moduleTools.js";
+import { LoadedModule, Module, TaskContent, Tool } from "@deepbounty/sdk/types";
+import { registerTool, validateTools } from "./moduleTools.js";
+import { getTaskAPI } from "@/tasks/taskAPI.js";
 
 const logger = new Logger("Modules-Loader");
 
@@ -33,10 +34,15 @@ function validateManifest(m: any): m is Module {
 
 // Build the SDK object passed to modules
 function buildModuleSDK(moduleId: string, moduleName: string) {
+  const taskAPI = getTaskAPI();
+
   return Object.freeze({
     version: "1.0.0",
     logger: new Logger(`Module-${moduleName}`),
     config: new ModuleConfig(moduleId),
+    tasks: {
+      submit: taskAPI.submitTask.bind(taskAPI),
+    },
   });
 }
 
@@ -85,6 +91,14 @@ export async function loadModules(baseDir: string): Promise<LoadedModule[]> {
         logger.warn(`Invalid tools structure in module '${parsed.id}'`);
         continue;
       }
+
+      // Register tools in the global registry
+      if (parsed.tools && Array.isArray(parsed.tools)) {
+        for (const tool of parsed.tools) {
+          registerTool(tool);
+        }
+      }
+
       // Initialize module settings
       await new ModuleConfig(parsed.id).initSettings(parsed.settings);
 

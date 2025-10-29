@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "tsx --watch --env-file .env src/worker.ts"
+    "dev": "docker-compose -f docker-compose.dev.yml up --build"
   },
   "keywords": [],
   "author": "",

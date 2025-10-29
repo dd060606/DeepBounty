@@ -1,0 +1,28 @@
+version: "3.8"
+
+services:
+  worker:
+    container_name: deepbounty-worker-dev
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    # Mount source code for hot reload
+    volumes:
+      # Source code (for hot reload)
+      - ./src:/app/src:ro
+      - ./tsconfig.json:/app/tsconfig.json:ro
+      # Tools directory (persistent)
+      - worker-tools:/tools
+      # Node modules (don't override with host)
+      - /app/node_modules
+    # Environment variables
+    environment:
+      - NODE_ENV=development
+    env_file:
+      - .env
+    network_mode: host
+
+volumes:
+  # Persistent volume for tools
+  worker-tools:
+    name: deepbounty-worker-tools

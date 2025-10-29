@@ -1,23 +1,23 @@
-import { Task, TaskResult, Tool } from "@deepbounty/sdk/types";
+import { ServerTask, TaskResult, Tool } from "@deepbounty/sdk/types";
 import { installToolsTask } from "./taskBuilder.js";
 
 // Transport interface for TaskManager to interact with workers
 interface TaskTransport {
   listWorkers(): Array<{
     id: number;
-    currentTasks: Task[];
+    currentTasks: ServerTask[];
     availableTools: Tool[];
     loadFactor: number;
   }>;
-  sendTask(workerId: number, task: Task): boolean;
+  sendTask(workerId: number, task: ServerTask): boolean;
   onRequeueNeeded?(taskIds: number[]): void;
 }
 
 // Listener for task completion events
-type TaskCompletionListener = (task: Task, result: TaskResult) => void;
+type TaskCompletionListener = (task: ServerTask, result: TaskResult) => void;
 
 class TaskManager {
-  private tasks: Map<number, Task> = new Map();
+  private tasks: Map<number, ServerTask> = new Map();
   // Queue of pending task IDs
   private pendingQueue: number[] = [];
   private transport?: TaskTransport;
@@ -32,7 +32,7 @@ class TaskManager {
   }
 
   // Check which tools are missing on a worker for a given task
-  private getMissingTools(task: Task, workerTools: Tool[]): Tool[] {
+  private getMissingTools(task: ServerTask, workerTools: Tool[]): Tool[] {
     if (!task.requiredTools || task.requiredTools.length === 0) {
       return [];
     }
@@ -50,7 +50,7 @@ class TaskManager {
   }
 
   // Add a new task to the queue
-  enqueue(task: Task) {
+  enqueue(task: ServerTask) {
     // Check for existing task with same ID
     if (this.tasks.has(task.id)) {
       const existing = this.tasks.get(task.id)!;
@@ -61,8 +61,6 @@ class TaskManager {
     // Normalize fields
     task.status = "pending";
     task.createdAt = task.createdAt || new Date();
-    // Not assigned yet
-    task.workerId = 0;
     this.tasks.set(task.id, task);
     this.pendingQueue.push(task.id);
     this.assignNextTask();
@@ -128,7 +126,7 @@ class TaskManager {
       } else {
         // Could not send; mark back to pending & break to avoid tight loop
         task.status = "pending";
-        task.workerId = 0;
+        task.workerId = undefined;
         break;
       }
     }
@@ -147,7 +145,7 @@ class TaskManager {
       // Only requeue tasks that were running on the disconnected worker
       if (task.workerId === workerId && task.status === "running") {
         task.status = "pending";
-        task.workerId = 0;
+        task.workerId = undefined;
         if (!this.pendingQueue.includes(task.id)) {
           this.pendingQueue.unshift(task.id);
         }
