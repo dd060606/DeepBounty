@@ -1,11 +1,12 @@
-import { Task, TaskResult } from "@deepbounty/sdk/types";
+import { Task, TaskResult, Tool } from "@deepbounty/sdk/types";
+import { installToolsTask } from "./taskBuilder.js";
 
 // Transport interface for TaskManager to interact with workers
 interface TaskTransport {
   listWorkers(): Array<{
     id: number;
     currentTasks: Task[];
-    availableTools: any[];
+    availableTools: Tool[];
     loadFactor: number;
   }>;
   sendTask(workerId: number, task: Task): boolean;
@@ -28,6 +29,24 @@ class TaskManager {
 
   onTaskComplete(listener: TaskCompletionListener) {
     this.completionListeners.push(listener);
+  }
+
+  // Check which tools are missing on a worker for a given task
+  private getMissingTools(task: Task, workerTools: Tool[]): Tool[] {
+    if (!task.requiredTools || task.requiredTools.length === 0) {
+      return [];
+    }
+
+    const missingTools: Tool[] = [];
+    for (const requiredTool of task.requiredTools) {
+      const hasToolInstalled = workerTools.some(
+        (wt) => wt.name === requiredTool.name && wt.version === requiredTool.version
+      );
+      if (!hasToolInstalled) {
+        missingTools.push(requiredTool);
+      }
+    }
+    return missingTools;
   }
 
   // Add a new task to the queue
@@ -82,10 +101,26 @@ class TaskManager {
       const chosen = enriched[0];
       if (!chosen) break;
 
+      // Check if the worker has all required tools
+      const missingTools = this.getMissingTools(task, chosen.availableTools);
+      let taskToSend = task;
+
+      // If tools are missing, augment the task with installation commands
+      if (missingTools.length > 0) {
+        // Clone the task to avoid modifying the original
+        taskToSend = {
+          ...task,
+          commands: [...task.commands],
+          requiredTools: task.requiredTools ? [...task.requiredTools] : undefined,
+        };
+        // Add installation commands for missing tools
+        taskToSend = installToolsTask(missingTools, taskToSend);
+      }
+
       // Assign task to chosen worker
       task.workerId = chosen.id;
       task.status = "running";
-      const sent = this.transport.sendTask(chosen.id, task);
+      const sent = this.transport.sendTask(chosen.id, taskToSend);
       if (sent) {
         this.pendingQueue.shift();
         assigned = true;

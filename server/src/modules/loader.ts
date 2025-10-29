@@ -4,18 +4,16 @@ import yaml from "yaml";
 import { createRequire } from "module";
 import Logger from "@/utils/logger.js";
 import { ModuleConfig, validateSettings } from "./moduleConfig.js";
-import { LoadedModule, ModuleSetting } from "@deepbounty/sdk/types";
+import { LoadedModule, Module } from "@deepbounty/sdk/types";
+import { validateTools } from "./moduleTools.js";
 
 const logger = new Logger("Modules-Loader");
 
-type Manifest = {
-  id: string;
-  name: string;
-  description?: string;
-  version: string;
-  entry: string;
-  settings?: ModuleSetting[];
-};
+let loadedModules: LoadedModule[] = [];
+
+export function getLoadedModules(): LoadedModule[] {
+  return loadedModules;
+}
 
 function readFirstExistingFile(files: string[]): string | null {
   for (const f of files) if (fs.existsSync(f)) return f;
@@ -23,7 +21,7 @@ function readFirstExistingFile(files: string[]): string | null {
 }
 
 // Check required fields in manifest
-function validateManifest(m: any): m is Manifest {
+function validateManifest(m: any): m is Module {
   return (
     m &&
     typeof m.id === "string" &&
@@ -40,13 +38,6 @@ function buildModuleSDK(moduleId: string, moduleName: string) {
     logger: new Logger(`Module-${moduleName}`),
     config: new ModuleConfig(moduleId),
   });
-}
-
-// Cache of loaded modules, accessible via getLoadedModules()
-let loadedModulesCache: LoadedModule[] = [];
-
-export function getLoadedModules(): LoadedModule[] {
-  return loadedModulesCache;
 }
 
 export async function loadModules(baseDir: string): Promise<LoadedModule[]> {
@@ -84,19 +75,23 @@ export async function loadModules(baseDir: string): Promise<LoadedModule[]> {
         continue;
       }
 
-      // Load the module
-      const require = createRequire(import.meta.url);
-      const mod = require(entry);
-      const exported = mod?.default ?? mod;
-
       // Validate settings structure if any
       if (parsed.settings && !validateSettings(parsed.settings)) {
         logger.warn(`Invalid settings structure in module '${parsed.id}'`);
         continue;
       }
-
-      // Initialize module settings (if any)
+      // Validate tools structure if any
+      if (parsed.tools && !validateTools(parsed.tools)) {
+        logger.warn(`Invalid tools structure in module '${parsed.id}'`);
+        continue;
+      }
+      // Initialize module settings
       await new ModuleConfig(parsed.id).initSettings(parsed.settings);
+
+      // Load the module
+      const require = createRequire(import.meta.url);
+      const mod = require(entry);
+      const exported = mod?.default ?? mod;
 
       const api = buildModuleSDK(parsed.id, parsed.name);
       let instance = new exported(api);
@@ -116,6 +111,7 @@ export async function loadModules(baseDir: string): Promise<LoadedModule[]> {
         name: parsed.name,
         description: parsed.description,
         version: parsed.version,
+        entry: entry,
         run,
       });
 
@@ -131,24 +127,17 @@ export async function loadModules(baseDir: string): Promise<LoadedModule[]> {
   return modules;
 }
 
-export async function initModules(baseDir: string): Promise<LoadedModule[]> {
-  let modules: LoadedModule[] = [];
-
+export async function initModules(baseDir: string): Promise<void> {
   try {
     // Load modules from disk
-    modules = await loadModules(baseDir);
+    loadedModules = await loadModules(baseDir);
   } catch (e) {
     logger.error("Error while loading modules", e);
-    return [];
   }
-  for (const m of modules) {
+  for (const m of loadedModules) {
     // Initialize the module
     m.run().catch((e) => {
       logger.error(`Error running module (${m.id})`, e);
     });
   }
-
-  // Update loaded modules cache
-  loadedModulesCache = modules;
-  return modules;
 }

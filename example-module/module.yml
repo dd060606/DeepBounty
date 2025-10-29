@@ -25,3 +25,13 @@ settings:
       type: info
       label: Feature 4 Information
       default: "This is some information about Feature 4."
+tools:
+    - name: subfinder
+      version: 2.9.0
+      description: Subdomain discovery tool
+      downloadUrl: https://github.com/projectdiscovery/subfinder/releases/download/v2.9.0/subfinder_2.9.0_linux_amd64.zip
+      preInstallCommands:
+          - echo "Preparing to install Subfinder"
+      postInstallCommands:
+          - unzip subfinder_2.9.0_linux_amd64.zip /tools/subfinder_2.9.0/
+          - echo "Subfinder installation complete"

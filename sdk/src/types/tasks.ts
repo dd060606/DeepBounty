@@ -1,7 +1,11 @@
+import { Tool } from "./tools";
+
 export interface Task {
 	id: number;
-	type: "tool" | "command";
-	payload: Record<string, any>;
+	// List of shell commands to execute
+	commands: string[];
+	// Tools required to execute the task
+	requiredTools?: Tool[];
 	// Assigned worker ID
 	workerId: number;
 	status: "pending" | "running" | "completed" | "failed";
