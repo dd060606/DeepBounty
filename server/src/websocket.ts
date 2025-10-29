@@ -2,7 +2,7 @@ import { IncomingMessage, Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import Logger from "./utils/logger.js";
 import config from "./utils/config.js";
-import { Task, TaskResult, Worker } from "@deepbounty/sdk/types";
+import { ServerTask, TaskResult, Worker } from "@deepbounty/sdk/types";
 import TaskManager from "./tasks/taskManager.js";
 
 const logger = new Logger("WS");
@@ -32,7 +32,7 @@ class WebSocketHandler {
           availableTools: w.availableTools,
         })),
       // Send task to worker
-      sendTask: (workerId: number, task: Task) => this.sendTask(workerId, task),
+      sendTask: (workerId: number, task: ServerTask) => this.sendTask(workerId, task),
       onRequeueNeeded: (taskIds: number[]) => {
         logger.warn(`Re-queueing ${taskIds.length} task(s) after worker disconnect`);
       },
@@ -115,8 +115,8 @@ class WebSocketHandler {
     }
 
     switch (msg.type) {
-      case "result": {
-        const result: TaskResult = msg.result;
+      case "task:result": {
+        const result: TaskResult = msg.data;
         // Validate result structure
         if (!result || typeof result.taskId !== "number") {
           logger.warn(`Worker ${workerId} sent malformed task result`);
@@ -135,17 +135,21 @@ class WebSocketHandler {
         this.taskManager.assignNextTask();
         break;
       }
+      case "pong": {
+        logger.info(`Worker ${workerId} responded to ping`);
+        break;
+      }
       default:
         logger.info(`Worker ${workerId} sent unhandled message type: ${msg.type}`);
     }
   }
 
   // Send task to a worker
-  private sendTask(workerId: number, task: Task) {
+  private sendTask(workerId: number, task: ServerTask) {
     const worker = this.workers.get(workerId);
     if (!worker) return false;
     try {
-      worker.socket.send(JSON.stringify({ type: "task", task }));
+      worker.socket.send(JSON.stringify({ type: "task:start", data: task }));
       worker.currentTasks.push(task);
       return true;
     } catch (e) {

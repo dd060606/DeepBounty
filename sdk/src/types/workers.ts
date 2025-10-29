@@ -1,9 +1,10 @@
-import { Task } from "./tasks";
+import { ServerTask } from "./tasks";
 import { Tool } from "./tools";
 
+// Server-side representation of a worker
 export interface Worker {
 	id: number;
-	currentTasks: Task[];
+	currentTasks: ServerTask[];
 	availableTools: Tool[];
 	loadFactor: number; // (currentTasks.length / maxTasks)
 }

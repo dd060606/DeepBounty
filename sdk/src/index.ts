@@ -1,4 +1,4 @@
-import { ModuleSetting } from "./types";
+import { ModuleSetting, TaskContent, TaskResult, Tool } from "./types";
 
 export interface Logger {
 	info: (...args: any[]) => void;
@@ -16,10 +16,16 @@ export interface ConfigAPI {
 	getAllSettings(): Promise<ModuleSetting[]>;
 }
 
+export interface TasksAPI {
+	// Submit a task and wait for its result
+	submit(taskContent: TaskContent): Promise<TaskResult>;
+}
+
 export interface ServerAPI {
 	version: string; // SDK version
 	logger: Logger;
 	config: ConfigAPI;
+	tasks: TasksAPI;
 }
 
 export interface PluginLifecycle {

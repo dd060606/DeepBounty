@@ -20,7 +20,7 @@
     "typescript": "^5.9.2"
   },
   "dependencies": {
-    "@deepbounty/sdk": "^1.0.2",
+    "@deepbounty/sdk": "^1.0.6",
     "axios": "^1.11.0"
   }
 }

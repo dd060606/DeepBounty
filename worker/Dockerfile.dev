@@ -1,0 +1,29 @@
+# Development Dockerfile for DeepBounty Worker
+FROM node:22-alpine
+
+# Install common tools
+RUN apk add --no-cache \
+    bash \
+    curl \
+    wget \
+    unzip \
+    git \
+    ca-certificates
+
+# Create tools directory
+RUN mkdir -p /tools
+
+# Set working directory for the app
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+
+# Install dependencies (including dev dependencies for hot reload)
+RUN npm install
+
+# Copy source code
+COPY . .
+
+# Use nodemon for hot reload
+CMD ["npx", "tsx", "--watch", "src/worker.ts"]
