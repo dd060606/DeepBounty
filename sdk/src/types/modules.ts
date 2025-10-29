@@ -1,3 +1,20 @@
+import { Tool } from "./tools";
+
+export interface Module {
+	// Unique identifier (e.g., "example-module")
+	id: string;
+	// Module details
+	name: string;
+	version: string;
+	// Entry point file
+	entry: string;
+	// Short description
+	description?: string;
+	// Configuration settings
+	settings?: ModuleSetting[];
+	// Tools required by the module
+	tools?: Tool[];
+}
 export interface ModuleSetting {
 	name: string;
 	type: "checkbox" | "text" | "select" | "info";
@@ -8,17 +25,7 @@ export interface ModuleSetting {
 	options?: string[];
 }
 
-export interface Module {
-	// Unique identifier
-	id: string;
-	// Human readable name
-	name: string;
-	version: string;
-	// Short description
-	description?: string;
-	settings?: ModuleSetting[];
-}
-
 export interface LoadedModule extends Module {
 	run: () => Promise<any>;
+	tools?: Tool[];
 }

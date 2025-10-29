@@ -5,23 +5,33 @@ version: 1.0.0
 entry: index.js
 author: Your name
 settings:
-  - name: feature1
-    type: checkbox
-    label: Enable Feature 1
-    default: true
-  - name: feature2
-    type: text
-    label: Feature 2 Configuration
-    default: "default value"
-  - name: feature3
-    type: select
-    label: Choose Feature 3 Option
-    options:
-      - option1
-      - option2
-      - option3
-    default: option1
-  - name: feature4
-    type: info
-    label: Feature 4 Information
-    default: "This is some information about Feature 4."
+    - name: feature1
+      type: checkbox
+      label: Enable Feature 1
+      default: true
+    - name: feature2
+      type: text
+      label: Feature 2 Configuration
+      default: "default value"
+    - name: feature3
+      type: select
+      label: Choose Feature 3 Option
+      options:
+          - option1
+          - option2
+          - option3
+      default: option1
+    - name: feature4
+      type: info
+      label: Feature 4 Information
+      default: "This is some information about Feature 4."
+tools:
+    - name: subfinder
+      version: 2.9.0
+      description: Subdomain discovery tool
+      downloadUrl: https://github.com/projectdiscovery/subfinder/releases/download/v2.9.0/subfinder_2.9.0_linux_amd64.zip
+      preInstallCommands:
+          - echo "Preparing to install Subfinder"
+      postInstallCommands:
+          - unzip subfinder_2.9.0_linux_amd64.zip /tools/subfinder_2.9.0/
+          - echo "Subfinder installation complete"
