@@ -2,8 +2,8 @@ import { IncomingMessage, Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import Logger from "./utils/logger.js";
 import config from "./utils/config.js";
-import { ServerTask, TaskResult, Worker } from "@deepbounty/sdk/types";
-import TaskManager from "./tasks/taskManager.js";
+import { TaskExecution, TaskResult, Worker } from "@deepbounty/sdk/types";
+import getTaskManager from "./tasks/taskManager.js";
 
 const logger = new Logger("WS");
 
@@ -17,11 +17,10 @@ class WebSocketHandler {
   // Map of workerId to WorkerWithSocket
   private workers: Map<number, WorkerWithSocket> = new Map();
   // Task manager instance
-  private taskManager: TaskManager;
+  private readonly taskManager = getTaskManager();
 
-  constructor(server: Server, taskManager: TaskManager) {
+  constructor(server: Server) {
     this.websocketServer = new WebSocketServer({ server });
-    this.taskManager = taskManager;
     this.taskManager.registerTransport({
       // List connected workers
       listWorkers: () =>
@@ -31,10 +30,10 @@ class WebSocketHandler {
           currentTasks: w.currentTasks,
           availableTools: w.availableTools,
         })),
-      // Send task to worker
-      sendTask: (workerId: number, task: ServerTask) => this.sendTask(workerId, task),
-      onRequeueNeeded: (taskIds: number[]) => {
-        logger.warn(`Re-queueing ${taskIds.length} task(s) after worker disconnect`);
+      // Send task execution to worker
+      sendTask: (workerId: number, execution: TaskExecution) => this.sendTask(workerId, execution),
+      onRequeueNeeded: (executionIds: number[]) => {
+        logger.warn(`Re-queueing ${executionIds.length} execution(s) after worker disconnect`);
       },
     });
   }
@@ -118,7 +117,7 @@ class WebSocketHandler {
       case "task:result": {
         const result: TaskResult = msg.data;
         // Validate result structure
-        if (!result || typeof result.taskId !== "number") {
+        if (!result || typeof result.executionId !== "number") {
           logger.warn(`Worker ${workerId} sent malformed task result`);
           return;
         }
@@ -126,8 +125,10 @@ class WebSocketHandler {
         this.taskManager.handleWorkerResult(workerId, result);
         const worker = this.workers.get(workerId);
         if (worker) {
-          // Remove completed task from worker's current tasks
-          worker.currentTasks = worker.currentTasks.filter((t) => t.id !== result.taskId);
+          // Remove completed task execution from worker's current tasks
+          worker.currentTasks = worker.currentTasks.filter(
+            (t) => t.executionId !== result.executionId
+          );
           // Update load factor if provided
           worker.loadFactor = msg.loadFactor ?? worker.loadFactor;
         }
@@ -144,16 +145,18 @@ class WebSocketHandler {
     }
   }
 
-  // Send task to a worker
-  private sendTask(workerId: number, task: ServerTask) {
+  // Send task execution to a worker
+  private sendTask(workerId: number, execution: TaskExecution) {
     const worker = this.workers.get(workerId);
     if (!worker) return false;
     try {
-      worker.socket.send(JSON.stringify({ type: "task:start", data: task }));
-      worker.currentTasks.push(task);
+      worker.socket.send(JSON.stringify({ type: "task:start", data: execution }));
+      worker.currentTasks.push(execution);
       return true;
     } catch (e) {
-      logger.error(`Failed to send task ${task.id} to worker ${workerId}: ${(e as Error).message}`);
+      logger.error(
+        `Failed to send task execution ${execution.executionId} to worker ${workerId}: ${(e as Error).message}`
+      );
       return false;
     }
   }

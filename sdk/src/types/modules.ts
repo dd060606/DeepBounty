@@ -12,8 +12,6 @@ export interface Module {
 	description?: string;
 	// Configuration settings
 	settings?: ModuleSetting[];
-	// Tools required by the module
-	tools?: Tool[];
 }
 export interface ModuleSetting {
 	name: string;
@@ -27,5 +25,4 @@ export interface ModuleSetting {
 
 export interface LoadedModule extends Module {
 	run: () => Promise<any>;
-	tools?: Tool[];
 }

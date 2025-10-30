@@ -24,7 +24,6 @@ export default function ModuleCard({ module, onClick, onSettingsChange }: Props)
       onSettingsChange?.(settings);
     } catch {
       toast.error(t("modules.errors.saveSettings"));
-      throw new Error("save failed");
     }
   }
   return (

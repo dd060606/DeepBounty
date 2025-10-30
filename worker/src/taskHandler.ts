@@ -1,59 +1,98 @@
 import { exec } from "child_process";
 import { promisify } from "util";
-import type { Task, TaskResult } from "@deepbounty/sdk/types";
+import type { TaskExecution, TaskResult } from "@deepbounty/sdk/types";
 
 const execAsync = promisify(exec);
+
+// Extract result between markers if present
+function extractResult(output: string, extractResult: boolean): string {
+  if (!extractResult) {
+    // Return full output as-is when extraction is not enabled
+    return output;
+  }
+
+  const startMarker = "<<<RESULT_START>>>";
+  const endMarker = "<<<RESULT_END>>>";
+
+  const startIdx = output.indexOf(startMarker);
+  const endIdx = output.indexOf(endMarker);
+
+  if (startIdx === -1 || endIdx === -1 || startIdx >= endIdx) {
+    // Markers not found or invalid - return full output
+    return output;
+  }
+
+  // Extract ONLY the content between markers (excluding the markers themselves)
+  const extracted = output.substring(startIdx + startMarker.length, endIdx).trim();
+  return extracted;
+}
+
+// Replace task:tempfile placeholders with actual temp file paths
+function replaceTempFilePlaceholders(taskId: number, commands: string[]): string[] {
+  return commands.map((cmd) => cmd.replace(/task:tempfile/g, `/tmp/task-${taskId}`));
+}
 
 /**
  * Execute a single task
  * @param task The task to execute
  * @returns The task result
  */
-export const executeTask = async (task: Task): Promise<TaskResult> => {
-  console.log(`Executing task ${task.id}...`);
+export const executeTask = async (task: TaskExecution): Promise<TaskResult> => {
+  console.log(`Executing task ${task.executionId}...`);
 
   try {
     const results: string[] = [];
 
-    // Execute each command sequentially
-    for (const command of task.commands) {
-      console.log(`Running command: ${command}`);
+    // Replace temp file placeholders
+    const processedCommands = replaceTempFilePlaceholders(task.executionId, task.content.commands);
 
-      try {
-        const { stdout, stderr } = await execAsync(command, {
-          // Execute commands in the tools directory
-          cwd: "/tools",
-        });
+    // Combine all commands into a single bash script to maintain context
+    // This allows cd commands to affect subsequent commands
+    const combinedScript = processedCommands.join(" && ");
 
-        if (stderr) {
-          console.warn(`Command stderr: ${stderr}`);
-        }
+    console.log(`Running combined commands: ${combinedScript}`);
 
-        results.push(stdout);
-      } catch (error: any) {
-        console.error(`Command failed: ${command}`, error);
+    try {
+      const { stdout, stderr } = await execAsync(combinedScript, {
+        // Execute commands in the tools directory as base
+        cwd: "/tools",
+        // Use bash to support all shell features
+        shell: "/bin/bash",
+      });
 
-        return {
-          taskId: task.id,
-          success: false,
-          error: error.message || error,
-          output: results.length > 0 ? results : undefined,
-        };
+      if (stderr) {
+        console.warn(`Command stderr: ${stderr}`);
       }
+
+      // Extract result if markers are used
+      const finalOutput = extractResult(stdout, task.content.extractResult || false);
+      results.push(finalOutput);
+    } catch (error: any) {
+      console.error(`Commands failed`, error);
+
+      return {
+        executionId: task.executionId,
+        scheduledTaskId: task.scheduledTaskId,
+        success: false,
+        error: error.message || error,
+        output: results.length > 0 ? results : undefined,
+      };
     }
 
-    console.log(`Task ${task.id} completed successfully`);
+    console.log(`Task ${task.executionId} completed successfully`);
 
     return {
-      taskId: task.id,
+      executionId: task.executionId,
+      scheduledTaskId: task.scheduledTaskId,
       success: true,
       output: results,
     };
   } catch (error: any) {
-    console.error(`Task ${task.id} execution error:`, error);
+    console.error(`Task ${task.executionId} execution error:`, error);
 
     return {
-      taskId: task.id,
+      executionId: task.executionId,
+      scheduledTaskId: task.scheduledTaskId,
       success: false,
       error: error.message || "Unknown error occurred",
     };
@@ -78,7 +117,7 @@ export const handleMessage = async (
     switch (type) {
       // Execute assigned task
       case "task:start": {
-        const task: Task = data;
+        const task: TaskExecution = data;
 
         // Execute the task
         const result = await executeTask(task);

@@ -1,105 +1,87 @@
-import { ServerTask, TaskContent, TaskResult, Tool } from "@deepbounty/sdk/types";
-import TaskManager from "./taskManager.js";
-import { resolveTools } from "@/modules/moduleTools.js";
+import { TaskContent, TaskResult, Tool } from "@deepbounty/sdk/types";
+import getTaskManager from "./taskManager.js";
 
 /**
- * Task API for modules to submit tasks
+ * Task API for modules to register scheduled tasks
+ * This acts as a simplified interface for modules to interact with the TaskManager
  */
 export class TaskAPI {
-  private taskManager: TaskManager;
-  private nextTaskId: number = 1;
-  // Store pending task promises
-  private pendingTasks: Map<
-    number,
-    {
-      resolve: (result: TaskResult) => void;
-      reject: (error: Error) => void;
-    }
-  > = new Map();
+  private readonly taskManager = getTaskManager();
+  // Store completion callbacks for tasks, keyed by scheduledTaskId
+  private taskCallbacks: Map<number, (result: TaskResult) => void> = new Map();
 
-  constructor(taskManager: TaskManager) {
-    this.taskManager = taskManager;
+  constructor(private moduleId: string) {
     // Listen for task completion events
-    this.taskManager.onTaskComplete((task, result) => {
-      this.handleTaskComplete(task.id, result);
+    this.taskManager.onTaskComplete((execution, result) => {
+      this.handleTaskComplete(result);
     });
   }
 
   /**
-   * Submit a task and wait for its result
+   * Register a scheduled task that runs at a specific interval
    * @param taskContent The task content including commands and required tools
-   * @returns Promise that resolves with the task result
+   * @param interval Interval in seconds between task executions
+   * @param onComplete Optional callback executed when the task completes
+   * @returns The ID of the registered scheduled task
    */
-  async submitTask(taskContent: TaskContent): Promise<TaskResult> {
-    const taskId = this.nextTaskId++;
+  registerScheduledTask(
+    taskContent: TaskContent,
+    interval: number,
+    onComplete?: (result: TaskResult) => void
+  ): number {
+    const taskId = this.taskManager.registerTask(taskContent, interval, this.moduleId);
 
-    // Resolve tool names to full Tool objects
-    const resolvedTools = resolveTools(taskContent.requiredTools);
-
-    const task: ServerTask = {
-      id: taskId,
-      commands: taskContent.commands,
-      requiredTools: resolvedTools,
-      status: "pending",
-      createdAt: new Date(),
-    };
-
-    // Create a promise that will be resolved when the task completes
-    const resultPromise = new Promise<TaskResult>((resolve, reject) => {
-      this.pendingTasks.set(taskId, {
-        resolve,
-        reject,
-      });
-    });
-
-    // Enqueue the task
-    try {
-      this.taskManager.enqueue(task);
-    } catch (error) {
-      // Clean up if enqueue fails
-      this.pendingTasks.delete(taskId);
-      throw error;
+    // Store callback if provided
+    if (onComplete) {
+      this.taskCallbacks.set(taskId, onComplete);
     }
 
-    return resultPromise;
+    return taskId;
   }
 
   /**
-   * Handle task completion
+   * Unregister a scheduled task
+   * @param taskId The ID of the scheduled task to unregister
+   * @returns true if the task was unregistered, false if it didn't exist
    */
-  private handleTaskComplete(taskId: number, result: TaskResult) {
-    const pending = this.pendingTasks.get(taskId);
-    if (!pending) return;
+  unregisterScheduledTask(taskId: number): boolean {
+    // Remove callback
+    this.taskCallbacks.delete(taskId);
+    return this.taskManager.unregisterTask(taskId);
+  }
 
-    // Resolve or reject based on task success
-    if (result.success) {
-      pending.resolve(result);
-    } else {
-      pending.reject(new Error(result.error || "Task failed"));
+  // Handle task completion and notify waiting callbacks
+  private handleTaskComplete(result: TaskResult) {
+    const callback = this.taskCallbacks.get(result.scheduledTaskId);
+    if (!callback) return;
+
+    // Notify callback
+    try {
+      callback(result);
+    } catch (error) {
+      console.error(`Error in task completion callback for task ${result.scheduledTaskId}:`, error);
     }
+  }
 
-    // Clean up
-    this.pendingTasks.delete(taskId);
+  // Get all scheduled tasks registered by this module
+  getModuleTasks() {
+    return this.taskManager.getScheduledTasksByModule(this.moduleId);
   }
 }
 
-// Global singleton instance
-let taskAPIInstance: TaskAPI | null = null;
+// Map of moduleId to TaskAPI instance
+const taskAPIInstances: Map<string, TaskAPI> = new Map();
 
 /**
- * Initialize the global TaskAPI instance
+ * Initialize or get the TaskAPI instance for a specific module
+ * @param moduleId The ID of the module
+ * @returns TaskAPI instance for the module
  */
-export function initTaskAPI(taskManager: TaskManager): TaskAPI {
-  taskAPIInstance = new TaskAPI(taskManager);
-  return taskAPIInstance;
-}
-
-/**
- * Get the global TaskAPI instance
- */
-export function getTaskAPI(): TaskAPI {
-  if (!taskAPIInstance) {
-    throw new Error("TaskAPI not initialized. Call initTaskAPI first.");
+export function getTaskAPI(moduleId: string): TaskAPI {
+  let instance = taskAPIInstances.get(moduleId);
+  if (!instance) {
+    instance = new TaskAPI(moduleId);
+    taskAPIInstances.set(moduleId, instance);
   }
-  return taskAPIInstance;
+  return instance;
 }

@@ -1,18 +1,58 @@
+import { SUBFINDER } from "@/tools";
 import { ServerAPI } from "@deepbounty/sdk";
-import type { TaskContent } from "@deepbounty/sdk/types";
+import type { TaskContent, TaskResult } from "@deepbounty/sdk/types";
 
-export function findSubdomains(api: ServerAPI) {
-	// Submit a task to find subdomains using subfinder
-	const taskContent: TaskContent = {
-		commands: ["./subfinder -d example.com"],
-		requiredTools: ["subfinder"],
-	};
-	api.tasks
-		.submit(taskContent)
-		.then((result) => {
-			api.logger.info(`Subfinder result: ${result.output}`);
-		})
-		.catch((error) => {
-			api.logger.error(`Subfinder task failed: ${error}`);
+// Register a subfinder task with a callback to process results
+export const FIND_SUBDOMAINS_TASK: TaskContent = {
+	commands: [
+		// Mark the start of the result we want to extract
+		'echo "<<<RESULT_START>>>"',
+
+		// tool:{subfinder} is automatically replaced with /tools/subfinder-2.9.0/subfinder
+		"tool:{subfinder} -d example.com",
+
+		// Mark the end of the result
+		'echo "<<<RESULT_END>>>"',
+	],
+	requiredTools: [SUBFINDER],
+	extractResult: true, // Enable result extraction
+};
+
+// Register a task with a temporary file
+export const FIND_SUBDOMAINS_TASK_WITH_TEMPFILE: TaskContent = {
+	commands: [
+		// Store subdomains to file (task:tempfile will be replaced by a dedicated temp task file)
+		"tool:{subfinder} -d example.com > task:tempfile",
+
+		// Extract only the result we want
+		'echo "<<<RESULT_START>>>"',
+		"cat task:tempfile | head -n 5",
+		'echo "<<<RESULT_END>>>"',
+
+		// Cleanup
+		"rm task:tempfile",
+	],
+	requiredTools: [SUBFINDER],
+	extractResult: true,
+};
+
+export function subdomainsCallback(api: ServerAPI, result: TaskResult) {
+	if (result.success && result.output) {
+		// Extract the list of subdomains
+		const subdomains = result.output[0]
+			.split("\n")
+			.filter((line: string) => line.trim().length > 0);
+
+		api.logger.info(`Found ${subdomains.length} subdomains:`);
+		subdomains.forEach((subdomain: string) => {
+			api.logger.info(`  - ${subdomain}`);
 		});
+
+		// You can process the results further here
+		// For example: store in database, trigger alerts, etc.
+	} else {
+		api.logger.error(
+			`Subfinder task failed: ${result.error || "Unknown error"}`
+		);
+	}
 }
