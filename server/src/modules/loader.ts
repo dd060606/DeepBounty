@@ -4,17 +4,13 @@ import yaml from "yaml";
 import { createRequire } from "module";
 import Logger from "@/utils/logger.js";
 import { ModuleConfig, validateSettings } from "./moduleConfig.js";
-import { LoadedModule, Module, TaskContent, Tool } from "@deepbounty/sdk/types";
-import { registerTool, validateTools } from "./moduleTools.js";
+import { Module, TaskContent, TaskResult } from "@deepbounty/sdk/types";
+import { ServerAPI } from "@deepbounty/sdk";
 import { getTaskAPI } from "@/tasks/taskAPI.js";
+import getRegistry from "@/utils/registry.js";
 
 const logger = new Logger("Modules-Loader");
-
-let loadedModules: LoadedModule[] = [];
-
-export function getLoadedModules(): LoadedModule[] {
-  return loadedModules;
-}
+const registry = getRegistry();
 
 function readFirstExistingFile(files: string[]): string | null {
   for (const f of files) if (fs.existsSync(f)) return f;
@@ -33,27 +29,36 @@ function validateManifest(m: any): m is Module {
 }
 
 // Build the SDK object passed to modules
-function buildModuleSDK(moduleId: string, moduleName: string) {
-  const taskAPI = getTaskAPI();
+function buildModuleSDK(moduleId: string, moduleName: string): ServerAPI {
+  const taskAPI = getTaskAPI(moduleId);
 
   return Object.freeze({
     version: "1.0.0",
     logger: new Logger(`Module-${moduleName}`),
     config: new ModuleConfig(moduleId),
-    tasks: {
-      submit: taskAPI.submitTask.bind(taskAPI),
+    registerScheduledTask(
+      taskContent: TaskContent,
+      interval: number,
+      onComplete?: (result: TaskResult) => void
+    ) {
+      return taskAPI.registerScheduledTask(taskContent, interval, onComplete);
     },
-  });
+    unregisterScheduledTask(taskId: number) {
+      return taskAPI.unregisterScheduledTask(taskId);
+    },
+    registerTool(tool) {
+      registry.registerTool(tool);
+    },
+  } as ServerAPI);
 }
 
-export async function loadModules(baseDir: string): Promise<LoadedModule[]> {
-  const modules: LoadedModule[] = [];
-
+// Load modules from disk
+async function loadModules(baseDir: string): Promise<void> {
   logger.info(`Loading modules...`);
 
   if (!fs.existsSync(baseDir)) {
     logger.warn(`Module directory not found: ${baseDir}`);
-    return modules;
+    return;
   }
   // For each subdirectory, look for a manifest file
   for (const dir of fs.readdirSync(baseDir)) {
@@ -86,18 +91,6 @@ export async function loadModules(baseDir: string): Promise<LoadedModule[]> {
         logger.warn(`Invalid settings structure in module '${parsed.id}'`);
         continue;
       }
-      // Validate tools structure if any
-      if (parsed.tools && !validateTools(parsed.tools)) {
-        logger.warn(`Invalid tools structure in module '${parsed.id}'`);
-        continue;
-      }
-
-      // Register tools in the global registry
-      if (parsed.tools && Array.isArray(parsed.tools)) {
-        for (const tool of parsed.tools) {
-          registerTool(tool);
-        }
-      }
 
       // Initialize module settings
       await new ModuleConfig(parsed.id).initSettings(parsed.settings);
@@ -119,8 +112,8 @@ export async function loadModules(baseDir: string): Promise<LoadedModule[]> {
         continue;
       }
 
-      // Add to loaded modules list
-      modules.push({
+      // Register the module in global registry
+      registry.registerModule({
         id: parsed.id,
         name: parsed.name,
         description: parsed.description,
@@ -136,22 +129,21 @@ export async function loadModules(baseDir: string): Promise<LoadedModule[]> {
     }
   }
 
-  logger.info(`Total modules loaded: ${modules.length}`);
-
-  return modules;
+  logger.info(`Total modules loaded: ${registry.moduleCount()}`);
 }
 
 export async function initModules(baseDir: string): Promise<void> {
   try {
     // Load modules from disk
-    loadedModules = await loadModules(baseDir);
+    await loadModules(baseDir);
+
+    // Initialize each module
+    for (const m of registry.getLoadedModules()) {
+      m.run().catch((e: any) => {
+        logger.error(`Error running module (${m.id})`, e);
+      });
+    }
   } catch (e) {
     logger.error("Error while loading modules", e);
-  }
-  for (const m of loadedModules) {
-    // Initialize the module
-    m.run().catch((e) => {
-      logger.error(`Error running module (${m.id})`, e);
-    });
   }
 }

@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import Logger from "@/utils/logger.js";
-import { getLoadedModules } from "@/modules/loader.js";
+import getRegistry from "@/utils/registry.js";
 import { query } from "@/utils/db.js";
 import { sql } from "drizzle-orm";
 
@@ -14,13 +14,15 @@ export const getModules = async (req: Request, res: Response) => {
       sql`SELECT "moduleId", "value" FROM modules_configs WHERE "key" = 'settings'`
     );
     // Modules with their info and settings
-    const modules = getLoadedModules().map((m) => ({
-      id: m.id,
-      name: m.name,
-      description: m.description,
-      version: m.version,
-      settings: settings.find((s) => s.moduleId === m.id)?.value || [],
-    }));
+    const modules = getRegistry()
+      .getLoadedModules()
+      .map((m) => ({
+        id: m.id,
+        name: m.name,
+        description: m.description,
+        version: m.version,
+        settings: settings.find((s) => s.moduleId === m.id)?.value || [],
+      }));
     res.json(modules);
   } catch (error) {
     logger.error("Error fetching modules", error);
