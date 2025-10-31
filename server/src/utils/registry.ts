@@ -28,7 +28,7 @@ class ServerRegistry {
   private constructor() {}
 
   // Return the singleton instance
-  public static getInstance(): ServerRegistry {
+  public static getRegistry(): ServerRegistry {
     if (!ServerRegistry.instance) {
       ServerRegistry.instance = new ServerRegistry();
     }
@@ -71,17 +71,12 @@ class ServerRegistry {
 
   // Register a tool
   public registerTool(tool: Tool): void {
-    this.tools.set(tool.name, tool);
+    this.tools.set(`${tool.name}@${tool.version}`, tool);
   }
 
-  // Get a tool by name
-  public getTool(name: string): Tool | undefined {
-    return this.tools.get(name);
-  }
-
-  // Unregister a tool
-  public unregisterTool(name: string): void {
-    this.tools.delete(name);
+  // Get a tool by name and version
+  public getTool(name: string, version: string): Tool | undefined {
+    return this.tools.get(`${name}@${version}`);
   }
 
   // Get all registered tools
@@ -90,8 +85,15 @@ class ServerRegistry {
   }
 
   // Check if a tool is registered
-  public hasTool(name: string): boolean {
-    return this.tools.has(name);
+  public hasTool(name: string, version: string): boolean {
+    return this.tools.has(`${name}@${version}`);
+  }
+
+  // Find tools by identifiers (toolname@version)
+  public findTools(toolIdentifiers: string[]): Tool[] {
+    return toolIdentifiers
+      .map((id) => this.tools.get(id))
+      .filter((tool) => tool !== undefined) as Tool[];
   }
 
   // ==================== SCHEDULED TASKS ====================
@@ -198,45 +200,16 @@ class ServerRegistry {
   }
 
   // Clear old completed/failed executions
-  public clearOldExecutions(olderThan: Date): number {
-    let cleared = 0;
+  public clearOldExecutions(olderThan: Date) {
     this.taskExecutions.forEach((execution, id) => {
       if (
         (execution.status === "completed" || execution.status === "failed") &&
         execution.createdAt < olderThan
       ) {
         this.taskExecutions.delete(id);
-        cleared++;
       }
     });
-    return cleared;
-  }
-
-  // Get execution statistics
-  public getExecutionStats(): {
-    total: number;
-    pending: number;
-    running: number;
-    completed: number;
-    failed: number;
-  } {
-    const stats = {
-      total: this.taskExecutions.size,
-      pending: 0,
-      running: 0,
-      completed: 0,
-      failed: 0,
-    };
-
-    this.taskExecutions.forEach((execution) => {
-      if (execution.status === "pending") stats.pending++;
-      else if (execution.status === "running") stats.running++;
-      else if (execution.status === "completed") stats.completed++;
-      else if (execution.status === "failed") stats.failed++;
-    });
-
-    return stats;
   }
 }
 
-export default ServerRegistry.getInstance;
+export default ServerRegistry.getRegistry;

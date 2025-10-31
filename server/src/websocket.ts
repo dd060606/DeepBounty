@@ -2,8 +2,10 @@ import { IncomingMessage, Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import Logger from "./utils/logger.js";
 import config from "./utils/config.js";
-import { TaskExecution, TaskResult, Worker } from "@deepbounty/sdk/types";
+import { TaskExecution, TaskResult, Tool, Worker } from "@deepbounty/sdk/types";
 import getTaskManager from "./tasks/taskManager.js";
+import getRegistry from "./utils/registry.js";
+import { getMissingTools } from "./utils/taskUtils.js";
 
 const logger = new Logger("WS");
 
@@ -18,6 +20,8 @@ class WebSocketHandler {
   private workers: Map<number, WorkerWithSocket> = new Map();
   // Task manager instance
   private readonly taskManager = getTaskManager();
+  // Server registry instance
+  private readonly registry = getRegistry();
 
   constructor(server: Server) {
     this.websocketServer = new WebSocketServer({ server });
@@ -35,6 +39,8 @@ class WebSocketHandler {
       onRequeueNeeded: (executionIds: number[]) => {
         logger.warn(`Re-queueing ${executionIds.length} execution(s) after worker disconnect`);
       },
+      updateWorkerTools: (workerId: number, tools: Tool[]) =>
+        this.updateWorkerTools(workerId, tools),
     });
   }
 
@@ -136,6 +142,20 @@ class WebSocketHandler {
         this.taskManager.assignNextTask();
         break;
       }
+      case "tools:list": {
+        // Update worker's available tools
+        const tools = this.registry.findTools(msg.data as string[]);
+        const worker = this.workers.get(workerId);
+        if (worker) {
+          worker.availableTools = tools;
+          logger.info(
+            `Worker ${workerId} reported ${tools.length} installed tool(s): ${tools
+              .map((t) => `${t.name}@${t.version}`)
+              .join(", ")}`
+          );
+        }
+        break;
+      }
       case "pong": {
         logger.info(`Worker ${workerId} responded to ping`);
         break;
@@ -158,6 +178,17 @@ class WebSocketHandler {
         `Failed to send task execution ${execution.executionId} to worker ${workerId}: ${(e as Error).message}`
       );
       return false;
+    }
+  }
+
+  // Update worker installed tools (by adding new tools to the list)
+  public updateWorkerTools(workerId: number, tools: Tool[]): void {
+    const worker = this.workers.get(workerId);
+    if (worker) {
+      // Check for tools difference before updating
+      const newAddedTools = getMissingTools(worker.availableTools, tools);
+      // Add only new added tools
+      worker.availableTools.push(...newAddedTools);
     }
   }
 }
