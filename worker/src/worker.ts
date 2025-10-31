@@ -1,5 +1,6 @@
 import { WebSocket } from "ws";
 import { handleMessage } from "./taskHandler.js";
+import { getInstalledTools } from "./tools.js";
 
 // Check for required environment variables
 const wsUrl = process.env.SERVER_WS_URL;
@@ -40,6 +41,11 @@ const scheduleReconnect = (reason: string) => {
 const attachEventHandlers = (socket: WebSocket) => {
   socket.on("open", () => {
     console.log("Connected to server");
+    // Send installed tools to server upon connection
+    const installedTools = getInstalledTools();
+    if (installedTools.length !== 0) {
+      socket.send(JSON.stringify({ type: "tools:list", data: installedTools }));
+    }
   });
 
   socket.on("message", (data) => {

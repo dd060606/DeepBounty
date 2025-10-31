@@ -1,6 +1,7 @@
 import { ScheduledTask, TaskContent, TaskExecution, TaskResult, Tool } from "@deepbounty/sdk/types";
 import { installToolsTask, replaceToolPlaceholders } from "./taskBuilder.js";
 import getRegistry from "../utils/registry.js";
+import { getMissingTools } from "@/utils/taskUtils.js";
 
 // Transport interface for TaskManager to interact with workers
 interface TaskTransport {
@@ -12,6 +13,7 @@ interface TaskTransport {
   }>;
   sendTask(workerId: number, execution: TaskExecution): boolean;
   onRequeueNeeded?(executionIds: number[]): void;
+  updateWorkerTools(workerId: number, tools: Tool[]): void;
 }
 
 // Listener for task completion events
@@ -46,24 +48,6 @@ class TaskManager {
 
   onTaskComplete(listener: TaskCompletionListener) {
     this.completionListeners.push(listener);
-  }
-
-  // Check which tools are missing on a worker for a given task
-  private getMissingTools(content: TaskContent, workerTools: Tool[]): Tool[] {
-    if (!content.requiredTools || content.requiredTools.length === 0) {
-      return [];
-    }
-
-    const missingTools: Tool[] = [];
-    for (const requiredTool of content.requiredTools) {
-      const hasToolInstalled = workerTools.some(
-        (wt) => wt.name === requiredTool.name && wt.version === requiredTool.version
-      );
-      if (!hasToolInstalled) {
-        missingTools.push(requiredTool);
-      }
-    }
-    return missingTools;
   }
 
   // Register a scheduled task
@@ -177,7 +161,7 @@ class TaskManager {
       if (!chosen) break;
 
       // Check if the worker has all required tools
-      const missingTools = this.getMissingTools(execution.content, chosen.availableTools);
+      const missingTools = getMissingTools(chosen.availableTools, execution.content.requiredTools);
       let executionToSend = execution;
 
       // If tools are missing, augment the execution with installation commands
@@ -272,6 +256,12 @@ class TaskManager {
     const updatedExecution = this.registry.getTaskExecution(execution.executionId);
     if (!updatedExecution) return;
 
+    // If a new tool was installed, update associated worker tool list
+    const taskRequiredTools = execution.content.requiredTools || [];
+    if (taskRequiredTools.length > 0) {
+      this.transport?.updateWorkerTools(workerId, taskRequiredTools);
+    }
+
     // Notify listeners
     this.completionListeners.forEach((cb) => {
       try {
@@ -314,14 +304,9 @@ class TaskManager {
     return this.registry.getTaskExecutionsByStatus("running");
   }
 
-  // Get execution statistics
-  getExecutionStats() {
-    return this.registry.getExecutionStats();
-  }
-
   // Clear old completed/failed executions
-  clearOldExecutions(olderThan: Date): number {
-    return this.registry.clearOldExecutions(olderThan);
+  clearOldExecutions(olderThan: Date) {
+    this.registry.clearOldExecutions(olderThan);
   }
 }
 

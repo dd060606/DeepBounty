@@ -2,7 +2,7 @@ import { TaskContent, Tool } from "@deepbounty/sdk/types";
 
 // Get the tool directory path
 function getToolDir(tool: Tool): string {
-  return `/tools/${tool.name}-${tool.version}`;
+  return `/tools/${tool.name}@${tool.version}`;
 }
 
 // Get the tool binary path
