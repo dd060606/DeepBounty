@@ -93,3 +93,48 @@ export const modulesConfigs = pgTable(
   },
   (table) => [unique("modules_configs_unique_module_key").on(table.moduleId, table.key)]
 );
+
+// Task templates table (task definitions registered by modules)
+export const taskTemplates = pgTable("task_templates", {
+  id: serial().primaryKey().notNull(),
+  moduleId: text().notNull(),
+  name: text().notNull(),
+  description: text(),
+  // Task content (commands and required tools)
+  content: jsonb().notNull(),
+  // Interval in seconds
+  interval: integer().notNull(),
+  // Global activation status
+  active: boolean().default(true).notNull(),
+  createdAt: timestamp({ mode: "string" })
+    .default(sql`CURRENT_TIMESTAMP`)
+    .notNull(),
+});
+
+// Target-specific task overrides (enable/disable tasks per target)
+export const targetTaskOverrides = pgTable(
+  "target_task_overrides",
+  {
+    id: serial().primaryKey().notNull(),
+    targetId: integer().notNull(),
+    taskTemplateId: integer().notNull(),
+    // Override the global activation status for this specific target
+    active: boolean().notNull(),
+    createdAt: timestamp({ mode: "string" })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.targetId],
+      foreignColumns: [targets.id],
+      name: "target_task_overrides_targetId_fkey",
+    }).onDelete("cascade"),
+    foreignKey({
+      columns: [table.taskTemplateId],
+      foreignColumns: [taskTemplates.id],
+      name: "target_task_overrides_taskTemplateId_fkey",
+    }).onDelete("cascade"),
+    unique("target_task_overrides_unique").on(table.targetId, table.taskTemplateId),
+  ]
+);

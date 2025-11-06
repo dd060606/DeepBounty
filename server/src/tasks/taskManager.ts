@@ -1,7 +1,15 @@
 import { ScheduledTask, TaskContent, TaskExecution, TaskResult, Tool } from "@deepbounty/sdk/types";
-import { installToolsTask, replaceToolPlaceholders } from "./taskBuilder.js";
+import {
+  installToolsTask,
+  replaceTargetPlaceholders,
+  replaceToolPlaceholders,
+} from "./taskBuilder.js";
 import getRegistry from "../utils/registry.js";
 import { getMissingTools } from "@/utils/taskUtils.js";
+import { getTaskTemplateService } from "./taskTemplateService.js";
+import Logger from "@/utils/logger.js";
+
+const logger = new Logger("Tasks-Manager");
 
 // Transport interface for TaskManager to interact with workers
 interface TaskTransport {
@@ -22,6 +30,7 @@ type TaskCompletionListener = (execution: TaskExecution, result: TaskResult) => 
 class TaskManager {
   private static instance: TaskManager | null = null;
   private readonly registry = getRegistry();
+  private readonly templateService = getTaskTemplateService();
   // Queue of pending execution IDs
   private pendingQueue: number[] = [];
   private transport?: TaskTransport;
@@ -34,38 +43,197 @@ class TaskManager {
     this.startScheduler(10000);
   }
 
-  // Get the singleton instance
-  public static getInstance(): TaskManager {
+  /**
+   * Get the singleton instance of TaskManager
+   * @returns The TaskManager instance
+   */
+  public static getTaskManager(): TaskManager {
     if (!TaskManager.instance) {
       TaskManager.instance = new TaskManager();
     }
     return TaskManager.instance;
   }
 
+  /**
+   * Register the transport layer for worker communication
+   * @param transport - The transport interface to use
+   */
   registerTransport(transport: TaskTransport) {
     this.transport = transport;
   }
 
+  /**
+   * Register a listener for task completion events
+   * @param listener - Callback function called when a task completes
+   */
   onTaskComplete(listener: TaskCompletionListener) {
     this.completionListeners.push(listener);
   }
 
-  // Register a scheduled task
+  /**
+   * Register a task template that creates scheduled tasks for all active targets
+   * @param moduleId - ID of the module registering the task
+   * @param name - Friendly name for the task
+   * @param description - Detailed description of what the task does
+   * @param content - Task content including commands and required tools
+   * @param interval - Execution interval in seconds
+   * @returns Promise resolving to the template ID
+   */
+  async registerTaskTemplate(
+    moduleId: string,
+    name: string,
+    description: string,
+    content: TaskContent,
+    interval: number
+  ): Promise<number> {
+    // Create template in database
+    const templateId = await this.templateService.createTemplate(
+      moduleId,
+      name,
+      description,
+      content,
+      interval
+    );
+
+    // Create scheduled tasks for all active targets
+    await this.syncTasksForTemplate(templateId);
+
+    return templateId;
+  }
+
+  /**
+   * Unregister a task template and all its associated scheduled tasks
+   * @param templateId - ID of the template to unregister
+   * @returns Promise resolving to true if successful, false otherwise
+   */
+  async unregisterTaskTemplate(templateId: number): Promise<boolean> {
+    // Delete all scheduled tasks for this template
+    const scheduledTasks = this.registry.getScheduledTasksByTemplate(templateId);
+    scheduledTasks.forEach((task) => {
+      this.registry.deleteScheduledTask(task.id);
+    });
+
+    // Delete template from database
+    return await this.templateService.deleteTemplate(templateId);
+  }
+
+  /**
+   * Synchronize scheduled tasks for a template across all applicable targets
+   * Creates tasks for new targets and removes tasks for inactive targets
+   * @param templateId - ID of the template to synchronize
+   */
+  async syncTasksForTemplate(templateId: number): Promise<void> {
+    const template = await this.templateService.getTemplate(templateId);
+    if (!template) return;
+
+    // Get all targets where this task should run
+    const targets = await this.templateService.getTargetsForTask(templateId);
+
+    // Get existing scheduled tasks for this template
+    const existingTasks = this.registry.getScheduledTasksByTemplate(templateId);
+    const existingTargetIds = new Set(
+      existingTasks.filter((t) => t.targetId !== undefined).map((t) => t.targetId!)
+    );
+
+    // Create new scheduled tasks for targets that don't have one
+    for (const target of targets) {
+      if (!existingTargetIds.has(target.id)) {
+        const taskId = this.registry.generateTaskId();
+        const now = new Date();
+        const scheduledTask: ScheduledTask = {
+          id: taskId,
+          templateId,
+          content: template.content,
+          interval: template.interval,
+          moduleId: template.moduleId,
+          targetId: target.id,
+          nextExecutionAt: new Date(now.getTime() + template.interval * 1000),
+          active: true,
+        };
+        this.registry.registerScheduledTask(scheduledTask);
+      }
+    }
+
+    // Remove scheduled tasks for targets that are no longer applicable
+    const validTargetIds = new Set(targets.map((t) => t.id));
+    existingTasks.forEach((task) => {
+      if (task.targetId !== undefined && !validTargetIds.has(task.targetId)) {
+        this.registry.deleteScheduledTask(task.id);
+      }
+    });
+  }
+
+  /**
+   * Synchronize all tasks when a new target is added or target settings change
+   * Ensures all templates have scheduled tasks for all applicable targets
+   */
+  async syncAllTasks(): Promise<void> {
+    const templates = await this.templateService.getAllTemplates();
+    for (const template of templates) {
+      await this.syncTasksForTemplate(template.id);
+    }
+  }
+
+  /**
+   * Enable or disable a task template globally for all targets
+   * @param templateId - ID of the template to modify
+   * @param active - true to enable, false to disable
+   * @returns Promise resolving to true if successful
+   */
+  async setTaskTemplateActive(templateId: number, active: boolean): Promise<boolean> {
+    const success = await this.templateService.setTemplateActive(templateId, active);
+    if (success) {
+      await this.syncTasksForTemplate(templateId);
+    }
+    return success;
+  }
+
+  /**
+   * Enable or disable a task template for a specific target
+   * Creates an override that takes precedence over the global setting
+   * @param templateId - ID of the template to modify
+   * @param targetId - ID of the target to apply the override to
+   * @param active - true to enable, false to disable for this target
+   */
+  async setTaskActiveForTarget(
+    templateId: number,
+    targetId: number,
+    active: boolean
+  ): Promise<void> {
+    await this.templateService.setTargetOverride(targetId, templateId, active);
+    await this.syncTasksForTemplate(templateId);
+  }
+
+  /**
+   * Register a scheduled task (legacy method for backward compatibility)
+   * @deprecated Use registerTaskTemplate instead for multi-target support
+   * @param content - Task content including commands and required tools
+   * @param interval - Execution interval in seconds
+   * @param moduleId - ID of the module registering the task
+   * @returns The scheduled task ID
+   */
   registerTask(content: TaskContent, interval: number, moduleId: string): number {
     const taskId = this.registry.generateTaskId();
     const now = new Date();
     const scheduledTask: ScheduledTask = {
       id: taskId,
+      templateId: 0, // Legacy tasks don't have a template
       content,
       interval,
       moduleId,
       nextExecutionAt: new Date(now.getTime() + interval * 1000),
+      active: true,
     };
     this.registry.registerScheduledTask(scheduledTask);
     return taskId;
   }
 
-  // Unregister a scheduled task
+  /**
+   * Unregister a scheduled task (legacy method)
+   * @deprecated Use unregisterTaskTemplate instead
+   * @param taskId - ID of the task to unregister
+   * @returns true if successful, false if task not found
+   */
   unregisterTask(taskId: number): boolean {
     if (!this.registry.hasScheduledTask(taskId)) {
       return false;
@@ -74,7 +242,11 @@ class TaskManager {
     return true;
   }
 
-  // Start the scheduler
+  /**
+   * Start the task scheduler
+   * @param checkInterval - Interval in milliseconds between scheduler checks (default: 10000)
+   * @private
+   */
   private startScheduler(checkInterval: number = 10000) {
     if (this.schedulerInterval) {
       clearInterval(this.schedulerInterval);
@@ -84,7 +256,10 @@ class TaskManager {
     }, checkInterval);
   }
 
-  // Stop the scheduler
+  /**
+   * Stop the task scheduler
+   * Clears the scheduler interval to prevent further task executions
+   */
   stopScheduler() {
     if (this.schedulerInterval) {
       clearInterval(this.schedulerInterval);
@@ -92,10 +267,25 @@ class TaskManager {
     }
   }
 
-  // Check for due tasks and create executions
+  /**
+   * Check for due tasks and create executions
+   * Called periodically by the scheduler
+   * @private
+   */
   private checkDueTasks() {
     const dueTasks = this.registry.getDueScheduledTasks();
     for (const scheduledTask of dueTasks) {
+      // Skip inactive tasks
+      if (!scheduledTask.active) {
+        // Update next execution time even for inactive tasks
+        const now = new Date();
+        this.registry.updateScheduledTask(scheduledTask.id, {
+          lastExecutedAt: now,
+          nextExecutionAt: new Date(now.getTime() + scheduledTask.interval * 1000),
+        });
+        continue;
+      }
+
       this.createExecution(scheduledTask);
       // Update next execution time
       const now = new Date();
@@ -106,7 +296,11 @@ class TaskManager {
     }
   }
 
-  // Create a task execution from a scheduled task
+  /**
+   * Create a task execution from a scheduled task
+   * @param scheduledTask - The scheduled task to create an execution for
+   * @private
+   */
   private createExecution(scheduledTask: ScheduledTask) {
     const executionId = this.registry.generateExecutionId();
     const execution: TaskExecution = {
@@ -121,98 +315,135 @@ class TaskManager {
           : undefined,
         extractResult: scheduledTask.content.extractResult,
       },
+      targetId: scheduledTask.targetId,
     };
     this.registry.registerTaskExecution(execution);
     this.pendingQueue.push(executionId);
-    this.assignNextTask();
+    // Don't await here to avoid blocking the scheduler
+    this.assignNextTask().catch((err) => {
+      logger.error(`Error assigning task: ${err.message}`);
+    });
   }
 
-  // Attempt to assign the next pending execution to an available worker
-  assignNextTask(): boolean {
-    if (!this.transport) return false;
-    let assigned = false;
+  /**
+   * Attempt to assign the next pending execution to an available worker
+   * Handles tool installation, placeholder replacement, and load balancing
+   */
+  async assignNextTask() {
+    if (!this.transport) return;
 
-    // Try to fill as many executions as possible while workers are available
-    for (let safety = 0; safety < 1000; safety++) {
-      const nextExecutionId = this.pendingQueue[0];
-      // Pending queue empty
-      if (nextExecutionId == null) break;
+    // Prevent concurrent executions of this method
+    if ((this as any)._assigning) return;
+    (this as any)._assigning = true;
 
-      const execution = this.registry.getTaskExecution(nextExecutionId);
-      // Pending execution missing or not pending anymore
-      if (!execution || execution.status !== "pending") {
-        this.pendingQueue.shift();
-        continue;
-      }
+    try {
+      // Try to fill as many executions as possible while workers are available
+      for (let safety = 0; safety < 1000; safety++) {
+        const nextExecutionId = this.pendingQueue[0];
+        // Pending queue empty
+        if (nextExecutionId == null) break;
 
-      // Get list of available workers
-      const workers = this.transport.listWorkers();
-      if (!workers.length) break;
+        const execution = this.registry.getTaskExecution(nextExecutionId);
+        // Pending execution missing or not pending anymore
+        if (!execution || execution.status !== "pending") {
+          this.pendingQueue.shift();
+          continue;
+        }
 
-      // Compute a dynamic load factor if not provided
-      const enriched = workers.map((w) => ({
-        ...w,
-        effectiveLoad:
-          isFinite(w.loadFactor) && w.loadFactor > 0 ? w.loadFactor : w.currentTasks.length,
-      }));
-      enriched.sort((a, b) => a.effectiveLoad - b.effectiveLoad);
-      // Select the worker with the lowest effective load
-      const chosen = enriched[0];
-      if (!chosen) break;
+        // Get list of available workers
+        const workers = this.transport.listWorkers();
+        if (!workers.length) break;
 
-      // Check if the worker has all required tools
-      const missingTools = getMissingTools(chosen.availableTools, execution.content.requiredTools);
-      let executionToSend = execution;
+        // Compute a dynamic load factor if not provided
+        const enriched = workers.map((w) => ({
+          ...w,
+          effectiveLoad:
+            isFinite(w.loadFactor) && w.loadFactor > 0 ? w.loadFactor : w.currentTasks.length,
+        }));
+        enriched.sort((a, b) => a.effectiveLoad - b.effectiveLoad);
+        // Select the worker with the lowest effective load
+        const chosen = enriched[0];
+        if (!chosen) break;
 
-      // If tools are missing, augment the execution with installation commands
-      if (missingTools.length > 0) {
-        // Clone the execution to avoid modifying the original
-        executionToSend = {
-          ...execution,
-          content: {
-            commands: [...execution.content.commands],
-            requiredTools: execution.content.requiredTools
-              ? [...execution.content.requiredTools]
-              : undefined,
-            extractResult: execution.content.extractResult, // Preserve extractResult
-          },
-        };
-        // Add installation commands for missing tools
-        executionToSend.content.commands = installToolsTask(missingTools, executionToSend.content);
-      }
-      // Replace tool placeholders in commands before sending
-      executionToSend.content.commands = replaceToolPlaceholders(
-        executionToSend.content.commands,
-        executionToSend.content.requiredTools || []
-      );
+        // Check if the worker has all required tools
+        const missingTools = getMissingTools(
+          chosen.availableTools,
+          execution.content.requiredTools
+        );
+        let executionToSend = execution;
 
-      // Assign execution to chosen worker
-      this.registry.updateTaskExecution(execution.executionId, {
-        workerId: chosen.id,
-        status: "running",
-      });
-      const sent = this.transport.sendTask(chosen.id, executionToSend);
-      if (sent) {
-        this.pendingQueue.shift();
-        assigned = true;
-        continue;
-      } else {
-        // Could not send; mark back to pending & break to avoid tight loop
+        // If tools are missing, augment the execution with installation commands
+        if (missingTools.length > 0) {
+          // Clone the execution to avoid modifying the original
+          executionToSend = {
+            ...execution,
+            content: {
+              commands: [...execution.content.commands],
+              requiredTools: execution.content.requiredTools
+                ? [...execution.content.requiredTools]
+                : undefined,
+              extractResult: execution.content.extractResult,
+            },
+          };
+          // Add installation commands for missing tools
+          executionToSend.content.commands = installToolsTask(
+            missingTools,
+            executionToSend.content
+          );
+        }
+        // Replace tool placeholders in commands before sending
+        executionToSend.content.commands = replaceToolPlaceholders(
+          executionToSend.content.commands,
+          executionToSend.content.requiredTools || []
+        );
+
+        // Replace target placeholders if applicable
+        executionToSend.content.commands = await replaceTargetPlaceholders(
+          executionToSend.content.commands,
+          executionToSend.targetId
+        );
+
+        // Assign execution to chosen worker
         this.registry.updateTaskExecution(execution.executionId, {
-          status: "pending",
-          workerId: undefined,
+          workerId: chosen.id,
+          status: "running",
         });
-        break;
+        logger.info(`Sending task execution ${execution.executionId} to worker ${chosen.id}`);
+        const sent = this.transport.sendTask(chosen.id, executionToSend);
+        if (sent) {
+          this.pendingQueue.shift();
+          continue;
+        } else {
+          // Could not send; mark back to pending & break to avoid tight loop
+          this.registry.updateTaskExecution(execution.executionId, {
+            status: "pending",
+            workerId: undefined,
+          });
+          break;
+        }
       }
+    } finally {
+      (this as any)._assigning = false;
     }
-    return assigned;
   }
 
+  /**
+   * Handle a new worker connection
+   * Attempts to assign pending tasks to the newly connected worker
+   * @param _workerId - ID of the connected worker (unused but kept for interface compatibility)
+   */
   handleWorkerConnect(_workerId: number) {
     // Try to dispatch tasks when a new worker arrives
-    this.assignNextTask();
+    this.assignNextTask().catch((err) => {
+      logger.error(`Error assigning task on worker connect: ${err.message}`);
+    });
   }
 
+  /**
+   * Handle a worker disconnection
+   * Requeues all running tasks from the disconnected worker
+   * @param workerId - ID of the disconnected worker
+   */
   handleWorkerDisconnect(workerId: number) {
     // Requeue executions that were running on that worker
     const toRequeue: number[] = [];
@@ -235,10 +466,18 @@ class TaskManager {
     if (toRequeue.length) {
       this.transport?.onRequeueNeeded?.(toRequeue);
       // Attempt immediate reassignment
-      this.assignNextTask();
+      this.assignNextTask().catch((err) => {
+        logger.error(`Error assigning task on worker disconnect: ${err.message}`);
+      });
     }
   }
 
+  /**
+   * Handle a task result from a worker
+   * Updates execution status and notifies completion listeners
+   * @param workerId - ID of the worker that executed the task
+   * @param result - The task execution result
+   */
   handleWorkerResult(workerId: number, result: TaskResult) {
     const execution = this.registry.getTaskExecution(result.executionId);
     if (!execution) return;
@@ -270,44 +509,82 @@ class TaskManager {
     });
   }
 
-  // Helper methods to query scheduled tasks
+  /**
+   * Get a scheduled task by ID
+   * @param id - The scheduled task ID
+   * @returns The scheduled task or undefined if not found
+   */
   getScheduledTask(id: number): ScheduledTask | undefined {
     return this.registry.getScheduledTask(id);
   }
 
+  /**
+   * Get all scheduled tasks
+   * @returns Array of all scheduled tasks
+   */
   getAllScheduledTasks(): ScheduledTask[] {
     return this.registry.getAllScheduledTasks();
   }
 
+  /**
+   * Get all scheduled tasks registered by a specific module
+   * @param moduleId - The module ID to filter by
+   * @returns Array of scheduled tasks for the module
+   */
   getScheduledTasksByModule(moduleId: string): ScheduledTask[] {
     return this.registry.getScheduledTasksByModule(moduleId);
   }
 
-  // Helper methods to query executions
+  /**
+   * Get a task execution by ID
+   * @param executionId - The execution ID
+   * @returns The task execution or undefined if not found
+   */
   getTaskExecution(executionId: number): TaskExecution | undefined {
     return this.registry.getTaskExecution(executionId);
   }
 
+  /**
+   * Get all task executions
+   * @returns Array of all task executions
+   */
   getAllTaskExecutions(): TaskExecution[] {
     return this.registry.getAllTaskExecutions();
   }
 
+  /**
+   * Get task executions filtered by status
+   * @param status - The execution status to filter by
+   * @returns Array of task executions with the specified status
+   */
   getTaskExecutionsByStatus(status: TaskExecution["status"]): TaskExecution[] {
     return this.registry.getTaskExecutionsByStatus(status);
   }
 
+  /**
+   * Get all pending task executions
+   * @returns Array of pending task executions
+   */
   getPendingExecutions(): TaskExecution[] {
     return this.registry.getTaskExecutionsByStatus("pending");
   }
 
+  /**
+   * Get all running task executions
+   * @returns Array of running task executions
+   */
   getRunningExecutions(): TaskExecution[] {
     return this.registry.getTaskExecutionsByStatus("running");
   }
 
-  // Clear old completed/failed executions
+  /**
+   * Clear old completed or failed task executions
+   * Removes executions that are older than the specified date
+   * @param olderThan - Date threshold; executions before this date will be removed
+   */
   clearOldExecutions(olderThan: Date) {
     this.registry.clearOldExecutions(olderThan);
   }
 }
 
-export default TaskManager.getInstance;
+export default TaskManager.getTaskManager;

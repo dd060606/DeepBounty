@@ -123,6 +123,16 @@ class ServerRegistry {
     return this.getAllScheduledTasks().filter((task) => task.moduleId === moduleId);
   }
 
+  // Get scheduled tasks by template ID
+  public getScheduledTasksByTemplate(templateId: number): ScheduledTask[] {
+    return this.getAllScheduledTasks().filter((task) => task.templateId === templateId);
+  }
+
+  // Get scheduled tasks by target ID
+  public getScheduledTasksByTarget(targetId: number): ScheduledTask[] {
+    return this.getAllScheduledTasks().filter((task) => task.targetId === targetId);
+  }
+
   // Update a scheduled task
   public updateScheduledTask(id: number, updates: Partial<ScheduledTask>): void {
     const task = this.scheduledTasks.get(id);

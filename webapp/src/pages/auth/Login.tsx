@@ -23,7 +23,8 @@ export default function Login() {
 
     ApiClient.post("/auth/login", { password })
       .then(() => {
-        navigate("/");
+        // Force replace to trigger Auth component check
+        navigate("/", { replace: true });
       })
       .catch((error) => {
         if (error.response?.status === 401) {

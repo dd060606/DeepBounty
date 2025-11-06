@@ -36,15 +36,18 @@ function buildModuleSDK(moduleId: string, moduleName: string): ServerAPI {
     version: "1.0.0",
     logger: new Logger(`Module-${moduleName}`),
     config: new ModuleConfig(moduleId),
-    registerScheduledTask(
-      taskContent: TaskContent,
-      interval: number,
-      onComplete?: (result: TaskResult) => void
-    ) {
-      return taskAPI.registerScheduledTask(taskContent, interval, onComplete);
+    registerTaskTemplate: async (name, description, taskContent, interval, onComplete) => {
+      return await taskAPI.registerTaskTemplate(
+        name,
+        description,
+        taskContent,
+        interval,
+        onComplete
+      );
     },
-    unregisterScheduledTask(taskId: number) {
-      return taskAPI.unregisterScheduledTask(taskId);
+
+    unregisterTaskTemplate: async (templateId) => {
+      return await taskAPI.unregisterTaskTemplate(templateId);
     },
     registerTool(tool) {
       registry.registerTool(tool);

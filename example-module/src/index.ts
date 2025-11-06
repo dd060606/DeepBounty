@@ -1,10 +1,6 @@
 import type { ServerAPI, PluginLifecycle } from "@deepbounty/sdk";
 import { sendTestRequest } from "./utils";
-import {
-	FIND_SUBDOMAINS_TASK,
-	FIND_SUBDOMAINS_TASK_WITH_TEMPFILE,
-	subdomainsCallback,
-} from "./tasks/subfinder";
+import { FIND_SUBDOMAINS_TASK, subdomainsCallback } from "./tasks/subfinder";
 import { SUBFINDER } from "./tools";
 
 export default class ExamplePlugin implements PluginLifecycle {
@@ -17,14 +13,13 @@ export default class ExamplePlugin implements PluginLifecycle {
 
 	private registerTasks() {
 		// Register tasks
-		// this.api.registerScheduledTask(FIND_SUBDOMAINS_TASK, 30, (res) =>
-		// 	subdomainsCallback(this.api, res)
-		// ); // every 30 seconds
-		this.api.registerScheduledTask(
-			FIND_SUBDOMAINS_TASK_WITH_TEMPFILE,
-			30,
+		this.api.registerTaskTemplate(
+			"Subdomain Discovery",
+			"Find subdomains using subfinder for all active targets",
+			FIND_SUBDOMAINS_TASK,
+			30, // every 30 seconds
 			(res) => subdomainsCallback(this.api, res)
-		); // every 30 seconds
+		);
 	}
 
 	async run() {

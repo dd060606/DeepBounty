@@ -19,8 +19,16 @@ export async function login(req: Request, res: Response) {
     }
 
     req.session.authenticated = true;
-    logger.info(req.ip + " logged in successfully");
-    return res.sendStatus(200);
+
+    // Ensure session is saved before responding
+    req.session.save((err) => {
+      if (err) {
+        logger.error("Session save error: " + err.message);
+        return res.status(500).json({ error: "Session error" });
+      }
+      logger.info(req.ip + " logged in successfully");
+      return res.sendStatus(200);
+    });
   } catch {
     return res.status(500).json({ error: "Internal server error" });
   }
