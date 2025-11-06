@@ -139,7 +139,9 @@ class WebSocketHandler {
           worker.loadFactor = msg.loadFactor ?? worker.loadFactor;
         }
         // Assign another task if available
-        this.taskManager.assignNextTask();
+        this.taskManager.assignNextTask().catch((err) => {
+          logger.error(`Error assigning next task: ${err.message}`);
+        });
         break;
       }
       case "tools:list": {

@@ -7,22 +7,20 @@ export const FIND_SUBDOMAINS_TASK: TaskContent = {
 	commands: [
 		// Mark the start of the result we want to extract
 		'echo "<<<RESULT_START>>>"',
-
 		// tool:{subfinder} is automatically replaced with /tools/subfinder-2.9.0/subfinder
-		"tool:{subfinder} -d example.com",
-
+		"tool:{subfinder} -d {{TARGET_DOMAIN}}",
 		// Mark the end of the result
 		'echo "<<<RESULT_END>>>"',
 	],
 	requiredTools: [SUBFINDER],
-	extractResult: true, // Enable result extraction
+	extractResult: true,
 };
 
 // Register a task with a temporary file
 export const FIND_SUBDOMAINS_TASK_WITH_TEMPFILE: TaskContent = {
 	commands: [
 		// Store subdomains to file (task:tempfile will be replaced by a dedicated temp task file)
-		"tool:{subfinder} -d example.com > task:tempfile",
+		"tool:{subfinder} -d {{TARGET_DOMAIN}} > task:tempfile",
 
 		// Extract only the result we want
 		'echo "<<<RESULT_START>>>"',
@@ -44,10 +42,9 @@ export function subdomainsCallback(api: ServerAPI, result: TaskResult) {
 			.filter((line: string) => line.trim().length > 0);
 
 		api.logger.info(`Found ${subdomains.length} subdomains:`);
-		subdomains.forEach((subdomain: string) => {
-			api.logger.info(`  - ${subdomain}`);
-		});
-
+		for (let i = 0; i < 5; i++) {
+			api.logger.info(`  - ${subdomains[i]}`);
+		}
 		// You can process the results further here
 		// For example: store in database, trigger alerts, etc.
 	} else {

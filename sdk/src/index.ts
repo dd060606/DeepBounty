@@ -54,24 +54,28 @@ export interface ServerAPI {
 	logger: Logger;
 	config: ConfigAPI;
 	/**
-	 * Register a scheduled task that runs at a specific interval
-	 * @param taskContent The task content including commands and required tools
+	 * Register a task template that can be scheduled for all targets
+	 * @param name Friendly name for the task
+	 * @param description Task description
+	 * @param taskContent The task content including commands and tools
 	 * @param interval Interval in seconds between task executions
 	 * @param onComplete Optional callback executed when the task completes
-	 * @returns The ID of the registered scheduled task
+	 * @returns The ID of the registered task template
 	 */
-	registerScheduledTask(
+	registerTaskTemplate(
+		name: string,
+		description: string,
 		taskContent: TaskContent,
 		interval: number,
 		onComplete?: (result: TaskResult) => void
-	): number;
+	): Promise<number>;
 
 	/**
-	 * Unregister a scheduled task
-	 * @param taskId The ID of the scheduled task to unregister
-	 * @returns true if the task was unregistered, false if it didn't exist
+	 * Unregister a task template
+	 * @param templateId The ID of the task template to unregister
+	 * @returns true if the template was unregistered, false if it didn't exist
 	 */
-	unregisterScheduledTask(taskId: number): boolean;
+	unregisterTaskTemplate(templateId: number): Promise<boolean>;
 
 	/** Register a tool
 	 * @param tool The tool to register

@@ -1,3 +1,4 @@
+import getTaskManager from "@/tasks/taskManager.js";
 import { query } from "@/utils/db.js";
 import Logger from "@/utils/logger.js";
 import { Target } from "@deepbounty/sdk/types";
@@ -64,6 +65,8 @@ export function addTarget(req: Request, res: Response) {
   )
     .then((result) => {
       logger.info(`Added new target: ${name} (${domain})`);
+      //Sync tasks for the new target
+      getTaskManager().syncAllTasks();
       res.status(201).json(result[0]);
     })
     .catch((error) => {
@@ -85,6 +88,11 @@ export function editTarget(req: Request, res: Response) {
         return res.status(404).json({ error: "Target not found" });
       }
       logger.info(`Updated target: ${name} (${domain})`);
+      if (activeScan) {
+        //Sync tasks if activeScan is enabled
+        getTaskManager().syncAllTasks();
+      }
+
       res.json(result[0]);
     })
     .catch((error) => {

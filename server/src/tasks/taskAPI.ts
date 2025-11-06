@@ -1,5 +1,8 @@
 import { TaskContent, TaskResult, Tool } from "@deepbounty/sdk/types";
 import getTaskManager from "./taskManager.js";
+import Logger from "@/utils/logger.js";
+
+const logger = new Logger("TaskAPI");
 
 /**
  * Task API for modules to register scheduled tasks
@@ -18,48 +21,66 @@ export class TaskAPI {
   }
 
   /**
-   * Register a scheduled task that runs at a specific interval
-   * @param taskContent The task content including commands and required tools
-   * @param interval Interval in seconds between task executions
-   * @param onComplete Optional callback executed when the task completes
-   * @returns The ID of the registered scheduled task
+   * Register a task template that runs across all targets
    */
-  registerScheduledTask(
+  async registerTaskTemplate(
+    name: string,
+    description: string,
     taskContent: TaskContent,
     interval: number,
     onComplete?: (result: TaskResult) => void
-  ): number {
-    const taskId = this.taskManager.registerTask(taskContent, interval, this.moduleId);
+  ): Promise<number> {
+    const templateId = await this.taskManager.registerTaskTemplate(
+      this.moduleId,
+      name,
+      description,
+      taskContent,
+      interval
+    );
 
     // Store callback if provided
     if (onComplete) {
-      this.taskCallbacks.set(taskId, onComplete);
+      this.taskCallbacks.set(templateId, onComplete);
     }
 
-    return taskId;
+    return templateId;
   }
 
   /**
-   * Unregister a scheduled task
-   * @param taskId The ID of the scheduled task to unregister
-   * @returns true if the task was unregistered, false if it didn't exist
+   * Unregister a task template
    */
-  unregisterScheduledTask(taskId: number): boolean {
-    // Remove callback
-    this.taskCallbacks.delete(taskId);
-    return this.taskManager.unregisterTask(taskId);
+  async unregisterTaskTemplate(templateId: number): Promise<boolean> {
+    this.taskCallbacks.delete(templateId);
+    return await this.taskManager.unregisterTaskTemplate(templateId);
   }
 
   // Handle task completion and notify waiting callbacks
   private handleTaskComplete(result: TaskResult) {
-    const callback = this.taskCallbacks.get(result.scheduledTaskId);
-    if (!callback) return;
+    // Get the scheduled task to find the template ID
+    const scheduledTask = this.taskManager.getScheduledTask(result.scheduledTaskId);
+    if (!scheduledTask) {
+      logger.warn(`Scheduled task ${result.scheduledTaskId} not found for result callback`);
+      return;
+    }
+
+    // Look up the callback using the template ID
+    const callback = this.taskCallbacks.get(scheduledTask.templateId);
+    if (!callback) {
+      // Silently return if no callback (this is normal for some tasks)
+      return;
+    }
+
+    logger.info(
+      `Executing callback for template ${scheduledTask.templateId}, execution ${result.executionId}, success: ${result.success}`
+    );
 
     // Notify callback
     try {
       callback(result);
     } catch (error) {
-      console.error(`Error in task completion callback for task ${result.scheduledTaskId}:`, error);
+      logger.error(
+        `Error in task completion callback for task ${result.scheduledTaskId}: ${(error as Error).message}`
+      );
     }
   }
 

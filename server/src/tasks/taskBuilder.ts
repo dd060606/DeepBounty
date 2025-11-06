@@ -1,4 +1,6 @@
-import { TaskContent, Tool } from "@deepbounty/sdk/types";
+import { query } from "@/utils/db.js";
+import { Target, TaskContent, Tool } from "@deepbounty/sdk/types";
+import { sql } from "drizzle-orm";
 
 // Get the tool directory path
 function getToolDir(tool: Tool): string {
@@ -26,6 +28,25 @@ export function replaceToolPlaceholders(commands: string[], tools: Tool[]): stri
 
     return replaced;
   });
+}
+
+// Replace target placeholders with actual target data
+export async function replaceTargetPlaceholders(
+  commands: string[],
+  targetId: number | undefined
+): Promise<string[]> {
+  if (!targetId) return Promise.resolve(commands);
+
+  // Fetch target from database
+  const target = await query<Target>(sql`SELECT * FROM targets WHERE id = ${targetId}`);
+  if (target.length === 0) return Promise.resolve(commands);
+
+  return commands.map((cmd) =>
+    cmd
+      .replace(/\{\{TARGET_DOMAIN\}\}/g, target[0].domain)
+      .replace(/\{\{TARGET_ID\}\}/g, String(target[0].id))
+      .replace(/\{\{TARGET_NAME\}\}/g, target[0].name)
+  );
 }
 
 // Return commands to install required tools
