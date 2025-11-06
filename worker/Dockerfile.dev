@@ -16,14 +16,11 @@ RUN mkdir -p /tools
 # Set working directory for the app
 WORKDIR /app
 
-# Copy package files
-COPY package*.json ./
+# Copy files
+COPY . .
 
 # Install dependencies (including dev dependencies for hot reload)
 RUN npm install
 
-# Copy source code
-COPY . .
-
-# Use nodemon for hot reload
-CMD ["npx", "tsx", "--watch", "src/worker.ts"]
+# Use nodemon for hot reloading
+CMD ["npx", "nodemon", "--config", "nodemon.json"]

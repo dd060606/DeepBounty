@@ -1,0 +1,9 @@
+{
+  "restartable": "rs",
+  "ignore": ["node_modules", "dist"],
+  "watch": ["src"],
+  "ext": "ts,js,json",
+  "exec": "npx tsx src/worker.ts",
+  "legacyWatch": true,
+  "delay": "250"
+}

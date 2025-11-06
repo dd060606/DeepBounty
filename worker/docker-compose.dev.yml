@@ -9,12 +9,10 @@ services:
     # Mount source code for hot reload
     volumes:
       # Source code (for hot reload)
-      - ./src:/app/src:ro
-      - ./tsconfig.json:/app/tsconfig.json:ro
+      - ./src:/app/src
+      - /app/node_modules
       # Tools directory (persistent)
       - worker-tools:/tools
-      # Node modules (don't override with host)
-      - /app/node_modules
     # Environment variables
     environment:
       - NODE_ENV=development
