@@ -11,6 +11,7 @@ import Auth from "./routes/auth.js";
 import Targets from "./routes/targets.js";
 import Alerts from "./routes/alerts.js";
 import Modules from "./routes/modules.js";
+import Tasks from "./routes/tasks.js";
 import { randomBytes } from "crypto";
 import { initDatabase } from "./utils/db.js";
 import path from "path";
@@ -70,7 +71,7 @@ if (config.get().enableSwaggerUi) {
     app.use(
       "/docs",
       swagger.serve,
-      swagger.setup(YAML.parse(fs.readFileSync("./src/docs/swagger.yml", "utf8")), {
+      swagger.setup(YAML.parse(fs.readFileSync("swagger.yml", "utf8")), {
         // Needed for authenticated requests
         swaggerOptions: {
           requestInterceptor: (req: any) => {
@@ -90,5 +91,6 @@ app.use("/auth", Auth);
 app.use("/targets", requireAuth, Targets);
 app.use("/alerts", requireAuth, Alerts);
 app.use("/modules", requireAuth, Modules);
+app.use("/tasks", requireAuth, Tasks);
 
 export default app;

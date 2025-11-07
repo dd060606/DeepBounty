@@ -1,0 +1,98 @@
+import getTaskManager from "@/tasks/taskManager.js";
+import { getTaskTemplateService } from "@/tasks/taskTemplateService.js";
+import Logger from "@/utils/logger.js";
+import { Request, Response } from "express";
+
+const logger = new Logger("Tasks");
+
+// GET /api/tasks/templates - List all task templates
+export async function getAllTemplates(req: Request, res: Response) {
+  try {
+    const templates = await getTaskTemplateService().getAllTemplates();
+    res.json(templates);
+  } catch (error) {
+    logger.error("Error fetching task templates:", error);
+    res.status(500).json({ error: "Failed to fetch templates" });
+  }
+}
+
+// PATCH /api/tasks/templates/:id - Toggle template activation
+export async function toggleTemplateActivation(req: Request, res: Response) {
+  try {
+    const { id } = req.params;
+    const { active } = req.body;
+
+    const success = await getTaskManager().setTaskTemplateActive(parseInt(id), active);
+
+    if (!success) {
+      return res.status(404).json({ error: "Template not found" });
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    logger.error("Error updating template:", error);
+    res.status(500).json({ error: "Failed to update template" });
+  }
+}
+
+// GET /api/targets/:targetId/task-overrides - Get target overrides
+export async function getTargetOverrides(req: Request, res: Response) {
+  try {
+    const { targetId } = req.params;
+    const overrides = await getTaskTemplateService().getTargetOverrides(parseInt(targetId));
+    res.json(overrides);
+  } catch (error) {
+    logger.error("Error fetching target overrides:", error);
+    res.status(500).json({ error: "Failed to fetch overrides" });
+  }
+}
+
+// PUT /api/targets/:targetId/task-overrides - Batch set overrides
+export async function setOverrides(req: Request, res: Response) {
+  try {
+    const { targetId } = req.params;
+    const { templateIds, active } = req.body;
+
+    const taskManager = getTaskManager();
+    const results = await Promise.allSettled(
+      templateIds.map((templateId: number) =>
+        taskManager.setTaskActiveForTarget(templateId, parseInt(targetId), active)
+      )
+    );
+
+    const failed = results.filter((r) => r.status === "rejected");
+    if (failed.length > 0) {
+      throw new Error("Some overrides failed to set:" + failed);
+    }
+
+    res.sendStatus(200);
+  } catch (error) {
+    logger.error("Error setting target overrides:", error);
+    res.status(500).json({ error: "Failed to set overrides" });
+  }
+}
+
+// DELETE /api/targets/:targetId/task-overrides - Batch remove overrides
+export async function removeOverrides(req: Request, res: Response) {
+  try {
+    const { targetId } = req.params;
+    const { templateIds } = req.body;
+
+    const service = getTaskTemplateService();
+    const results = await Promise.allSettled(
+      templateIds.map((templateId: number) =>
+        service.deleteTargetOverride(parseInt(targetId), templateId)
+      )
+    );
+
+    const failed = results.filter((r) => r.status === "rejected");
+    if (failed.length > 0) {
+      throw new Error("Some overrides failed to delete:" + failed);
+    }
+
+    res.sendStatus(200);
+  } catch (error) {
+    logger.error("Error deleting target overrides:", error);
+    res.status(500).json({ error: "Failed to delete overrides" });
+  }
+}

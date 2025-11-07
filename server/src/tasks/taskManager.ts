@@ -73,6 +73,7 @@ class TaskManager {
   /**
    * Register a task template that creates scheduled tasks for all active targets
    * @param moduleId - ID of the module registering the task
+   * @param uniqueKey - Unique identifier for this task within the module (e.g., "subdomain-scan")
    * @param name - Friendly name for the task
    * @param description - Detailed description of what the task does
    * @param content - Task content including commands and required tools
@@ -81,14 +82,16 @@ class TaskManager {
    */
   async registerTaskTemplate(
     moduleId: string,
+    uniqueKey: string,
     name: string,
     description: string,
     content: TaskContent,
     interval: number
   ): Promise<number> {
-    // Create template in database
+    // Create or update template in database
     const templateId = await this.templateService.createTemplate(
       moduleId,
+      uniqueKey,
       name,
       description,
       content,

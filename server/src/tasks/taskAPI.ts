@@ -24,6 +24,7 @@ export class TaskAPI {
    * Register a task template that runs across all targets
    */
   async registerTaskTemplate(
+    uniqueKey: string,
     name: string,
     description: string,
     taskContent: TaskContent,
@@ -32,6 +33,7 @@ export class TaskAPI {
   ): Promise<number> {
     const templateId = await this.taskManager.registerTaskTemplate(
       this.moduleId,
+      uniqueKey,
       name,
       description,
       taskContent,

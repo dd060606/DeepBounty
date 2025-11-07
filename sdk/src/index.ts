@@ -55,6 +55,7 @@ export interface ServerAPI {
 	config: ConfigAPI;
 	/**
 	 * Register a task template that can be scheduled for all targets
+	 * @param uniqueKey Unique identifier for this task within the module (e.g., "subdomain-scan")
 	 * @param name Friendly name for the task
 	 * @param description Task description
 	 * @param taskContent The task content including commands and tools
@@ -63,6 +64,7 @@ export interface ServerAPI {
 	 * @returns The ID of the registered task template
 	 */
 	registerTaskTemplate(
+		uniqueKey: string,
 		name: string,
 		description: string,
 		taskContent: TaskContent,

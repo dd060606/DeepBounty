@@ -95,21 +95,27 @@ export const modulesConfigs = pgTable(
 );
 
 // Task templates table (task definitions registered by modules)
-export const taskTemplates = pgTable("task_templates", {
-  id: serial().primaryKey().notNull(),
-  moduleId: text().notNull(),
-  name: text().notNull(),
-  description: text(),
-  // Task content (commands and required tools)
-  content: jsonb().notNull(),
-  // Interval in seconds
-  interval: integer().notNull(),
-  // Global activation status
-  active: boolean().default(true).notNull(),
-  createdAt: timestamp({ mode: "string" })
-    .default(sql`CURRENT_TIMESTAMP`)
-    .notNull(),
-});
+export const taskTemplates = pgTable(
+  "task_templates",
+  {
+    id: serial().primaryKey().notNull(),
+    moduleId: text().notNull(),
+    // Unique identifier for the task within the module (e.g., "subdomain-scan")
+    uniqueKey: text().notNull(),
+    name: text().notNull(),
+    description: text(),
+    // Task content (commands and required tools)
+    content: jsonb().notNull(),
+    // Interval in seconds
+    interval: integer().notNull(),
+    // Global activation status
+    active: boolean().default(true).notNull(),
+    createdAt: timestamp({ mode: "string" })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+  },
+  (table) => [unique("task_templates_unique_key").on(table.moduleId, table.uniqueKey)]
+);
 
 // Target-specific task overrides (enable/disable tasks per target)
 export const targetTaskOverrides = pgTable(

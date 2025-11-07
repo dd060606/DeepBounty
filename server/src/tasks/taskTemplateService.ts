@@ -6,22 +6,69 @@ import { query } from "@/utils/db.js";
  */
 export class TaskTemplateService {
   /**
-   * Create a new task template
+   * Create a new task template or update if it already exists
+   * Uses uniqueKey to prevent duplicates on restart
    */
   async createTemplate(
     moduleId: string,
+    uniqueKey: string,
     name: string,
     description: string | undefined,
     content: TaskContent,
     interval: number
   ): Promise<number> {
+    // Check if template already exists
+    const existing = await this.getTemplateByUniqueKey(moduleId, uniqueKey);
+
+    if (existing) {
+      // Update existing template (preserve active status and overrides)
+      await query(sql`
+        UPDATE task_templates 
+        SET name = ${name}, 
+            description = ${description}, 
+            content = ${JSON.stringify(content)}, 
+            interval = ${interval}
+        WHERE id = ${existing.id}
+      `);
+      return existing.id;
+    }
+
+    // Create new template
     const result = await query<{ id: number }>(
-      sql`INSERT INTO task_templates ("moduleId", name, description, content, interval, active) 
-      VALUES (${moduleId}, ${name}, ${description}, ${JSON.stringify(content)}, ${interval}, true) 
+      sql`INSERT INTO task_templates ("moduleId", "uniqueKey", name, description, content, interval, active) 
+      VALUES (${moduleId}, ${uniqueKey}, ${name}, ${description}, ${JSON.stringify(content)}, ${interval}, true) 
       RETURNING id`
     );
 
     return result[0].id;
+  }
+
+  /**
+   * Get a task template by its unique key
+   */
+  async getTemplateByUniqueKey(
+    moduleId: string,
+    uniqueKey: string
+  ): Promise<TaskTemplate | undefined> {
+    const result = await query<TaskTemplate>(sql`
+      SELECT * FROM task_templates 
+      WHERE "moduleId" = ${moduleId} AND "uniqueKey" = ${uniqueKey}
+    `);
+
+    if (result.length === 0) return undefined;
+
+    const template = result[0];
+    return {
+      id: template.id,
+      moduleId: template.moduleId,
+      uniqueKey: template.uniqueKey,
+      name: template.name,
+      description: template.description ?? undefined,
+      content: template.content as TaskContent,
+      interval: template.interval,
+      active: template.active,
+      createdAt: new Date(template.createdAt),
+    };
   }
 
   /**
@@ -36,6 +83,7 @@ export class TaskTemplateService {
     return {
       id: template.id,
       moduleId: template.moduleId,
+      uniqueKey: template.uniqueKey,
       name: template.name,
       description: template.description ?? undefined,
       content: template.content as TaskContent,
@@ -54,6 +102,7 @@ export class TaskTemplateService {
     return result.map((template: any) => ({
       id: template.id,
       moduleId: template.moduleId,
+      uniqueKey: template.uniqueKey,
       name: template.name,
       description: template.description ?? undefined,
       content: template.content as TaskContent,
@@ -74,6 +123,7 @@ export class TaskTemplateService {
     return result.map((template: any) => ({
       id: template.id,
       moduleId: template.moduleId,
+      uniqueKey: template.uniqueKey,
       name: template.name,
       description: template.description ?? undefined,
       content: template.content as TaskContent,
