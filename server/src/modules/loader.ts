@@ -36,8 +36,16 @@ function buildModuleSDK(moduleId: string, moduleName: string): ServerAPI {
     version: "1.0.0",
     logger: new Logger(`Module-${moduleName}`),
     config: new ModuleConfig(moduleId),
-    registerTaskTemplate: async (name, description, taskContent, interval, onComplete) => {
+    registerTaskTemplate: async (
+      uniqueKey,
+      name,
+      description,
+      taskContent,
+      interval,
+      onComplete
+    ) => {
       return await taskAPI.registerTaskTemplate(
+        uniqueKey,
         name,
         description,
         taskContent,

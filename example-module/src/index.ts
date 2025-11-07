@@ -14,6 +14,7 @@ export default class ExamplePlugin implements PluginLifecycle {
 	private registerTasks() {
 		// Register tasks
 		this.api.registerTaskTemplate(
+			"subdomain-scan",
 			"Subdomain Discovery",
 			"Find subdomains using subfinder for all active targets",
 			FIND_SUBDOMAINS_TASK,

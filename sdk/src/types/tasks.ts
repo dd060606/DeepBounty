@@ -16,6 +16,8 @@ export interface TaskTemplate {
 	id: number;
 	// Module that registered this task
 	moduleId: string;
+	// Unique key for this task within the module (e.g., "subdomain-scan")
+	uniqueKey: string;
 	// Friendly task name
 	name: string;
 	// Task description
