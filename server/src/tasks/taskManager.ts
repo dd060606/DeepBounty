@@ -101,6 +101,8 @@ class TaskManager {
     // Create scheduled tasks for all active targets
     await this.syncTasksForTemplate(templateId);
 
+    logger.info(`Module '${moduleId}' registered task '${name}' (ID: ${templateId})`);
+
     return templateId;
   }
 
@@ -122,7 +124,8 @@ class TaskManager {
 
   /**
    * Synchronize scheduled tasks for a template across all applicable targets
-   * Creates tasks for new targets and removes tasks for inactive targets
+   * Creates tasks for new targets, removes tasks for inactive targets,
+   * and updates interval for existing tasks if template interval changed
    * @param templateId - ID of the template to synchronize
    */
   async syncTasksForTemplate(templateId: number): Promise<void> {
@@ -137,6 +140,44 @@ class TaskManager {
     const existingTargetIds = new Set(
       existingTasks.filter((t) => t.targetId !== undefined).map((t) => t.targetId!)
     );
+
+    // Update existing tasks with new interval and content if changed
+    existingTasks.forEach((task) => {
+      const needsUpdate =
+        task.interval !== template.interval ||
+        JSON.stringify(task.content) !== JSON.stringify(template.content) ||
+        task.active !== template.active;
+
+      if (needsUpdate) {
+        // Calculate new nextExecutionAt based on the new interval
+        // If the task hasn't run yet or lastExecutedAt is not set, schedule from now
+        const baseTime = task.lastExecutedAt || new Date();
+        const timeSinceLastExecution = Date.now() - baseTime.getTime();
+
+        // If interval changed, reschedule appropriately
+        let nextExecutionAt: Date;
+        if (task.interval !== template.interval) {
+          // If time since last execution exceeds new interval, execute soon
+          if (timeSinceLastExecution >= template.interval * 1000) {
+            nextExecutionAt = new Date(Date.now() + 5000); // Execute in 5 seconds
+          } else {
+            // Schedule based on remaining time with new interval
+            const remainingTime = template.interval * 1000 - timeSinceLastExecution;
+            nextExecutionAt = new Date(Date.now() + remainingTime);
+          }
+        } else {
+          // Keep existing nextExecutionAt if interval didn't change
+          nextExecutionAt = task.nextExecutionAt;
+        }
+
+        this.registry.updateScheduledTask(task.id, {
+          content: template.content,
+          interval: template.interval,
+          active: template.active,
+          nextExecutionAt,
+        });
+      }
+    });
 
     // Create new scheduled tasks for targets that don't have one
     for (const target of targets) {

@@ -140,3 +140,5 @@ vite.config.ts.timestamp-*
 
 # Configuration files
 **/config/config.json
+
+server/modules/**
