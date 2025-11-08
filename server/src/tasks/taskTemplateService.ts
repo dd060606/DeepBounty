@@ -8,6 +8,7 @@ export class TaskTemplateService {
   /**
    * Create a new task template or update if it already exists
    * Uses uniqueKey to prevent duplicates on restart
+   * Preserves user-customized interval unless the module's default interval changes
    */
   async createTemplate(
     moduleId: string,
@@ -22,14 +23,29 @@ export class TaskTemplateService {
 
     if (existing) {
       // Update existing template (preserve active status and overrides)
-      await query(sql`
-        UPDATE task_templates 
-        SET name = ${name}, 
-            description = ${description}, 
-            content = ${JSON.stringify(content)}, 
-            interval = ${interval}
-        WHERE id = ${existing.id}
-      `);
+      // Only update interval if it matches the current module default,
+      // meaning user hasn't customized it
+      const shouldUpdateInterval = existing.interval === interval;
+
+      if (shouldUpdateInterval) {
+        await query(sql`
+          UPDATE task_templates 
+          SET name = ${name}, 
+              description = ${description}, 
+              content = ${JSON.stringify(content)}, 
+              interval = ${interval}
+          WHERE id = ${existing.id}
+        `);
+      } else {
+        // Preserve customized interval
+        await query(sql`
+          UPDATE task_templates 
+          SET name = ${name}, 
+              description = ${description}, 
+              content = ${JSON.stringify(content)}
+          WHERE id = ${existing.id}
+        `);
+      }
       return existing.id;
     }
 
@@ -67,7 +83,6 @@ export class TaskTemplateService {
       content: template.content as TaskContent,
       interval: template.interval,
       active: template.active,
-      createdAt: new Date(template.createdAt),
     };
   }
 
@@ -89,7 +104,6 @@ export class TaskTemplateService {
       content: template.content as TaskContent,
       interval: template.interval,
       active: template.active,
-      createdAt: new Date(template.createdAt),
     };
   }
 
@@ -108,7 +122,6 @@ export class TaskTemplateService {
       content: template.content as TaskContent,
       interval: template.interval,
       active: template.active,
-      createdAt: new Date(template.createdAt),
     }));
   }
 
@@ -129,7 +142,6 @@ export class TaskTemplateService {
       content: template.content as TaskContent,
       interval: template.interval,
       active: template.active,
-      createdAt: new Date(template.createdAt),
     }));
   }
 
@@ -142,6 +154,49 @@ export class TaskTemplateService {
     );
 
     return result.length > 0;
+  }
+
+  /**
+   * Update a task template's interval
+   */
+  async setTemplateInterval(id: number, interval: number): Promise<boolean> {
+    const result = await query<{ id: number }>(
+      sql`UPDATE task_templates SET interval = ${interval} WHERE id = ${id} RETURNING id`
+    );
+
+    return result.length > 0;
+  }
+
+  /**
+   * Update a task template's active status and/or interval
+   */
+  async updateTemplate(
+    id: number,
+    updates: { active?: boolean; interval?: number }
+  ): Promise<boolean> {
+    if (updates.active === undefined && updates.interval === undefined) {
+      return false; // No updates provided
+    }
+
+    // Build query dynamically based on what needs updating
+    if (updates.active !== undefined && updates.interval !== undefined) {
+      const result = await query<{ id: number }>(
+        sql`UPDATE task_templates SET active = ${updates.active}, interval = ${updates.interval} WHERE id = ${id} RETURNING id`
+      );
+      return result.length > 0;
+    } else if (updates.active !== undefined) {
+      const result = await query<{ id: number }>(
+        sql`UPDATE task_templates SET active = ${updates.active} WHERE id = ${id} RETURNING id`
+      );
+      return result.length > 0;
+    } else if (updates.interval !== undefined) {
+      const result = await query<{ id: number }>(
+        sql`UPDATE task_templates SET interval = ${updates.interval} WHERE id = ${id} RETURNING id`
+      );
+      return result.length > 0;
+    }
+
+    return false;
   }
 
   /**
@@ -185,7 +240,6 @@ export class TaskTemplateService {
       targetId: override.targetId,
       taskTemplateId: override.taskTemplateId,
       active: override.active,
-      createdAt: new Date(override.createdAt),
     };
   }
 
@@ -201,7 +255,6 @@ export class TaskTemplateService {
       targetId: override.targetId,
       taskTemplateId: override.taskTemplateId,
       active: override.active,
-      createdAt: new Date(override.createdAt),
     }));
   }
 
@@ -238,7 +291,6 @@ export class TaskTemplateService {
       targetId: override.targetId,
       taskTemplateId: override.taskTemplateId,
       active: override.active,
-      createdAt: new Date(override.createdAt),
     };
   }
 

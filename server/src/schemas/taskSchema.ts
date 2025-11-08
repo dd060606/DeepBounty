@@ -1,8 +1,13 @@
 import { z } from "zod";
 
-export const taskTemplateSchema = z.object({
-  active: z.boolean(),
-});
+export const taskTemplateSchema = z
+  .object({
+    active: z.boolean().optional(),
+    interval: z.number().int().positive().optional(),
+  })
+  .refine((data) => data.active !== undefined || data.interval !== undefined, {
+    message: "At least one of 'active' or 'interval' must be provided",
+  });
 
 export const taskOverridesSchema = z.array(
   z.object({

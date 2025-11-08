@@ -627,9 +627,6 @@ paths:
                     description:
                       type: string
                       example: "Discover subdomains using Subfinder"
-                    content:
-                      type: object
-                      description: Task configuration (tools, parameters, etc.)
                     interval:
                       type: integer
                       description: Interval in seconds between task executions
@@ -638,9 +635,6 @@ paths:
                       type: boolean
                       description: Whether the task template is globally active
                       example: true
-                    createdAt:
-                      type: string
-                      format: date-time
         "401":
           description: Unauthorized
   /tasks/templates/{moduleId}:
@@ -682,9 +676,6 @@ paths:
                     description:
                       type: string
                       example: "Discover subdomains using Subfinder"
-                    content:
-                      type: object
-                      description: Task configuration (tools, parameters, etc.)
                     interval:
                       type: integer
                       description: Interval in seconds between task executions
@@ -693,9 +684,6 @@ paths:
                       type: boolean
                       description: Whether the task template is globally active
                       example: true
-                    createdAt:
-                      type: string
-                      format: date-time
         "401":
           description: Unauthorized
   /tasks/templates/{id}:
@@ -707,7 +695,8 @@ paths:
           type: integer
         description: Task Template ID
     patch:
-      summary: Toggle task template activation globally
+      summary: Update task template (activation and/or interval)
+      description: Update a task template's active status and/or execution interval. When interval is updated, all scheduled tasks for this template are automatically resynchronized.
       tags:
         - Tasks
       security:
@@ -718,28 +707,27 @@ paths:
           application/json:
             schema:
               type: object
-              required:
-                - active
               properties:
                 active:
                   type: boolean
                   description: Set to true to activate globally, false to deactivate
                   example: true
+                interval:
+                  type: integer
+                  description: Interval in seconds between task executions. Must be a positive integer.
+                  minimum: 1
+                  example: 3600
+              oneOf:
+                - required: [active]
+                - required: [interval]
+                - required: [active, interval]
       responses:
         "200":
-          description: Template activation toggled successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
+          description: Template updated successfully
         "404":
           description: Template not found
         "400":
-          description: Invalid request
+          description: Invalid request (at least one of 'active' or 'interval' must be provided)
         "401":
           description: Unauthorized
   /tasks/targets/{targetId}/task-overrides:

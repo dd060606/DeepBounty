@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import ModulesSkeleton from "@/components/modules/ModulesSkeleton";
 import ApiClient from "@/utils/api";
-import type { Module } from "@deepbounty/sdk/types";
+import type { Module, TaskTemplate } from "@deepbounty/sdk/types";
 import { Input } from "@/components/ui/input";
 import { useMemo, useState as useReactState } from "react";
 import ModuleCard from "@/components/modules/ModuleCard";
@@ -13,6 +13,7 @@ export default function Modules() {
   const [modules, setModules] = useState<Module[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [query, setQuery] = useReactState("");
+  const [allTasks, setAllTasks] = useState<TaskTemplate[]>([]);
 
   async function fetchModules() {
     setLoading(true);
@@ -31,8 +32,20 @@ export default function Modules() {
     }
   }
 
+  async function fetchAllTasks() {
+    try {
+      const res = await ApiClient.get<TaskTemplate[]>("/tasks/templates");
+      setAllTasks(res.data || []);
+    } catch {
+      // Silent fail - tasks will be empty but won't block the UI
+      setAllTasks([]);
+    }
+  }
+
   useEffect(() => {
     fetchModules();
+    // Fetch tasks in background after modules are loaded
+    fetchAllTasks();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -79,6 +92,7 @@ export default function Modules() {
             <ModuleCard
               key={m.id}
               module={m}
+              allTasks={allTasks}
               onSettingsChange={(newSettings) => {
                 // Update the module settings in the list
                 setModules(
@@ -86,6 +100,15 @@ export default function Modules() {
                     modules?.map((mod) =>
                       mod.id === m.id ? { ...mod, settings: newSettings } : mod
                     ) || null
+                );
+              }}
+              onTasksChange={(updatedTasks: TaskTemplate[]) => {
+                // Update tasks in the global list
+                setAllTasks((prev) =>
+                  prev.map((task) => {
+                    const updated = updatedTasks.find((t: TaskTemplate) => t.id === task.id);
+                    return updated || task;
+                  })
                 );
               }}
             />

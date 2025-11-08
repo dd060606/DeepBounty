@@ -9,7 +9,19 @@ const logger = new Logger("Tasks");
 export async function getAllTemplates(req: Request, res: Response) {
   try {
     const templates = await getTaskTemplateService().getAllTemplates();
-    res.json(templates);
+    res.json(
+      templates.map((t) => {
+        return {
+          id: t.id,
+          moduleId: t.moduleId,
+          uniqueKey: t.uniqueKey,
+          name: t.name,
+          description: t.description,
+          interval: t.interval,
+          active: t.active,
+        };
+      })
+    );
   } catch (error) {
     logger.error("Error fetching task templates:", error);
     res.status(500).json({ error: "Failed to fetch templates" });
@@ -21,26 +33,47 @@ export async function getTemplatesByModuleId(req: Request, res: Response) {
   try {
     const { moduleId } = req.params;
     const templates = await getTaskTemplateService().getTemplatesByModule(moduleId);
-    res.json(templates);
+    res.json(
+      templates.map((t) => {
+        return {
+          id: t.id,
+          moduleId: t.moduleId,
+          uniqueKey: t.uniqueKey,
+          name: t.name,
+          description: t.description,
+          interval: t.interval,
+          active: t.active,
+        };
+      })
+    );
   } catch (error) {
     logger.error("Error fetching templates by module ID:", error);
     res.status(500).json({ error: "Failed to fetch templates" });
   }
 }
 
-// PATCH /tasks/templates/:id - Toggle template activation
-export async function toggleTemplateActivation(req: Request, res: Response) {
+// PATCH /tasks/templates/:id - Update template (activation and/or interval)
+export async function updateTemplate(req: Request, res: Response) {
   try {
     const { id } = req.params;
-    const { active } = req.body;
+    const { active, interval } = req.body;
 
-    const success = await getTaskManager().setTaskTemplateActive(parseInt(id), active);
+    const updates: { active?: boolean; interval?: number } = {};
+    if (active !== undefined) updates.active = active;
+    if (interval !== undefined) updates.interval = interval;
+
+    const success = await getTaskTemplateService().updateTemplate(parseInt(id), updates);
 
     if (!success) {
       return res.status(404).json({ error: "Template not found" });
     }
 
-    res.json({ success: true });
+    // If interval was updated, resync tasks to apply new schedule
+    if (interval !== undefined) {
+      await getTaskManager().syncTasksForTemplate(parseInt(id));
+    }
+
+    res.sendStatus(200);
   } catch (error) {
     logger.error("Error updating template:", error);
     res.status(500).json({ error: "Failed to update template" });

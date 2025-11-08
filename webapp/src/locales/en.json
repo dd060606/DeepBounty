@@ -169,5 +169,18 @@
       "loadModules": "Failed to load modules",
       "saveSettings": "Failed to save module settings"
     }
+  },
+  "tasks": {
+    "searchPlaceholder": "Search a task by name...",
+    "interval": "Interval",
+    "seconds": "seconds",
+    "empty": {
+      "title": "No tasks",
+      "hint": "No tasks configured for this target."
+    },
+    "errors": {
+      "loadTasks": "Failed to load tasks",
+      "updateTask": "Failed to update task status"
+    }
   }
 }

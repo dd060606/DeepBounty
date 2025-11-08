@@ -28,8 +28,6 @@ export interface TaskTemplate {
 	interval: number;
 	// Global activation status
 	active: boolean;
-	// When this template was created
-	createdAt: Date;
 }
 
 // Registered scheduled task (template)
@@ -90,5 +88,4 @@ export interface TargetTaskOverride {
 	targetId: number;
 	taskTemplateId: number;
 	active: boolean;
-	createdAt: Date;
 }

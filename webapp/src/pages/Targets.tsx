@@ -7,7 +7,7 @@ import TargetDialog from "@/components/dialogs/TargetDialog";
 import TargetCard from "@/components/targets/TargetCard";
 import TargetSkeleton from "@/components/targets/TargetSkeleton";
 import ApiClient from "@/utils/api";
-import type { Target } from "@deepbounty/sdk/types";
+import type { Target, TaskTemplate } from "@deepbounty/sdk/types";
 import { normalizeDomain } from "@/utils/domains";
 import { ConfirmDialog } from "@/components/dialogs/ConfirmDialog";
 
@@ -18,6 +18,7 @@ export default function Targets() {
   const [query, setQuery] = useState("");
   const [edit, setEdit] = useState<Target | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<Target | null>(null);
+  const [allTasks, setAllTasks] = useState<TaskTemplate[]>([]);
 
   async function fetchTargets() {
     setLoading(true);
@@ -34,8 +35,20 @@ export default function Targets() {
     }
   }
 
+  async function fetchAllTasks() {
+    try {
+      const res = await ApiClient.get<TaskTemplate[]>("/tasks/templates");
+      setAllTasks(res.data || []);
+    } catch {
+      // Silent fail - tasks will be empty but won't block the UI
+      setAllTasks([]);
+    }
+  }
+
   useEffect(() => {
     fetchTargets();
+    // Fetch tasks in background
+    fetchAllTasks();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -195,6 +208,7 @@ export default function Targets() {
         <TargetDialog
           mode="edit"
           initial={edit}
+          allTasks={allTasks}
           open={true}
           onOpenChange={(o) => {
             if (!o) setEdit(null);
