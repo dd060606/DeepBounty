@@ -22,7 +22,8 @@
   },
   "tabs": {
     "general": "General",
-    "advanced": "Advanced"
+    "advanced": "Advanced",
+    "tasks": "Tasks"
   },
   "alerts": {
     "searchPlaceholder": "Search an alert, company or domain...",
