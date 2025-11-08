@@ -27,4 +27,3 @@ function makeValidator(segment: Segment) {
 // Validate request data
 export const validateBody = makeValidator("body");
 export const validateParams = makeValidator("params");
-export const validateQuery = makeValidator("query");

@@ -5,7 +5,7 @@ import { Request, Response } from "express";
 
 const logger = new Logger("Tasks");
 
-// GET /api/tasks/templates - List all task templates
+// GET /tasks/templates - List all task templates
 export async function getAllTemplates(req: Request, res: Response) {
   try {
     const templates = await getTaskTemplateService().getAllTemplates();
@@ -16,7 +16,19 @@ export async function getAllTemplates(req: Request, res: Response) {
   }
 }
 
-// PATCH /api/tasks/templates/:id - Toggle template activation
+// GET /tasks/templates/:moduleId - Get templates by module ID
+export async function getTemplatesByModuleId(req: Request, res: Response) {
+  try {
+    const { moduleId } = req.params;
+    const templates = await getTaskTemplateService().getTemplatesByModule(moduleId);
+    res.json(templates);
+  } catch (error) {
+    logger.error("Error fetching templates by module ID:", error);
+    res.status(500).json({ error: "Failed to fetch templates" });
+  }
+}
+
+// PATCH /tasks/templates/:id - Toggle template activation
 export async function toggleTemplateActivation(req: Request, res: Response) {
   try {
     const { id } = req.params;
@@ -35,7 +47,7 @@ export async function toggleTemplateActivation(req: Request, res: Response) {
   }
 }
 
-// GET /api/targets/:targetId/task-overrides - Get target overrides
+// GET /tasks/targets/:targetId/task-overrides - Get target overrides
 export async function getTargetOverrides(req: Request, res: Response) {
   try {
     const { targetId } = req.params;
@@ -47,15 +59,15 @@ export async function getTargetOverrides(req: Request, res: Response) {
   }
 }
 
-// PUT /api/targets/:targetId/task-overrides - Batch set overrides
+// PUT /tasks/targets/:targetId/task-overrides - Batch set overrides
 export async function setOverrides(req: Request, res: Response) {
   try {
     const { targetId } = req.params;
-    const { templateIds, active } = req.body;
+    const taskOverridesArray: { templateId: number; active: boolean }[] = req.body;
 
     const taskManager = getTaskManager();
     const results = await Promise.allSettled(
-      templateIds.map((templateId: number) =>
+      taskOverridesArray.map(({ templateId, active }) =>
         taskManager.setTaskActiveForTarget(templateId, parseInt(targetId), active)
       )
     );
@@ -72,7 +84,7 @@ export async function setOverrides(req: Request, res: Response) {
   }
 }
 
-// DELETE /api/targets/:targetId/task-overrides - Batch remove overrides
+// DELETE /tasks/targets/:targetId/task-overrides - Batch remove overrides
 export async function removeOverrides(req: Request, res: Response) {
   try {
     const { targetId } = req.params;
