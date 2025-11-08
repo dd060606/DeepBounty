@@ -110,9 +110,6 @@ export const taskTemplates = pgTable(
     interval: integer().notNull(),
     // Global activation status
     active: boolean().default(true).notNull(),
-    createdAt: timestamp({ mode: "string" })
-      .default(sql`CURRENT_TIMESTAMP`)
-      .notNull(),
   },
   (table) => [unique("task_templates_unique_key").on(table.moduleId, table.uniqueKey)]
 );
@@ -126,9 +123,6 @@ export const targetTaskOverrides = pgTable(
     taskTemplateId: integer().notNull(),
     // Override the global activation status for this specific target
     active: boolean().notNull(),
-    createdAt: timestamp({ mode: "string" })
-      .default(sql`CURRENT_TIMESTAMP`)
-      .notNull(),
   },
   (table) => [
     foreignKey({

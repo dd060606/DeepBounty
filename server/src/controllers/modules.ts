@@ -41,7 +41,7 @@ export const updateModuleSettings = async (req: Request, res: Response) => {
     if (result.length === 0) {
       return res.status(404).json({ error: "Target not found" });
     }
-    logger.info(`Updated settings for module ID ${moduleId}`);
+    logger.info(`Updated settings for module ID '${moduleId}'`);
     res.status(204).send();
   } catch (error) {
     logger.error("Error updating module settings", error);
