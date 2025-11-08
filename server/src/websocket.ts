@@ -63,11 +63,11 @@ class WebSocketHandler {
       return;
     }
     // Add the new worker
-    this.addWorker(worker);
+    this.addWorker(worker, req.socket.remoteAddress);
   };
 
   // Add a new worker
-  public addWorker(ws: WebSocket): void {
+  public addWorker(ws: WebSocket, ip?: string): void {
     // Generate a new worker ID
     const workerId = this.workers.size + 1;
     const newWorker: WorkerWithSocket = {
@@ -78,7 +78,9 @@ class WebSocketHandler {
       socket: ws,
     };
     this.workers.set(workerId, newWorker);
-    logger.info(`Worker ${workerId} connected. Total workers: ${this.workers.size}`);
+    logger.info(
+      `New worker connected from ${ip || "unknown"} (ID: ${workerId}). Total workers: ${this.workers.size}`
+    );
 
     // Inform task manager
     this.taskManager.handleWorkerConnect(workerId);

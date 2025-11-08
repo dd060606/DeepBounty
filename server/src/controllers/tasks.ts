@@ -68,8 +68,8 @@ export async function updateTemplate(req: Request, res: Response) {
       return res.status(404).json({ error: "Template not found" });
     }
 
-    // If interval was updated, resync tasks to apply new schedule
-    if (interval !== undefined) {
+    // Resync tasks to apply new schedule, content, or activation status
+    if (active !== undefined || interval !== undefined) {
       await getTaskManager().syncTasksForTemplate(parseInt(id));
     }
 
