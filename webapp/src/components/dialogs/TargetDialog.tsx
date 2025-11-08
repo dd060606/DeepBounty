@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import {
   Dialog,
@@ -22,12 +22,22 @@ import {
   isValidDomain,
   isValidSubdomainEntry,
 } from "@/utils/domains";
-import type { Target } from "@deepbounty/sdk/types";
+import type { Target, TaskTemplate, TargetTaskOverride } from "@deepbounty/sdk/types";
+import { Switch } from "@/components/ui/switch";
+import ApiClient from "@/utils/api";
+import { toast } from "sonner";
+
+type TaskWithOverride = TaskTemplate & {
+  overrideId?: number;
+  overrideActive?: boolean;
+  hasOverride: boolean;
+};
 
 type TargetDialogProps = {
   mode?: "create" | "edit";
   trigger?: React.ReactNode;
   initial?: Partial<Target>;
+  allTasks?: TaskTemplate[];
   onSubmit?: (data: Partial<Target>) => Promise<void> | void;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
@@ -37,6 +47,7 @@ export default function TargetDialog({
   mode = "create",
   trigger,
   initial,
+  allTasks = [],
   onSubmit,
   open: openProp,
   onOpenChange,
@@ -72,7 +83,78 @@ export default function TargetDialog({
     initial?.settings?.customHeader?.split(":")[1] ?? ""
   );
 
+  // Tasks state
+  const [tasks, setTasks] = useState<TaskWithOverride[]>([]);
+  const [taskSearchQuery, setTaskSearchQuery] = useState("");
+  const [loadingTasks, setLoadingTasks] = useState(false);
+
   const icon = useMemo(() => faviconUrl(domain), [domain]);
+
+  // Load task overrides for edit mode
+  useEffect(() => {
+    if (isOpen && mode === "edit" && initial?.id) {
+      fetchTaskOverrides();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, mode, initial?.id]);
+
+  async function fetchTaskOverrides() {
+    if (!initial?.id) return;
+    setLoadingTasks(true);
+    try {
+      const res = await ApiClient.get<TargetTaskOverride[]>(
+        `/tasks/targets/${initial.id}/task-overrides`
+      );
+      const overrides = res.data || [];
+
+      // Merge tasks with their overrides
+      const tasksWithOverrides: TaskWithOverride[] = allTasks.map((task) => {
+        const override = overrides.find((o) => o.taskTemplateId === task.id);
+        return {
+          ...task,
+          overrideId: override?.id,
+          overrideActive: override?.active,
+          hasOverride: !!override,
+        };
+      });
+
+      setTasks(tasksWithOverrides.sort((a, b) => a.name.localeCompare(b.name)));
+    } catch {
+      toast.error(t("tasks.errors.loadTasks"));
+      setTasks([]);
+    } finally {
+      setLoadingTasks(false);
+    }
+  }
+
+  const filteredTasks = useMemo(() => {
+    const q = taskSearchQuery.trim().toLowerCase();
+    if (!q) return tasks;
+    return tasks.filter((task) => task.name.toLowerCase().includes(q));
+  }, [tasks, taskSearchQuery]);
+
+  function toggleTaskOverride(taskId: number) {
+    setTasks((prev) =>
+      prev.map((task) => {
+        if (task.id !== taskId) return task;
+
+        // If there's already an override, toggle it
+        if (task.hasOverride) {
+          return {
+            ...task,
+            overrideActive: !task.overrideActive,
+          };
+        }
+
+        // Create a new override with opposite of template's active state
+        return {
+          ...task,
+          overrideActive: !task.active,
+          hasOverride: true,
+        };
+      })
+    );
+  }
 
   // Validation helpers
   const nameError = !name.trim() ? t("targets.form.errors.nameRequired") : null;
@@ -147,9 +229,49 @@ export default function TargetDialog({
               : undefined,
         },
       });
+
+      // Save task overrides only in edit mode
+      if (mode === "edit" && initial?.id) {
+        await saveTaskOverrides(initial.id);
+      }
+
       handleOpenChange(false);
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function saveTaskOverrides(targetId: number) {
+    const overridesToSet: { templateId: number; active: boolean }[] = [];
+    const overridesToRemove: number[] = [];
+
+    tasks.forEach((task) => {
+      if (task.hasOverride) {
+        // Set or update override
+        overridesToSet.push({
+          templateId: task.id,
+          active: task.overrideActive!,
+        });
+      } else if (task.overrideId) {
+        // Remove override (was overridden before, but user removed it)
+        overridesToRemove.push(task.id);
+      }
+    });
+
+    try {
+      // Set overrides
+      if (overridesToSet.length > 0) {
+        await ApiClient.put(`/tasks/targets/${targetId}/task-overrides`, overridesToSet);
+      }
+
+      // Remove overrides
+      if (overridesToRemove.length > 0) {
+        await ApiClient.delete(`/tasks/targets/${targetId}/task-overrides`, {
+          data: { templateIds: overridesToRemove },
+        });
+      }
+    } catch {
+      toast.error(t("tasks.errors.updateTask"));
     }
   }
 
@@ -169,6 +291,7 @@ export default function TargetDialog({
     setSubdomains(subs);
     setTouched({});
     setSaving(false);
+    setTaskSearchQuery("");
   }
 
   function resetForm() {
@@ -182,6 +305,8 @@ export default function TargetDialog({
     setSubdomains([]);
     setTouched({});
     setSaving(false);
+    setTasks([]);
+    setTaskSearchQuery("");
   }
 
   function handleOpenChange(next: boolean) {
@@ -211,6 +336,7 @@ export default function TargetDialog({
             <TabsList>
               <TabsTrigger value="general">{t("tabs.general")}</TabsTrigger>
               <TabsTrigger value="advanced">{t("tabs.advanced")}</TabsTrigger>
+              {mode === "edit" && <TabsTrigger value="tasks">{t("tabs.tasks")}</TabsTrigger>}
             </TabsList>
 
             <TabsContent value="general">
@@ -403,6 +529,71 @@ export default function TargetDialog({
                 </div>
               </div>
             </TabsContent>
+
+            {/* Tasks tab - only in edit mode */}
+            {mode === "edit" && (
+              <TabsContent value="tasks">
+                <div className="space-y-4 pt-2">
+                  {/* Search bar */}
+                  <Input
+                    value={taskSearchQuery}
+                    onChange={(e) => setTaskSearchQuery(e.target.value)}
+                    placeholder={t("tasks.searchPlaceholder")}
+                  />
+
+                  {/* Tasks list or loading/empty state */}
+                  {loadingTasks ? (
+                    <div className="space-y-3">
+                      {[...Array(3)].map((_, i) => (
+                        <div
+                          key={i}
+                          className="border-border bg-card/60 h-24 animate-pulse rounded-lg border"
+                        />
+                      ))}
+                    </div>
+                  ) : filteredTasks.length === 0 ? (
+                    <div className="text-muted-foreground border-border bg-card/60 flex flex-col rounded-xl border p-8 text-center">
+                      <p className="text-sm font-medium">{t("tasks.empty.title")}</p>
+                      <p className="text-xs">{t("tasks.empty.hint")}</p>
+                    </div>
+                  ) : (
+                    <div className="scrollbar-thin max-h-[400px] space-y-3 overflow-y-auto pr-1">
+                      {filteredTasks.map((task) => {
+                        // Determine the effective active state
+                        const effectiveActive = task.hasOverride
+                          ? task.overrideActive!
+                          : task.active;
+
+                        return (
+                          <div
+                            key={task.id}
+                            className="border-border bg-card hover:bg-muted/50 flex items-start gap-4 rounded-lg border p-4 transition-colors"
+                          >
+                            <div className="flex-1 space-y-2">
+                              <div className="flex items-start justify-between gap-2">
+                                <h4 className="text-foreground text-sm font-semibold">
+                                  {task.name}
+                                </h4>
+                              </div>
+                              {task.description && (
+                                <p className="text-muted-foreground text-xs leading-relaxed">
+                                  {task.description}
+                                </p>
+                              )}
+                            </div>
+                            {/* Enable task switch */}
+                            <Switch
+                              checked={effectiveActive}
+                              onCheckedChange={() => toggleTaskOverride(task.id)}
+                            />
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </TabsContent>
+            )}
           </Tabs>
 
           {/* Button actions */}

@@ -1,4 +1,4 @@
-import type { ModuleSetting, Module } from "@deepbounty/sdk/types";
+import type { ModuleSetting, Module, TaskTemplate } from "@deepbounty/sdk/types";
 import { Button } from "@/components/ui/button";
 import { Settings } from "lucide-react";
 import { useState } from "react";
@@ -9,11 +9,19 @@ import ApiClient from "@/utils/api";
 
 type Props = {
   module: Module;
+  allTasks: TaskTemplate[];
   onClick?: (m: Module) => void;
   onSettingsChange?: (newSettings: ModuleSetting[]) => void;
+  onTasksChange?: (updatedTasks: TaskTemplate[]) => void;
 };
 
-export default function ModuleCard({ module, onClick, onSettingsChange }: Props) {
+export default function ModuleCard({
+  module,
+  allTasks,
+  onClick,
+  onSettingsChange,
+  onTasksChange,
+}: Props) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
 
@@ -48,9 +56,11 @@ export default function ModuleCard({ module, onClick, onSettingsChange }: Props)
         {/* Settings button */}
         <ModuleDialog
           module={module}
+          allTasks={allTasks}
           open={open}
           onOpenChange={setOpen}
           onSubmit={saveSettings}
+          onTasksChange={onTasksChange}
           trigger={
             <Button
               size="icon"

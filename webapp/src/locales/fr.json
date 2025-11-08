@@ -168,5 +168,18 @@
       "loadModules": "Impossible de charger les modules",
       "saveSettings": "Impossible d'enregistrer les paramètres du module"
     }
+  },
+  "tasks": {
+    "searchPlaceholder": "Rechercher une tâche par nom...",
+    "interval": "Intervalle",
+    "seconds": "secondes",
+    "empty": {
+      "title": "Aucune tâche",
+      "hint": "Aucune tâche configurée pour cette cible."
+    },
+    "errors": {
+      "loadTasks": "Impossible de charger les tâches",
+      "updateTask": "Impossible de mettre à jour le statut de la tâche"
+    }
   }
 }

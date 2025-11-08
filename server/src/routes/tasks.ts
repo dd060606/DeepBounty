@@ -4,7 +4,7 @@ import {
   getTargetOverrides,
   removeOverrides,
   setOverrides,
-  toggleTemplateActivation,
+  updateTemplate,
 } from "@/controllers/tasks.js";
 import { validateBody, validateParams } from "@/middlewares/validate.js";
 import { idParamSchema, targetIdParamSchema } from "@/schemas/commonSchema.js";
@@ -27,7 +27,7 @@ router.patch(
   "/templates/:id",
   validateParams(idParamSchema),
   validateBody(taskTemplateSchema),
-  toggleTemplateActivation
+  updateTemplate
 );
 // GET /tasks/targets/:targetId/task-overrides
 router.get(
