@@ -30,7 +30,6 @@ class WebSocketHandler {
       listWorkers: () =>
         [...this.workers.values()].map((w) => ({
           id: w.id,
-          loadFactor: w.loadFactor,
           currentTasks: w.currentTasks,
           availableTools: w.availableTools,
         })),
@@ -74,7 +73,6 @@ class WebSocketHandler {
       id: workerId,
       currentTasks: [],
       availableTools: [],
-      loadFactor: 0,
       socket: ws,
     };
     this.workers.set(workerId, newWorker);
@@ -137,8 +135,6 @@ class WebSocketHandler {
           worker.currentTasks = worker.currentTasks.filter(
             (t) => t.executionId !== result.executionId
           );
-          // Update load factor if provided
-          worker.loadFactor = msg.loadFactor ?? worker.loadFactor;
         }
         // Assign another task if available
         this.taskManager.assignNextTask().catch((err) => {

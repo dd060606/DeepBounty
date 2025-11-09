@@ -17,7 +17,6 @@ interface TaskTransport {
     id: number;
     currentTasks: TaskExecution[];
     availableTools: Tool[];
-    loadFactor: number;
   }>;
   sendTask(workerId: number, execution: TaskExecution): boolean;
   onRequeueNeeded?(executionIds: number[]): void;
@@ -398,15 +397,9 @@ class TaskManager {
         const workers = this.transport.listWorkers();
         if (!workers.length) break;
 
-        // Compute a dynamic load factor if not provided
-        const enriched = workers.map((w) => ({
-          ...w,
-          effectiveLoad:
-            isFinite(w.loadFactor) && w.loadFactor > 0 ? w.loadFactor : w.currentTasks.length,
-        }));
-        enriched.sort((a, b) => a.effectiveLoad - b.effectiveLoad);
         // Select the worker with the lowest effective load
-        const chosen = enriched[0];
+        workers.sort((a, b) => a.currentTasks.length - b.currentTasks.length);
+        const chosen = workers[0];
         if (!chosen) break;
 
         // Check if the worker has all required tools
