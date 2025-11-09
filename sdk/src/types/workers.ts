@@ -6,5 +6,4 @@ export interface Worker {
 	id: number;
 	currentTasks: TaskExecution[];
 	availableTools: Tool[];
-	loadFactor: number; // (currentTasks.length / maxTasks)
 }
