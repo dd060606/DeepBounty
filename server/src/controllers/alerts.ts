@@ -1,3 +1,4 @@
+import { createAlert } from "@/utils/alertUtils.js";
 import { query } from "@/utils/db.js";
 import Logger from "@/utils/logger.js";
 import { Alert } from "@deepbounty/sdk/types";
@@ -37,33 +38,16 @@ export async function getAlerts(req: Request, res: Response) {
 export async function addAlert(req: Request, res: Response) {
   try {
     const { targetId, name, subdomain, score, confirmed = false, description, endpoint } = req.body;
-
-    const inserted = await query<Alert & { targetId: number }>(
-      sql`INSERT INTO alerts ("targetId", name, subdomain, score, confirmed, description, endpoint)
-       VALUES (${targetId}, ${name}, ${subdomain}, ${score}, ${confirmed}, ${description}, ${endpoint})
-       RETURNING id, "targetId", name, subdomain, score, confirmed, description, endpoint, "createdAt"`
-    );
-
-    const alert = inserted[0];
-    // Enrich with target details for response
-    const target = await query<{ name: string; domain: string }>(
-      sql`SELECT name, domain FROM targets WHERE id = ${alert.targetId}`
-    );
-    const t = target[0];
-
-    logger.info(`New alert ${alert.id} (${alert.name}) for target ID ${alert.targetId}`);
-    res.status(201).json({
-      id: alert.id,
-      name: alert.name,
-      targetName: t?.name ?? "",
-      domain: t?.domain ?? "",
-      subdomain: alert.subdomain,
-      score: alert.score,
-      confirmed: alert.confirmed,
-      description: alert.description,
-      endpoint: alert.endpoint,
-      createdAt: new Date(alert.createdAt).toISOString(),
+    const alert = await createAlert({
+      targetId,
+      name,
+      subdomain,
+      score,
+      confirmed,
+      description,
+      endpoint,
     });
+    res.status(201).json(alert);
   } catch (error) {
     logger.error("Error adding alert:", error);
     res.status(500).json({ error: "Internal server error" });

@@ -44,6 +44,17 @@ export default class ExamplePlugin implements PluginLifecycle {
 		this.api.config.getAll().then((cfg) => {
 			this.api.logger.info(`Current config: ${JSON.stringify(cfg)}`);
 		});
+		/*
+		this.api.createAlert(
+			1,
+			"Test Alert",
+			"sub.example.com",
+			2,
+			"This is a test alert",
+			"/test-endpoint",
+			true
+		);
+		*/
 	}
 
 	async stop() {

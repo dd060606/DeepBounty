@@ -10,6 +10,7 @@ import { getTaskAPI } from "@/tasks/taskAPI.js";
 import getRegistry from "@/utils/registry.js";
 import { MODULES_DIR } from "@/utils/constants.js";
 import { validateModule } from "./validateModule.js";
+import { createAlert } from "@/utils/alertUtils.js";
 
 const logger = new Logger("Modules-Loader");
 const registry = getRegistry();
@@ -57,6 +58,25 @@ function buildModuleSDK(moduleId: string, moduleName: string): ServerAPI {
     },
     registerTool(tool) {
       registry.registerTool(tool);
+    },
+    createAlert: async (
+      targetId: number,
+      name: string,
+      subdomain: string,
+      score: number,
+      description: string,
+      endpoint: string,
+      confirmed: boolean = false
+    ) => {
+      return await createAlert({
+        targetId,
+        name,
+        subdomain,
+        score,
+        description,
+        endpoint,
+        confirmed,
+      });
     },
   } as ServerAPI);
 }

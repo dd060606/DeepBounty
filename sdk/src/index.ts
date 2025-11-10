@@ -1,4 +1,4 @@
-import { ModuleSetting, TaskContent, TaskResult, Tool } from "./types";
+import { Alert, ModuleSetting, TaskContent, TaskResult, Tool } from "./types";
 
 export interface Logger {
 	info: (...args: any[]) => void;
@@ -126,6 +126,27 @@ export interface ServerAPI {
 	 * @param tool The tool to register
 	 */
 	registerTool(tool: Tool): void;
+
+	/**
+	 * Create a new alert for a target
+	 * @param targetId The ID of the target
+	 * @param name The title of the alert
+	 * @param subdomain The subdomain where the vulnerability was found
+	 * @param score The severity score (0=Informational, 1=Low, 2=Medium, 3=High, 4=Critical)
+	 * @param description Detailed description of the alert
+	 * @param endpoint Specific endpoint/path where the vulnerability was found
+	 * @param confirmed Whether the vulnerability has been confirmed (default: false)
+	 * @returns The created alert ID
+	 */
+	createAlert(
+		targetId: number,
+		name: string,
+		subdomain: string,
+		score: number,
+		description: string,
+		endpoint: string,
+		confirmed?: boolean
+	): Promise<Alert>;
 }
 
 export interface PluginLifecycle {
