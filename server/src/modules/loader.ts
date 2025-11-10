@@ -3,11 +3,13 @@ import path from "path";
 import yaml from "yaml";
 import { createRequire } from "module";
 import Logger from "@/utils/logger.js";
-import { ModuleConfig, validateSettings } from "./moduleConfig.js";
-import { Module, TaskContent, TaskResult } from "@deepbounty/sdk/types";
+import { ModuleConfig } from "./moduleConfig.js";
+import { closeAllDatabases, ModuleStorage } from "./moduleStorage.js";
 import { ServerAPI } from "@deepbounty/sdk";
 import { getTaskAPI } from "@/tasks/taskAPI.js";
 import getRegistry from "@/utils/registry.js";
+import { MODULES_DIR } from "@/utils/constants.js";
+import { validateModule } from "./validateModule.js";
 
 const logger = new Logger("Modules-Loader");
 const registry = getRegistry();
@@ -17,25 +19,22 @@ function readFirstExistingFile(files: string[]): string | null {
   return null;
 }
 
-// Check required fields in manifest
-function validateManifest(m: any): m is Module {
-  return (
-    m &&
-    typeof m.id === "string" &&
-    typeof m.name === "string" &&
-    typeof m.version === "string" &&
-    typeof m.entry === "string"
-  );
-}
-
 // Build the SDK object passed to modules
 function buildModuleSDK(moduleId: string, moduleName: string): ServerAPI {
   const taskAPI = getTaskAPI(moduleId);
+  const storage = new ModuleStorage(moduleId);
 
   return Object.freeze({
     version: "1.0.0",
     logger: new Logger(`Module-${moduleName}`),
     config: new ModuleConfig(moduleId),
+    storage: {
+      query: storage.query.bind(storage),
+      queryOne: storage.queryOne.bind(storage),
+      execute: storage.execute.bind(storage),
+      createTable: storage.createTable.bind(storage),
+      dropTable: storage.dropTable.bind(storage),
+    },
     registerTaskTemplate: async (
       uniqueKey,
       name,
@@ -53,7 +52,6 @@ function buildModuleSDK(moduleId: string, moduleName: string): ServerAPI {
         onComplete
       );
     },
-
     unregisterTaskTemplate: async (templateId) => {
       return await taskAPI.unregisterTaskTemplate(templateId);
     },
@@ -67,10 +65,6 @@ function buildModuleSDK(moduleId: string, moduleName: string): ServerAPI {
 async function loadModules(baseDir: string): Promise<void> {
   logger.info(`Loading modules...`);
 
-  if (!fs.existsSync(baseDir)) {
-    logger.warn(`Module directory not found: ${baseDir}`);
-    return;
-  }
   // For each subdirectory, look for a manifest file
   for (const dir of fs.readdirSync(baseDir)) {
     try {
@@ -85,27 +79,21 @@ async function loadModules(baseDir: string): Promise<void> {
 
       const manifestRaw = fs.readFileSync(manifestPath, "utf8");
       const parsed = yaml.parse(manifestRaw) as any;
-      // Validate manifest structure
-      if (!validateManifest(parsed)) {
-        logger.warn(`Invalid manifest for ${dir}, file: ${path.basename(manifestPath)}`);
-        continue;
-      }
-      // Check entrypoint exists
-      const entry = path.join(moduleDir, parsed.entry);
-      if (!fs.existsSync(entry)) {
-        logger.warn(`Entrypoint not found for module '${parsed.id}': ${entry}`);
-        continue;
-      }
 
-      // Validate settings structure if any
-      if (parsed.settings && !validateSettings(parsed.settings)) {
-        logger.warn(`Invalid settings structure in module '${parsed.id}'`);
+      // Validate module definition
+      if (!validateModule(parsed, dir, manifestPath)) {
         continue;
       }
 
       // Initialize module settings
       await new ModuleConfig(parsed.id).initSettings(parsed.settings);
 
+      // Check entrypoint exists
+      const entry = path.join(moduleDir, parsed.entry);
+      if (!fs.existsSync(entry)) {
+        logger.warn(`Entrypoint not found for module '${parsed.id}': ${entry}`);
+        continue;
+      }
       // Load the module
       const require = createRequire(import.meta.url);
       const mod = require(entry);
@@ -122,7 +110,11 @@ async function loadModules(baseDir: string): Promise<void> {
         logger.warn(`The module '${parsed.id}' does not expose a run() method.`);
         continue;
       }
-
+      // Normalize stop() method
+      let stop: (() => void) | undefined;
+      if (typeof instance?.stop === "function") {
+        stop = instance.stop.bind(instance);
+      }
       // Register the module in global registry
       registry.registerModule({
         id: parsed.id,
@@ -131,6 +123,7 @@ async function loadModules(baseDir: string): Promise<void> {
         version: parsed.version,
         entry: entry,
         run,
+        stop,
       });
 
       logger.info(`Module loaded: ${parsed.name} (${parsed.id}) v${parsed.version}`);
@@ -143,11 +136,15 @@ async function loadModules(baseDir: string): Promise<void> {
   logger.info(`Total modules loaded: ${registry.moduleCount()}`);
 }
 
-export async function initModules(baseDir: string): Promise<void> {
+export async function initModules(): Promise<void> {
   try {
+    // If the modules directory does not exist, create it
+    if (!fs.existsSync(MODULES_DIR)) {
+      logger.info("Creating modules directory...");
+      fs.mkdirSync(MODULES_DIR, { recursive: true });
+    }
     // Load modules from disk
-    await loadModules(baseDir);
-
+    await loadModules(MODULES_DIR);
     // Initialize each module
     for (const m of registry.getLoadedModules()) {
       m.run().catch((e: any) => {
@@ -156,5 +153,19 @@ export async function initModules(baseDir: string): Promise<void> {
     }
   } catch (e) {
     logger.error("Error while loading modules", e);
+  }
+}
+
+export function shutdownModules(): void {
+  try {
+    closeAllDatabases();
+    registry.getLoadedModules().forEach((m) => {
+      // Call stop() method if defined
+      if (typeof m.stop === "function") {
+        m.stop();
+      }
+    });
+  } catch (e) {
+    logger.error("Error while shutting down modules", e);
   }
 }

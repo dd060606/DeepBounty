@@ -14,7 +14,6 @@ import Modules from "./routes/modules.js";
 import Tasks from "./routes/tasks.js";
 import { randomBytes } from "crypto";
 import { initDatabase } from "./utils/db.js";
-import path from "path";
 import { initModules } from "./modules/loader.js";
 
 // Initialize the app
@@ -23,8 +22,7 @@ function initApp() {
   // Initialize the database
   initDatabase().then(() => {
     // Once the DB is ready, initialize modules
-    const modulesDir = path.join(process.cwd(), "modules");
-    initModules(modulesDir);
+    initModules();
   });
 }
 initApp();
