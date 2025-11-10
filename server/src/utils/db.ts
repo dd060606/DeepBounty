@@ -48,3 +48,8 @@ export async function query<T = unknown>(q: SQL): Promise<T[]> {
   const result = await db.execute(q);
   return result.rows as T[];
 }
+
+export async function queryOne<T = unknown>(q: SQL): Promise<T> {
+  const result = await db.execute(q);
+  return result.rows[0] as T;
+}
