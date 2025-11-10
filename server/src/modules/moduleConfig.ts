@@ -106,29 +106,3 @@ export class ModuleConfig {
     }));
   }
 }
-
-// Check settings structure
-export function validateSettings(settings: any): settings is ModuleSetting[] {
-  if (!Array.isArray(settings)) return false;
-  for (const s of settings) {
-    if (!validateSingleSetting(s)) return false;
-  }
-  return true;
-}
-
-// Validate a single setting structure
-function validateSingleSetting(setting: any): setting is ModuleSetting {
-  if (typeof setting !== "object" || setting === null) return false;
-  if (typeof setting.name !== "string") return false;
-  if (!["checkbox", "text", "select", "info"].includes(setting.type)) return false;
-  if (typeof setting.label !== "string") return false;
-  if (setting.type === "checkbox" && typeof setting.default !== "boolean") return false;
-  if (setting.type === "text" && typeof setting.default !== "string") return false;
-  if (
-    setting.type === "select" &&
-    (!Array.isArray(setting.options) || typeof setting.default !== "string")
-  ) {
-    return false;
-  }
-  return true;
-}

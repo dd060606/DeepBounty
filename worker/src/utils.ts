@@ -1,3 +1,5 @@
+import { TaskExecution } from "@deepbounty/sdk/types";
+
 // Extract result between markers if present
 export function extractResult(output: string, extractResult: boolean): string {
   if (!extractResult) {
@@ -24,4 +26,20 @@ export function extractResult(output: string, extractResult: boolean): string {
 // Replace task:tempfile placeholders with actual temp file paths
 export function replaceTempFilePlaceholders(taskId: number, commands: string[]): string[] {
   return commands.map((cmd) => cmd.replace(/task:tempfile/g, `/tmp/task-${taskId}`));
+}
+
+export function createTaskResult(
+  taskExecution: TaskExecution,
+  success: boolean,
+  output?: string[],
+  error?: string
+) {
+  return {
+    executionId: taskExecution.executionId,
+    scheduledTaskId: taskExecution.scheduledTaskId,
+    targetId: taskExecution.targetId,
+    success,
+    output,
+    error,
+  };
 }

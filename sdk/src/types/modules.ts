@@ -25,4 +25,5 @@ export interface ModuleSetting {
 
 export interface LoadedModule extends Module {
 	run: () => Promise<any>;
+	stop?: () => void;
 }

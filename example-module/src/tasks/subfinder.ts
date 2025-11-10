@@ -1,3 +1,4 @@
+import { storeSubdomain } from "@/storage";
 import { SUBFINDER } from "@/tools";
 import { ServerAPI } from "@deepbounty/sdk";
 import type { TaskContent, TaskResult } from "@deepbounty/sdk/types";
@@ -44,6 +45,9 @@ export function subdomainsCallback(api: ServerAPI, result: TaskResult) {
 		api.logger.info(`Found ${subdomains.length} subdomains:`);
 		for (let i = 0; i < 5; i++) {
 			api.logger.info(`  - ${subdomains[i]}`);
+			if (result.targetId) {
+				storeSubdomain(api, result.targetId, subdomains[i]);
+			}
 		}
 		// You can process the results further here
 		// For example: store in database, trigger alerts, etc.

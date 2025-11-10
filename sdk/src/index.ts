@@ -49,10 +49,53 @@ export interface ConfigAPI {
 	getAllSettings(): Promise<ModuleSetting[]>;
 }
 
+export interface StorageAPI {
+	/**
+	 * Execute a raw SQL query (SELECT)
+	 * @param sql The SQL query to execute
+	 * @param params Optional parameters for the query
+	 * @returns All matching rows
+	 */
+	query<T = any>(sql: string, params?: any[]): T[];
+
+	/**
+	 * Execute a raw SQL query and return the first row
+	 * @param sql The SQL query to execute
+	 * @param params Optional parameters for the query
+	 * @returns The first matching row or undefined
+	 */
+	queryOne<T = any>(sql: string, params?: any[]): T | undefined;
+
+	/**
+	 * Execute a raw SQL statement (INSERT, UPDATE, DELETE)
+	 * @param sql The SQL statement to execute
+	 * @param params Optional parameters for the statement
+	 * @returns Information about the execution (changes, lastInsertRowid)
+	 */
+	execute(
+		sql: string,
+		params?: any[]
+	): { changes: number | bigint; lastInsertRowid: number | bigint };
+
+	/**
+	 * Helper method to create a table if it doesn't exist
+	 * @param tableName The name of the table to create
+	 * @param schema The schema definition for the table
+	 */
+	createTable(tableName: string, schema: string): void;
+
+	/**
+	 * Helper method to drop a table
+	 * @param tableName The name of the table to drop
+	 */
+	dropTable(tableName: string): void;
+}
+
 export interface ServerAPI {
 	version: string; // SDK version
 	logger: Logger;
 	config: ConfigAPI;
+	storage: StorageAPI;
 	/**
 	 * Register a task template that can be scheduled for all targets
 	 * @param uniqueKey Unique identifier for this task within the module (e.g., "subdomain-scan")

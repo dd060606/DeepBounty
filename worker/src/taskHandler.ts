@@ -1,7 +1,7 @@
 import { exec } from "child_process";
 import { promisify } from "util";
 import type { TaskExecution, TaskResult } from "@deepbounty/sdk/types";
-import { extractResult, replaceTempFilePlaceholders } from "./utils.js";
+import { createTaskResult, extractResult, replaceTempFilePlaceholders } from "./utils.js";
 
 const execAsync = promisify(exec);
 
@@ -43,32 +43,21 @@ export const executeTask = async (task: TaskExecution): Promise<TaskResult> => {
     } catch (error: any) {
       console.error(`Commands failed`, error);
 
-      return {
-        executionId: task.executionId,
-        scheduledTaskId: task.scheduledTaskId,
-        success: false,
-        error: error.message || error,
-        output: results.length > 0 ? results : undefined,
-      };
+      return createTaskResult(
+        task,
+        false,
+        results.length > 0 ? results : undefined,
+        error.message || "Command execution failed"
+      );
     }
 
     console.log(`Task ${task.executionId} completed successfully`);
 
-    return {
-      executionId: task.executionId,
-      scheduledTaskId: task.scheduledTaskId,
-      success: true,
-      output: results,
-    };
+    return createTaskResult(task, true, results);
   } catch (error: any) {
     console.error(`Task ${task.executionId} execution error:`, error);
 
-    return {
-      executionId: task.executionId,
-      scheduledTaskId: task.scheduledTaskId,
-      success: false,
-      error: error.message || "Unknown error occurred",
-    };
+    return createTaskResult(task, false, undefined, error.message || "Unknown error occurred");
   }
 };
 
