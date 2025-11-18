@@ -181,5 +181,85 @@
       "loadTasks": "Impossible de charger les tâches",
       "updateTask": "Impossible de mettre à jour le statut de la tâche"
     }
+  },
+  "settings": {
+    "tabs": {
+      "general": "Général",
+      "notifications": "Notifications",
+      "workers": "Workers",
+      "logs": "Logs",
+      "security": "Sécurité"
+    },
+    "general": {
+      "title": "Paramètres généraux",
+      "description": "Configurez les préférences de votre application",
+      "language": "Langue",
+      "languageDesc": "Sélectionnez votre langue préférée",
+      "languageChanged": "Langue modifiée avec succès",
+      "burpsuiteToken": "Token Burp Suite",
+      "burpsuiteTokenDesc": "Token d'API pour l'intégration Burp Suite",
+      "tokenRegenerated": "Token régénéré avec succès",
+      "errorRegeneratingToken": "Impossible de régénérer le token",
+      "swaggerUI": "Interface Swagger",
+      "swaggerUIDesc": "Activer l'interface de documentation API",
+      "darkMode": "Mode sombre",
+      "darkModeDesc": "Activer le mode sombre pour l'interface",
+      "settingsSaved": "Paramètres enregistrés avec succès",
+      "errorSavingSettings": "Impossible d'enregistrer les paramètres",
+      "secretCopied": "Copié dans le presse-papier",
+      "copy": "Copier dans le presse-papier",
+      "regenerate": "Régénérer",
+      "errorLoadingSettings": "Impossible de charger les paramètres"
+    },
+    "advanced": {
+      "title": "Paramètres avancés",
+      "description": "Gérer les opérations avancées de l'application",
+      "cleanupDatabase": "Nettoyer la base de données",
+      "cleanupDatabaseDesc": "Supprimer les anciennes tâches inutilisées",
+      "cleanup": "Nettoyer",
+      "cleanupSuccess": "Base de données nettoyée avec succès",
+      "cleanupError": "Impossible de nettoyer la base de données",
+      "resetModules": "Réinitialiser la base de données des modules",
+      "resetModulesDesc": "Réinitialiser toutes les données des modules",
+      "reset": "Réinitialiser",
+      "resetSuccess": "Modules réinitialisés avec succès",
+      "resetError": "Impossible de réinitialiser les modules",
+      "confirmCleanup": "Confirmer le nettoyage de la base de données",
+      "confirmCleanupDesc": "Cela supprimera les anciennes tâches inutilisées. Cette action est irréversible.",
+      "confirmReset": "Confirmer la réinitialisation des modules",
+      "confirmResetDesc": "Cela réinitialisera toutes les données des modules. Cette action est irréversible."
+    },
+    "notifications": {
+      "title": "Services de notification",
+      "description": "Configurez les notifications pour les alertes"
+    },
+    "workers": {
+      "title": "Configuration des workers",
+      "description": "Gérer l'authentification et la surveillance des workers",
+      "serverSecret": "Clé secrète du serveur",
+      "serverSecretDesc": "Clé d'authentification pour la connexion des workers",
+      "secretRegenerated": "Secret régénéré avec succès",
+      "errorRegeneratingSecret": "Impossible de régénérer le secret",
+      "errorLoadingWorkers": "Impossible de charger les workers",
+      "connectedWorkers": "Workers connectés",
+      "noWorkers": "Aucun worker connecté",
+      "online": "En ligne",
+      "offline": "Hors ligne",
+      "connectedAt": "Connecté le",
+      "cpu": "CPU",
+      "memory": "Mémoire",
+      "tasksCompleted": "Tâches complétées"
+    },
+    "logs": {
+      "title": "Logs de l'application",
+      "description": "Consulter et télécharger les logs système",
+      "loadLogs": "Charger les logs",
+      "loading": "Chargement...",
+      "downloadLogs": "Télécharger les logs",
+      "clickToLoad": "Cliquez sur 'Charger les logs' pour voir les logs récents",
+      "downloadSuccess": "Logs téléchargés avec succès",
+      "errorLoadingLogs": "Impossible de charger les logs",
+      "errorDownloadingLogs": "Impossible de télécharger les logs"
+    }
   }
 }

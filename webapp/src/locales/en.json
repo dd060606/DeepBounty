@@ -182,5 +182,85 @@
       "loadTasks": "Failed to load tasks",
       "updateTask": "Failed to update task status"
     }
+  },
+  "settings": {
+    "tabs": {
+      "general": "General",
+      "notifications": "Notifications",
+      "workers": "Workers",
+      "logs": "Logs",
+      "security": "Security"
+    },
+    "general": {
+      "title": "General Settings",
+      "description": "Configure your application preferences",
+      "language": "Language",
+      "languageDesc": "Select your preferred language",
+      "languageChanged": "Language changed successfully",
+      "burpsuiteToken": "Burp Suite Token",
+      "burpsuiteTokenDesc": "API token for Burp Suite integration",
+      "tokenRegenerated": "Token regenerated successfully",
+      "errorRegeneratingToken": "Failed to regenerate token",
+      "swaggerUI": "Swagger UI",
+      "swaggerUIDesc": "Enable API documentation interface",
+      "darkMode": "Dark Mode",
+      "darkModeDesc": "Enable dark mode for the interface",
+      "settingsSaved": "Settings saved successfully",
+      "errorSavingSettings": "Failed to save settings",
+      "secretCopied": "Copied to clipboard",
+      "copy": "Copy to clipboard",
+      "regenerate": "Regenerate",
+      "errorLoadingSettings": "Failed to load settings"
+    },
+    "advanced": {
+      "title": "Advanced Settings",
+      "description": "Manage advanced application operations",
+      "cleanupDatabase": "Cleanup Database",
+      "cleanupDatabaseDesc": "Remove old unused tasks",
+      "cleanup": "Clean Up",
+      "cleanupSuccess": "Database cleaned up successfully",
+      "cleanupError": "Failed to cleanup database",
+      "resetModules": "Reset Modules Database",
+      "resetModulesDesc": "Reset all module data to default",
+      "reset": "Reset",
+      "resetSuccess": "Modules reset successfully",
+      "resetError": "Failed to reset modules",
+      "confirmCleanup": "Confirm Database Cleanup",
+      "confirmCleanupDesc": "This will remove old unused tasks. This action cannot be undone.",
+      "confirmReset": "Confirm Module Reset",
+      "confirmResetDesc": "This will reset all module data to their defaults. This action cannot be undone."
+    },
+    "notifications": {
+      "title": "Notification Services",
+      "description": "Configure alerts notifications"
+    },
+    "workers": {
+      "title": "Worker Configuration",
+      "description": "Manage worker authentication and monitoring",
+      "serverSecret": "Server Secret Key",
+      "serverSecretDesc": "Authentication key for workers to connect",
+      "secretRegenerated": "Secret regenerated successfully",
+      "errorRegeneratingSecret": "Failed to regenerate secret",
+      "errorLoadingWorkers": "Failed to load workers",
+      "connectedWorkers": "Connected Workers",
+      "noWorkers": "No workers connected",
+      "online": "Online",
+      "offline": "Offline",
+      "connectedAt": "Connected at",
+      "cpu": "CPU",
+      "memory": "Memory",
+      "tasksCompleted": "Tasks completed"
+    },
+    "logs": {
+      "title": "Application Logs",
+      "description": "View and download system logs",
+      "loadLogs": "Load Logs",
+      "loading": "Loading...",
+      "downloadLogs": "Download Logs",
+      "clickToLoad": "Click 'Load Logs' to view recent logs",
+      "downloadSuccess": "Logs downloaded successfully",
+      "errorLoadingLogs": "Failed to load logs",
+      "errorDownloadingLogs": "Failed to download logs"
+    }
   }
 }
