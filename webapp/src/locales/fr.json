@@ -222,12 +222,12 @@
       "resetModules": "Réinitialiser la base de données des modules",
       "resetModulesDesc": "Réinitialiser toutes les données des modules",
       "reset": "Réinitialiser",
-      "resetSuccess": "Modules réinitialisés avec succès",
+      "resetSuccess": "Modules réinitialisés avec succès. Le serveur redémarre.",
       "resetError": "Impossible de réinitialiser les modules",
       "confirmCleanup": "Confirmer le nettoyage de la base de données",
       "confirmCleanupDesc": "Cela supprimera les anciennes tâches inutilisées. Cette action est irréversible.",
       "confirmReset": "Confirmer la réinitialisation des modules",
-      "confirmResetDesc": "Cela réinitialisera toutes les données des modules. Cette action est irréversible."
+      "confirmResetDesc": "Cela réinitialisera toutes les données des modules. Cette action est irréversible et le serveur va redémarrer."
     },
     "notifications": {
       "title": "Services de notification",

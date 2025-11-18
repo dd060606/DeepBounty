@@ -57,7 +57,7 @@ class WebSocketHandler {
       return;
     }
     // Validate the worker key
-    if (workerKey !== config.get().secretWorkerKey) {
+    if (workerKey !== config.get().workerKey) {
       worker.close(3000, "Invalid worker key");
       return;
     }

@@ -223,12 +223,12 @@
       "resetModules": "Reset Modules Database",
       "resetModulesDesc": "Reset all module data to default",
       "reset": "Reset",
-      "resetSuccess": "Modules reset successfully",
+      "resetSuccess": "Modules reset successfully. The server is restarting.",
       "resetError": "Failed to reset modules",
       "confirmCleanup": "Confirm Database Cleanup",
       "confirmCleanupDesc": "This will remove old unused tasks. This action cannot be undone.",
       "confirmReset": "Confirm Module Reset",
-      "confirmResetDesc": "This will reset all module data to their defaults. This action cannot be undone."
+      "confirmResetDesc": "This will reset all module data to their defaults. This action cannot be undone and the server will restart."
     },
     "notifications": {
       "title": "Notification Services",
