@@ -22,6 +22,7 @@ import ApiClient from "@/utils/api";
 import { ConfirmDialog } from "@/components/dialogs/ConfirmDialog";
 import { useTheme } from "@/components/theme-provider";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useNavigate } from "react-router";
 
 type Worker = {
   id: string;
@@ -35,19 +36,20 @@ type Worker = {
 
 export default function Settings() {
   const { t, i18n } = useTranslation();
+  const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
 
   // General settings
   const [loadingSettings, setLoadingSettings] = useState(true);
   const [language, setLanguage] = useState(i18n.language.split("-")[0]);
-  const [burpsuiteToken, setBurpsuiteToken] = useState("");
+  const [burpsuiteKey, setBurpsuiteKey] = useState("");
   const [swaggerEnabled, setSwaggerEnabled] = useState(true);
   const [regeneratingBurpsuite, setRegeneratingBurpsuite] = useState(false);
 
   // Workers
   const [loadingWorkers, setLoadingWorkers] = useState(false);
   const [workersLoaded, setWorkersLoaded] = useState(false);
-  const [workerSecret, setWorkerSecret] = useState("");
+  const [workerKey, setWorkerKey] = useState("");
   const [regeneratingWorker, setRegeneratingWorker] = useState(false);
   const [workers, setWorkers] = useState<Worker[]>([]);
 
@@ -70,9 +72,9 @@ export default function Settings() {
       // Load general settings
       const settingsRes = await ApiClient.get("/settings");
       if (settingsRes.data) {
-        setBurpsuiteToken(settingsRes.data.burpsuiteToken || "");
-        setWorkerSecret(settingsRes.data.workerSecret || "");
-        setSwaggerEnabled(settingsRes.data.swaggerEnabled ?? swaggerEnabled);
+        setBurpsuiteKey(settingsRes.data.burpsuiteKey);
+        setWorkerKey(settingsRes.data.workerKey);
+        setSwaggerEnabled(settingsRes.data.enableSwaggerUi);
       }
     } catch {
       toast.error(t("settings.general.errorLoadingSettings"));
@@ -107,8 +109,8 @@ export default function Settings() {
   async function regenerateBurpsuiteToken() {
     setRegeneratingBurpsuite(true);
     try {
-      const res = await ApiClient.post("/settings/regenerate-burpsuite");
-      setBurpsuiteToken(res.data.token);
+      const res = await ApiClient.post("/settings/regenerate/burpsuite-key");
+      setBurpsuiteKey(res.data.burpsuiteKey);
       toast.success(t("settings.general.tokenRegenerated"));
     } catch {
       toast.error(t("settings.general.errorRegeneratingToken"));
@@ -120,8 +122,8 @@ export default function Settings() {
   async function regenerateWorkerSecret() {
     setRegeneratingWorker(true);
     try {
-      const res = await ApiClient.post("/settings/regenerate-worker-secret");
-      setWorkerSecret(res.data.secret);
+      const res = await ApiClient.post("/settings/regenerate/worker-key");
+      setWorkerKey(res.data.workerKey);
       toast.success(t("settings.workers.secretRegenerated"));
     } catch {
       toast.error(t("settings.workers.errorRegeneratingSecret"));
@@ -133,7 +135,7 @@ export default function Settings() {
   async function toggleSwagger(enabled: boolean) {
     setSwaggerEnabled(enabled);
     try {
-      await ApiClient.patch("/settings", { swaggerEnabled: enabled });
+      await ApiClient.patch("/settings", { swaggerUi: enabled });
       toast.success(t("settings.general.settingsSaved"));
     } catch {
       toast.error(t("settings.general.errorSavingSettings"));
@@ -155,6 +157,10 @@ export default function Settings() {
     try {
       await ApiClient.post("/settings/reset-modules");
       toast.success(t("settings.advanced.resetSuccess"));
+      // The server is expected to restart after this action
+      setTimeout(() => {
+        navigate("/", { replace: true });
+      }, 2000);
     } catch {
       toast.error(t("settings.advanced.resetError"));
     } finally {
@@ -242,10 +248,10 @@ export default function Settings() {
               description={t("settings.general.burpsuiteTokenDesc")}
             >
               {loadingSettings ? (
-                <Skeleton className="h-10 w-xs sm:w-sm" />
+                <Skeleton className="h-8 w-xs sm:w-sm" />
               ) : (
                 <SecretField
-                  value={burpsuiteToken}
+                  value={burpsuiteKey}
                   onRegenerate={regenerateBurpsuiteToken}
                   regenerating={regeneratingBurpsuite}
                 />
@@ -341,10 +347,10 @@ export default function Settings() {
               description={t("settings.workers.serverSecretDesc")}
             >
               {loadingSettings ? (
-                <Skeleton className="h-10 w-xs sm:w-sm" />
+                <Skeleton className="h-8 w-xs sm:w-sm" />
               ) : (
                 <SecretField
-                  value={workerSecret}
+                  value={workerKey}
                   onRegenerate={regenerateWorkerSecret}
                   regenerating={regeneratingWorker}
                 />

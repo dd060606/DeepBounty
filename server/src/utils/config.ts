@@ -9,14 +9,16 @@ const CONFIG_PATH = path.join(CONFIG_DIR, "config.json");
 export type Config = {
   password: string;
   enableSwaggerUi: boolean;
-  secretWorkerKey: string;
+  workerKey: string;
+  burpsuiteKey: string;
   [key: string]: any;
 };
 
 const DEFAULT_CONFIG: Config = {
   password: "",
   enableSwaggerUi: false,
-  secretWorkerKey: randomBytes(20).toString("hex"),
+  workerKey: generateRandomKey(),
+  burpsuiteKey: generateRandomKey(),
 };
 
 let cachedConfig: Config | null = null;
@@ -67,6 +69,10 @@ function writeConfigToDisk(config: Config): void {
   const tmpPath = CONFIG_PATH + ".tmp";
   fs.writeFileSync(tmpPath, JSON.stringify(config, null, 2), "utf-8");
   fs.renameSync(tmpPath, CONFIG_PATH);
+}
+
+export function generateRandomKey(): string {
+  return randomBytes(32).toString("hex");
 }
 
 export function loadConfig(): Config {

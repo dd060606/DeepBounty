@@ -1,5 +1,6 @@
 import { DatabaseSync } from "node:sqlite";
 import path from "path";
+import fs from "fs";
 import Logger from "@/utils/logger.js";
 import { MODULES_DIR } from "@/utils/constants.js";
 
@@ -140,6 +141,26 @@ export function closeAllDatabases(): void {
       if (db.isOpen) {
         db.close();
       }
+    } catch (err) {
+      logger.error(`Error closing database for module "${moduleId}"`, err);
+    }
+  }
+  dbConnections.clear();
+}
+
+/**
+ * Clear all databases
+ * Used to reset module storage (reinitialization)
+ */
+export function clearAllDatabases(): void {
+  logger.info("Clearing all module databases...");
+  for (const [moduleId, db] of dbConnections.entries()) {
+    try {
+      if (db.isOpen) {
+        db.close();
+      }
+      const dbPath = path.join(MODULES_DIR, moduleId, "data.db");
+      fs.unlinkSync(dbPath);
     } catch (err) {
       logger.error(`Error closing database for module "${moduleId}"`, err);
     }

@@ -1,5 +1,6 @@
 {
   "password": "BCRYPT_HASHED_PASSWORD",
   "enableSwaggerUi": false,
-  "secretWorkerKey": "RANDOMLY_GENERATED_20_CHARACTER_HEX_STRING"
+  "workerKey": "RANDOMLY_GENERATED_32_CHARACTER_HEX_STRING",
+  "burpsuiteKey": "RANDOMLY_GENERATED_32_CHARACTER_HEX_STRING"
 }

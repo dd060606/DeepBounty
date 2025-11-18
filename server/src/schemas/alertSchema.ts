@@ -12,5 +12,3 @@ export const addAlertSchema = z.object({
   description: z.string().trim().min(1, { message: "Description is required" }),
   endpoint: z.string().trim().min(1, { message: "Endpoint is required" }),
 });
-
-export type AddAlertInput = z.infer<typeof addAlertSchema>;

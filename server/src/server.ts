@@ -19,7 +19,7 @@ server.listen(PORT, () => {
 });
 
 // Graceful shutdown handler
-const gracefulShutdown = async (signal: string) => {
+export const gracefulShutdown = async (signal: string) => {
   logger.info(`Received ${signal}, starting graceful shutdown...`);
 
   // Stop modules
