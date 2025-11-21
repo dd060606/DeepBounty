@@ -3,6 +3,8 @@ import Logger from "@/utils/logger.js";
 import config, { generateRandomKey } from "@/utils/config.js";
 import { clearAllDatabases } from "@/modules/moduleStorage.js";
 import { gracefulShutdown } from "@/server.js";
+import { getTaskTemplateService } from "@/tasks/taskTemplateService.js";
+import getRegistry from "@/utils/registry.js";
 
 const logger = new Logger("Settings");
 
@@ -48,7 +50,34 @@ export const regenerateBurpsuiteKey = async (req: Request, res: Response) => {
 // POST /settings/reset-modules - reset all module databases
 export const resetModulesDatabases = async (req: Request, res: Response) => {
   clearAllDatabases();
-  logger.info("All module databases have been reset");
+  logger.info("All module databases have been reset. Restarting server...");
   res.sendStatus(200);
   gracefulShutdown("RESTART");
+};
+
+// POST /settings/cleanup-tasks - cleanup registered tasks
+export const cleanupTasks = async (req: Request, res: Response) => {
+  try {
+    await getTaskTemplateService().clearAllTemplatesAndOverrides();
+    logger.info("All task templates and overrides have been cleared. Restarting server...");
+    res.sendStatus(200);
+    gracefulShutdown("RESTART");
+  } catch (error) {
+    logger.error("Error during tasks cleanup:", error);
+    res.status(500).json({ error: "Failed to cleanup tasks" });
+  }
+};
+
+// GET /settings/workers - get list of connected workers
+export const getWorkers = async (req: Request, res: Response) => {
+  const workers = getRegistry().getAllWorkers();
+  res.json(
+    workers.map((w) => ({
+      id: w.id,
+      ip: w.ip,
+      connectedAt: w.connectedAt,
+      tasksCount: w.currentTasks.length,
+      toolsCount: w.availableTools.length,
+    }))
+  );
 };

@@ -215,18 +215,18 @@
     "advanced": {
       "title": "Advanced Settings",
       "description": "Manage advanced application operations",
-      "cleanupDatabase": "Cleanup Database",
-      "cleanupDatabaseDesc": "Remove old unused tasks",
+      "cleanupTasks": "Cleanup Tasks",
+      "cleanupTasksDesc": "Remove registered tasks",
       "cleanup": "Clean Up",
-      "cleanupSuccess": "Database cleaned up successfully",
-      "cleanupError": "Failed to cleanup database",
+      "cleanupSuccess": "Tasks cleaned up successfully. The server will restart.",
+      "cleanupError": "Failed to cleanup tasks",
       "resetModules": "Reset Modules Database",
       "resetModulesDesc": "Reset all module data to default",
       "reset": "Reset",
-      "resetSuccess": "Modules reset successfully. The server is restarting.",
+      "resetSuccess": "Modules reset successfully. The server will restart.",
       "resetError": "Failed to reset modules",
-      "confirmCleanup": "Confirm Database Cleanup",
-      "confirmCleanupDesc": "This will remove old unused tasks. This action cannot be undone.",
+      "confirmCleanup": "Confirm Tasks Cleanup",
+      "confirmCleanupDesc": "This will remove modules registered tasks. This action cannot be undone and the server will restart.",
       "confirmReset": "Confirm Module Reset",
       "confirmResetDesc": "This will reset all module data to their defaults. This action cannot be undone and the server will restart."
     },
@@ -236,7 +236,7 @@
     },
     "workers": {
       "title": "Worker Configuration",
-      "description": "Manage worker authentication and monitoring",
+      "description": "List of connected workers",
       "serverSecret": "Server Secret Key",
       "serverSecretDesc": "Authentication key for workers to connect",
       "secretRegenerated": "Secret regenerated successfully",
@@ -245,11 +245,9 @@
       "connectedWorkers": "Connected Workers",
       "noWorkers": "No workers connected",
       "online": "Online",
-      "offline": "Offline",
       "connectedAt": "Connected at",
-      "cpu": "CPU",
-      "memory": "Memory",
-      "tasksCompleted": "Tasks completed"
+      "tasksRunning": "Tasks running",
+      "installedTools": "Installed tools"
     },
     "logs": {
       "title": "Application Logs",

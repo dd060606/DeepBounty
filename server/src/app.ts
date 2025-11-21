@@ -13,7 +13,6 @@ import Auth from "./routes/auth.js";
 import Targets from "./routes/targets.js";
 import Alerts from "./routes/alerts.js";
 import Modules from "./routes/modules.js";
-import Tasks from "./routes/tasks.js";
 import Settings from "./routes/settings.js";
 
 // Initialize the app
@@ -89,7 +88,6 @@ app.use("/auth", Auth);
 app.use("/targets", requireAuth, Targets);
 app.use("/alerts", requireAuth, Alerts);
 app.use("/modules", requireAuth, Modules);
-app.use("/tasks", requireAuth, Tasks);
 app.use("/settings", requireAuth, Settings);
 
 export default app;

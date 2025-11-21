@@ -214,18 +214,18 @@
     "advanced": {
       "title": "Paramètres avancés",
       "description": "Gérer les opérations avancées de l'application",
-      "cleanupDatabase": "Nettoyer la base de données",
-      "cleanupDatabaseDesc": "Supprimer les anciennes tâches inutilisées",
+      "cleanupTasks": "Nettoyer les tâches",
+      "cleanupTasksDesc": "Réinitialiser les tâches enregistrées",
       "cleanup": "Nettoyer",
-      "cleanupSuccess": "Base de données nettoyée avec succès",
-      "cleanupError": "Impossible de nettoyer la base de données",
+      "cleanupSuccess": "Tâches nettoyée avec succès. Le serveur va redémarrer.",
+      "cleanupError": "Impossible de nettoyer les tâches enregistrées",
       "resetModules": "Réinitialiser la base de données des modules",
       "resetModulesDesc": "Réinitialiser toutes les données des modules",
       "reset": "Réinitialiser",
-      "resetSuccess": "Modules réinitialisés avec succès. Le serveur redémarre.",
+      "resetSuccess": "Modules réinitialisés avec succès. Le serveur va redémarrer.",
       "resetError": "Impossible de réinitialiser les modules",
-      "confirmCleanup": "Confirmer le nettoyage de la base de données",
-      "confirmCleanupDesc": "Cela supprimera les anciennes tâches inutilisées. Cette action est irréversible.",
+      "confirmCleanup": "Confirmer le nettoyage des tâches",
+      "confirmCleanupDesc": "Cela supprimera les tâches enregistrées par les modules. Cette action est irréversible et le serveur va redémarrer.",
       "confirmReset": "Confirmer la réinitialisation des modules",
       "confirmResetDesc": "Cela réinitialisera toutes les données des modules. Cette action est irréversible et le serveur va redémarrer."
     },
@@ -235,7 +235,7 @@
     },
     "workers": {
       "title": "Configuration des workers",
-      "description": "Gérer l'authentification et la surveillance des workers",
+      "description": "Liste des workers connectés",
       "serverSecret": "Clé secrète du serveur",
       "serverSecretDesc": "Clé d'authentification pour la connexion des workers",
       "secretRegenerated": "Secret régénéré avec succès",
@@ -244,11 +244,9 @@
       "connectedWorkers": "Workers connectés",
       "noWorkers": "Aucun worker connecté",
       "online": "En ligne",
-      "offline": "Hors ligne",
       "connectedAt": "Connecté le",
-      "cpu": "CPU",
-      "memory": "Mémoire",
-      "tasksCompleted": "Tâches complétées"
+      "tasksRunning": "Tâches en cours",
+      "installedTools": "Outils installés"
     },
     "logs": {
       "title": "Logs de l'application",
