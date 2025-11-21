@@ -16,23 +16,13 @@ import { AlertTriangle, Download, Trash2 } from "lucide-react";
 import SettingSection from "@/components/settings/SettingSection";
 import SettingItem from "@/components/settings/SettingItem";
 import SecretField from "@/components/settings/SecretField";
-import WorkerCard from "@/components/settings/WorkerCard";
+import WorkerCard, { type WorkerInfo } from "@/components/settings/WorkerCard";
 import WorkersSkeleton from "@/components/settings/WorkersSkeleton";
 import ApiClient from "@/utils/api";
 import { ConfirmDialog } from "@/components/dialogs/ConfirmDialog";
 import { useTheme } from "@/components/theme-provider";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useNavigate } from "react-router";
-
-type Worker = {
-  id: string;
-  name: string;
-  status: "online" | "offline";
-  connectedAt: string;
-  cpu?: number;
-  memory?: number;
-  tasksCompleted?: number;
-};
 
 export default function Settings() {
   const { t, i18n } = useTranslation();
@@ -51,7 +41,7 @@ export default function Settings() {
   const [workersLoaded, setWorkersLoaded] = useState(false);
   const [workerKey, setWorkerKey] = useState("");
   const [regeneratingWorker, setRegeneratingWorker] = useState(false);
-  const [workers, setWorkers] = useState<Worker[]>([]);
+  const [workers, setWorkers] = useState<WorkerInfo[]>([]);
 
   // Logs
   const [logs, setLogs] = useState("");
@@ -88,9 +78,9 @@ export default function Settings() {
     setLoadingWorkers(true);
     try {
       // Load workers list
-      const workersRes = await ApiClient.get("/workers");
+      const workersRes = await ApiClient.get("/settings/workers");
       if (workersRes.data) {
-        setWorkers(workersRes.data.workers || workersRes.data || []);
+        setWorkers(workersRes.data || []);
       }
     } catch {
       toast.error(t("settings.workers.errorLoadingWorkers"));
@@ -142,10 +132,14 @@ export default function Settings() {
     }
   }
 
-  async function cleanupDatabase() {
+  async function cleanupTasks() {
     try {
-      await ApiClient.post("/settings/cleanup-database");
+      await ApiClient.post("/settings/cleanup-tasks");
       toast.success(t("settings.advanced.cleanupSuccess"));
+      // The server is expected to restart after this action
+      setTimeout(() => {
+        navigate("/", { replace: true });
+      }, 2000);
     } catch {
       toast.error(t("settings.advanced.cleanupError"));
     } finally {
@@ -290,10 +284,10 @@ export default function Settings() {
             title={t("settings.advanced.title")}
             description={t("settings.advanced.description")}
           >
-            {/* Cleanup Database */}
+            {/* Cleanup Tasks */}
             <SettingItem
-              label={t("settings.advanced.cleanupDatabase")}
-              description={t("settings.advanced.cleanupDatabaseDesc")}
+              label={t("settings.advanced.cleanupTasks")}
+              description={t("settings.advanced.cleanupTasksDesc")}
             >
               <Button
                 variant="outline"
@@ -416,7 +410,7 @@ export default function Settings() {
         onOpenChange={setConfirmCleanup}
         title={t("settings.advanced.confirmCleanup")}
         desc={t("settings.advanced.confirmCleanupDesc")}
-        onConfirm={cleanupDatabase}
+        onConfirm={cleanupTasks}
       />
 
       <ConfirmDialog

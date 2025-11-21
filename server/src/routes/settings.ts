@@ -3,7 +3,9 @@ import {
   regenerateBurpsuiteKey,
   regenerateWorkerKey,
   resetModulesDatabases,
+  cleanupTasks,
   updateSettings,
+  getWorkers,
 } from "@/controllers/settings.js";
 import { validateBody } from "@/middlewares/validate.js";
 import { updateSettingsSchema } from "@/schemas/settingSchema.js";
@@ -24,5 +26,10 @@ router.post("/regenerate/burpsuite-key", regenerateBurpsuiteKey);
 
 // POST /settings/reset-modules
 router.post("/reset-modules", resetModulesDatabases);
+// POST /settings/cleanup-tasks
+router.post("/cleanup-tasks", cleanupTasks);
+
+// GET /settings/workers
+router.get("/workers", getWorkers);
 
 export default router;

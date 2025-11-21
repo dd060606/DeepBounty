@@ -74,8 +74,13 @@ class WebSocketHandler {
       currentTasks: [],
       availableTools: [],
       socket: ws,
+      ip,
+      connectedAt: new Date(),
     };
     this.workers.set(workerId, newWorker);
+    // Sync with registry
+    this.registry.registerWorker(newWorker);
+
     logger.info(
       `New worker connected from ${ip || "unknown"} (ID: ${workerId}). Total workers: ${this.workers.size}`
     );
@@ -95,6 +100,8 @@ class WebSocketHandler {
   public removeWorker(workerId: number): void {
     if (this.workers.has(workerId)) {
       this.workers.delete(workerId);
+      // Sync with registry
+      this.registry.removeWorker(workerId);
       logger.info(`Worker ${workerId} disconnected. Total workers: ${this.workers.size}`);
     }
   }
@@ -135,6 +142,8 @@ class WebSocketHandler {
           worker.currentTasks = worker.currentTasks.filter(
             (t) => t.executionId !== result.executionId
           );
+          // Sync with registry
+          this.registry.updateWorker(workerId, { currentTasks: worker.currentTasks });
         }
         // Assign another task if available
         this.taskManager.assignNextTask().catch((err) => {
@@ -148,6 +157,8 @@ class WebSocketHandler {
         const worker = this.workers.get(workerId);
         if (worker) {
           worker.availableTools = tools;
+          // Sync with registry
+          this.registry.updateWorker(workerId, { availableTools: tools });
           logger.info(
             `Worker ${workerId} reported ${tools.length} installed tool(s): ${tools
               .map((t) => `${t.name}@${t.version}`)
@@ -172,6 +183,8 @@ class WebSocketHandler {
     try {
       worker.socket.send(JSON.stringify({ type: "task:start", data: execution }));
       worker.currentTasks.push(execution);
+      // Sync with registry
+      this.registry.updateWorker(workerId, { currentTasks: worker.currentTasks });
       return true;
     } catch (e) {
       logger.error(
@@ -189,6 +202,8 @@ class WebSocketHandler {
       const newAddedTools = getMissingTools(worker.availableTools, tools);
       // Add only new added tools
       worker.availableTools.push(...newAddedTools);
+      // Sync with registry
+      this.registry.updateWorker(workerId, { availableTools: worker.availableTools });
     }
   }
 }

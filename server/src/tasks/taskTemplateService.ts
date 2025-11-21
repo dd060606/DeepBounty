@@ -357,6 +357,14 @@ export class TaskTemplateService {
 
     return activeTargets.filter((target) => !disabledTargetIds.has(target.id));
   }
+
+  /**
+   * Delete all task templates and overrides from the database
+   */
+  async clearAllTemplatesAndOverrides(): Promise<void> {
+    await query(sql`DELETE FROM target_task_overrides`);
+    await query(sql`DELETE FROM task_templates`);
+  }
 }
 
 let instance: TaskTemplateService | null = null;

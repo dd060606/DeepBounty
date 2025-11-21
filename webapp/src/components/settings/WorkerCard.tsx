@@ -1,24 +1,17 @@
 import { Badge } from "@/components/ui/badge";
-import { Monitor, Cpu, HardDrive, Activity } from "lucide-react";
+import { Monitor, Clock, Activity, Wrench } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
-type Worker = {
-  id: string;
-  name: string;
-  status: "online" | "offline";
-  connectedAt: string;
-  cpu?: number;
-  memory?: number;
-  tasksCompleted?: number;
+export type WorkerInfo = {
+  id: number;
+  ip?: string;
+  connectedAt: Date;
+  tasksCount: number;
+  toolsCount: number;
 };
 
-type Props = {
-  worker: Worker;
-};
-
-export default function WorkerCard({ worker }: Props) {
+export default function WorkerCard({ worker }: { worker: WorkerInfo }) {
   const { t } = useTranslation();
-  const isOnline = worker.status === "online";
 
   return (
     <div className="border-border bg-card/50 rounded-lg border p-4">
@@ -26,12 +19,12 @@ export default function WorkerCard({ worker }: Props) {
         <div className="flex items-center gap-2">
           <Monitor className="text-primary size-5" />
           <div>
-            <h4 className="text-foreground text-sm font-semibold">{worker.name}</h4>
-            <p className="text-muted-foreground font-mono text-xs">{worker.id}</p>
+            <h4 className="text-foreground text-sm font-semibold">Worker {worker.id}</h4>
+            <p className="text-muted-foreground font-mono text-xs">{worker.ip || ""}</p>
           </div>
         </div>
-        <Badge variant={isOnline ? "default" : "secondary"} className="text-xs">
-          {isOnline ? t("settings.workers.online") : t("settings.workers.offline")}
+        <Badge variant={"default"} className="text-xs">
+          {t("settings.workers.online")}
         </Badge>
       </div>
 
@@ -39,33 +32,21 @@ export default function WorkerCard({ worker }: Props) {
         <div className="flex items-center gap-2">
           <Activity className="size-3.5" />
           <span>
+            {t("settings.workers.tasksRunning")}: {worker.tasksCount}
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <Wrench className="size-3.5" />
+          <span>
+            {t("settings.workers.installedTools")}: {worker.toolsCount}
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <Clock className="size-3.5" />
+          <span>
             {t("settings.workers.connectedAt")}: {new Date(worker.connectedAt).toLocaleString()}
           </span>
         </div>
-        {worker.cpu !== undefined && (
-          <div className="flex items-center gap-2">
-            <Cpu className="size-3.5" />
-            <span>
-              {t("settings.workers.cpu")}: {worker.cpu}%
-            </span>
-          </div>
-        )}
-        {worker.memory !== undefined && (
-          <div className="flex items-center gap-2">
-            <HardDrive className="size-3.5" />
-            <span>
-              {t("settings.workers.memory")}: {worker.memory}%
-            </span>
-          </div>
-        )}
-        {worker.tasksCompleted !== undefined && (
-          <div className="flex items-center gap-2">
-            <Activity className="size-3.5" />
-            <span>
-              {t("settings.workers.tasksCompleted")}: {worker.tasksCompleted}
-            </span>
-          </div>
-        )}
       </div>
     </div>
   );

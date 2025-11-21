@@ -1,4 +1,4 @@
-import { LoadedModule, ScheduledTask, TaskExecution, Tool } from "@deepbounty/sdk/types";
+import { LoadedModule, ScheduledTask, TaskExecution, Tool, Worker } from "@deepbounty/sdk/types";
 
 /**
  * Global server registry
@@ -18,6 +18,9 @@ class ServerRegistry {
 
   // Task executions by execution id (active/completed task instances)
   private taskExecutions: Map<number, TaskExecution> = new Map();
+
+  // Connected workers by id
+  private workers: Map<number, Worker> = new Map();
 
   // Task ID counter
   private nextTaskId: number = 1;
@@ -219,6 +222,41 @@ class ServerRegistry {
         this.taskExecutions.delete(id);
       }
     });
+  }
+
+  // ==================== WORKERS ====================
+
+  // Register a worker
+  public registerWorker(worker: Worker): void {
+    this.workers.set(worker.id, worker);
+  }
+
+  // Get a worker by id
+  public getWorker(id: number): Worker | undefined {
+    return this.workers.get(id);
+  }
+
+  // Get all workers
+  public getAllWorkers(): Worker[] {
+    return Array.from(this.workers.values());
+  }
+
+  // Update a worker
+  public updateWorker(id: number, updates: Partial<Worker>): void {
+    const worker = this.workers.get(id);
+    if (worker) {
+      Object.assign(worker, updates);
+    }
+  }
+
+  // Remove a worker
+  public removeWorker(id: number): void {
+    this.workers.delete(id);
+  }
+
+  // Check if a worker is registered
+  public hasWorker(id: number): boolean {
+    return this.workers.has(id);
   }
 }
 
