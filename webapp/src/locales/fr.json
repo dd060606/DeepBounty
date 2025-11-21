@@ -227,7 +227,12 @@
       "confirmCleanup": "Confirmer le nettoyage des tâches",
       "confirmCleanupDesc": "Cela supprimera les tâches enregistrées par les modules. Cette action est irréversible et le serveur va redémarrer.",
       "confirmReset": "Confirmer la réinitialisation des modules",
-      "confirmResetDesc": "Cela réinitialisera toutes les données des modules. Cette action est irréversible et le serveur va redémarrer."
+      "confirmResetDesc": "Cela réinitialisera toutes les données des modules. Cette action est irréversible et le serveur va redémarrer.",
+      "restart": "Redémarrer",
+      "restartServer": "Redémarrer le serveur",
+      "restartServerDesc": "Cela redémarrera le serveur immédiatement.",
+      "restartSuccess": "Le serveur va redémarrer.",
+      "restartError": "Impossible de redémarrer le serveur"
     },
     "notifications": {
       "title": "Services de notification",
@@ -246,11 +251,17 @@
       "online": "En ligne",
       "connectedAt": "Connecté le",
       "tasksRunning": "Tâches en cours",
-      "installedTools": "Outils installés"
+      "installedTools": "Outils installés",
+      "disconnect": "Déconnecter",
+      "disconnectSuccess": "Worker déconnecté avec succès",
+      "disconnectError": "Impossible de déconnecter le worker",
+      "confirmDisconnect": "Déconnecter le worker",
+      "confirmDisconnectDesc": "Êtes-vous sûr de vouloir déconnecter ce worker ? Les tâches en cours seront interrompues et le worker devra être redémarré manuellement."
     },
     "logs": {
       "title": "Logs de l'application",
       "description": "Consulter et télécharger les logs système",
+      "lines": "lignes",
       "loadLogs": "Charger les logs",
       "loading": "Chargement...",
       "downloadLogs": "Télécharger les logs",
