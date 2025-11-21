@@ -14,6 +14,7 @@ import Targets from "./routes/targets.js";
 import Alerts from "./routes/alerts.js";
 import Modules from "./routes/modules.js";
 import Settings from "./routes/settings.js";
+import Workers from "./routes/workers.js";
 
 // Initialize the app
 function initApp() {
@@ -89,5 +90,6 @@ app.use("/targets", requireAuth, Targets);
 app.use("/alerts", requireAuth, Alerts);
 app.use("/modules", requireAuth, Modules);
 app.use("/settings", requireAuth, Settings);
+app.use("/workers", requireAuth, Workers);
 
 export default app;

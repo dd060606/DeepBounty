@@ -15,6 +15,7 @@ interface WorkerWithSocket extends Worker {
 }
 
 class WebSocketHandler {
+  private static instance: WebSocketHandler | null = null;
   private websocketServer: WebSocketServer;
   // Map of workerId to WorkerWithSocket
   private workers: Map<number, WorkerWithSocket> = new Map();
@@ -24,6 +25,7 @@ class WebSocketHandler {
   private readonly registry = getRegistry();
 
   constructor(server: Server) {
+    WebSocketHandler.instance = this;
     this.websocketServer = new WebSocketServer({ server });
     this.taskManager.registerTransport({
       // List connected workers
@@ -46,6 +48,32 @@ class WebSocketHandler {
   public initialize() {
     logger.info("WebSocket server initialized");
     this.websocketServer.on("connection", this.handleConnection);
+  }
+
+  public static getInstance(): WebSocketHandler | null {
+    return WebSocketHandler.instance;
+  }
+
+  public disconnectWorker(workerId: number): boolean {
+    const worker = this.workers.get(workerId);
+    if (worker) {
+      try {
+        // Send shutdown command
+        worker.socket.send(JSON.stringify({ type: "system:shutdown", data: {} }));
+        // Close socket after a short delay to allow message to be sent
+        setTimeout(() => {
+          if (worker.socket.readyState === WebSocket.OPEN) {
+            worker.socket.close(1000, "Disconnected by admin");
+          }
+          this.removeWorker(workerId);
+        }, 100);
+        return true;
+      } catch (e) {
+        logger.error(`Error disconnecting worker ${workerId}:`, e);
+        return false;
+      }
+    }
+    return false;
   }
 
   // Handle incoming connections

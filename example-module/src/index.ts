@@ -19,7 +19,7 @@ export default class ExamplePlugin implements PluginLifecycle {
 			"Subdomain Discovery",
 			"Find subdomains using subfinder for all active targets",
 			FIND_SUBDOMAINS_TASK,
-			30, // every 30 seconds
+			500, // every 5 minutes
 			(res) => subdomainsCallback(this.api, res)
 		);
 	}

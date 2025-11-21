@@ -93,6 +93,12 @@ export const handleMessage = async (
         sendMessage("pong", {});
         break;
       }
+      // Shutdown the worker
+      case "system:shutdown": {
+        console.log("Received shutdown command from server. Exiting...");
+        process.exit(0);
+        break;
+      }
       default: {
         console.warn(`Unknown message type: ${type}`);
       }

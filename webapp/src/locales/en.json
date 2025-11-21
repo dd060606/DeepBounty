@@ -228,7 +228,12 @@
       "confirmCleanup": "Confirm Tasks Cleanup",
       "confirmCleanupDesc": "This will remove modules registered tasks. This action cannot be undone and the server will restart.",
       "confirmReset": "Confirm Module Reset",
-      "confirmResetDesc": "This will reset all module data to their defaults. This action cannot be undone and the server will restart."
+      "confirmResetDesc": "This will reset all module data to their defaults. This action cannot be undone and the server will restart.",
+      "restart": "Restart",
+      "restartServer": "Restart the server",
+      "restartServerDesc": "This will restart the server immediately.",
+      "restartSuccess": "The server will restart.",
+      "restartError": "Failed to restart the server"
     },
     "notifications": {
       "title": "Notification Services",
@@ -247,11 +252,19 @@
       "online": "Online",
       "connectedAt": "Connected at",
       "tasksRunning": "Tasks running",
-      "installedTools": "Installed tools"
+      "installedTools": "Installed tools",
+      "disconnect": "Disconnect",
+      "disconnectSuccess": "Worker disconnected successfully",
+      "disconnectError": "Failed to disconnect worker",
+      "confirmDisconnect": "Disconnect Worker",
+      "confirmDisconnectDesc": "Are you sure you want to disconnect this worker? Any running tasks will be interrupted and the worker will need to be restarted manually.",
+      "restart": "Restart",
+      "restartServer": "Restart Server"
     },
     "logs": {
       "title": "Application Logs",
       "description": "View and download system logs",
+      "lines": "lines",
       "loadLogs": "Load Logs",
       "loading": "Loading...",
       "downloadLogs": "Download Logs",

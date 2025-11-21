@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { AlertTriangle, Download, Trash2 } from "lucide-react";
+import { AlertTriangle, Download, Power, Trash2 } from "lucide-react";
 import SettingSection from "@/components/settings/SettingSection";
 import SettingItem from "@/components/settings/SettingItem";
 import SecretField from "@/components/settings/SecretField";
@@ -46,10 +46,13 @@ export default function Settings() {
   // Logs
   const [logs, setLogs] = useState("");
   const [loadingLogs, setLoadingLogs] = useState(false);
+  const [logsLimit, setLogsLimit] = useState(100);
 
   // Confirm dialogs
   const [confirmCleanup, setConfirmCleanup] = useState(false);
   const [confirmResetModules, setConfirmResetModules] = useState(false);
+  const [confirmDisconnectWorker, setConfirmDisconnectWorker] = useState(false);
+  const [workerToDisconnect, setWorkerToDisconnect] = useState<number | null>(null);
 
   useEffect(() => {
     // Load settings from API
@@ -78,7 +81,7 @@ export default function Settings() {
     setLoadingWorkers(true);
     try {
       // Load workers list
-      const workersRes = await ApiClient.get("/settings/workers");
+      const workersRes = await ApiClient.get("/workers");
       if (workersRes.data) {
         setWorkers(workersRes.data || []);
       }
@@ -122,6 +125,25 @@ export default function Settings() {
     }
   }
 
+  function initiateDisconnectWorker(id: number) {
+    setWorkerToDisconnect(id);
+    setConfirmDisconnectWorker(true);
+  }
+
+  async function disconnectWorker() {
+    if (workerToDisconnect === null) return;
+    try {
+      await ApiClient.post(`/workers/${workerToDisconnect}/disconnect`);
+      toast.success(t("settings.workers.disconnectSuccess"));
+      setWorkers(workers.filter((w) => w.id !== workerToDisconnect));
+    } catch {
+      toast.error(t("settings.workers.disconnectError"));
+    } finally {
+      setConfirmDisconnectWorker(false);
+      setWorkerToDisconnect(null);
+    }
+  }
+
   async function toggleSwagger(enabled: boolean) {
     setSwaggerEnabled(enabled);
     try {
@@ -162,10 +184,23 @@ export default function Settings() {
     }
   }
 
+  async function restartServer() {
+    try {
+      await ApiClient.post("/settings/restart-server");
+      toast.success(t("settings.advanced.restartSuccess"));
+      // The server is expected to restart after this action
+      setTimeout(() => {
+        navigate("/", { replace: true });
+      }, 2000);
+    } catch {
+      toast.error(t("settings.advanced.restartError"));
+    }
+  }
+
   async function loadLogs() {
     setLoadingLogs(true);
     try {
-      const res = await ApiClient.get("/logs?limit=1000");
+      const res = await ApiClient.get(`/logs?limit=${logsLimit}`);
       setLogs(res.data.logs || "No logs available");
     } catch {
       toast.error(t("settings.logs.errorLoadingLogs"));
@@ -294,7 +329,7 @@ export default function Settings() {
                 onClick={() => setConfirmCleanup(true)}
                 className="text-destructive"
               >
-                <Trash2 className="mr-2 size-4" />
+                <Trash2 className="size-4" />
                 {t("settings.advanced.cleanup")}
               </Button>
             </SettingItem>
@@ -309,8 +344,19 @@ export default function Settings() {
                 onClick={() => setConfirmResetModules(true)}
                 className="text-destructive"
               >
-                <AlertTriangle className="mr-2 size-4" />
+                <AlertTriangle className="size-4" />
                 {t("settings.advanced.reset")}
+              </Button>
+            </SettingItem>
+
+            {/* Restart Server */}
+            <SettingItem
+              label={t("settings.advanced.restartServer")}
+              description={t("settings.advanced.restartServerDesc")}
+            >
+              <Button variant="outline" onClick={restartServer} className="text-destructive">
+                <Power className="size-4" />
+                {t("</TabsContent>settings.advanced.restart")}
               </Button>
             </SettingItem>
           </SettingSection>
@@ -361,7 +407,11 @@ export default function Settings() {
               </h3>
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {workers.map((worker) => (
-                  <WorkerCard key={worker.id} worker={worker} />
+                  <WorkerCard
+                    key={worker.id}
+                    worker={worker}
+                    onDisconnect={initiateDisconnectWorker}
+                  />
                 ))}
               </div>
 
@@ -376,12 +426,26 @@ export default function Settings() {
 
         {/* Logs Tab */}
         <TabsContent value="logs" className="space-y-6">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h2 className="text-foreground text-lg font-semibold">{t("settings.logs.title")}</h2>
               <p className="text-muted-foreground text-sm">{t("settings.logs.description")}</p>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
+              <Select
+                value={logsLimit.toString()}
+                onValueChange={(val) => setLogsLimit(Number(val))}
+              >
+                <SelectTrigger className="w-[140px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="100">100 {t("settings.logs.lines")}</SelectItem>
+                  <SelectItem value="500">500 {t("settings.logs.lines")}</SelectItem>
+                  <SelectItem value="1000">1000 {t("settings.logs.lines")}</SelectItem>
+                  <SelectItem value="5000">5000 {t("settings.logs.lines")}</SelectItem>
+                </SelectContent>
+              </Select>
               <Button variant="outline" onClick={loadLogs} disabled={loadingLogs}>
                 {loadingLogs ? t("settings.logs.loading") : t("settings.logs.loadLogs")}
               </Button>
@@ -396,8 +460,7 @@ export default function Settings() {
             <Textarea
               value={logs}
               readOnly
-              className="font-mono text-xs"
-              rows={20}
+              className="h-[400px] font-mono text-xs"
               placeholder={t("settings.logs.clickToLoad")}
             />
           </div>
@@ -419,6 +482,14 @@ export default function Settings() {
         title={t("settings.advanced.confirmReset")}
         desc={t("settings.advanced.confirmResetDesc")}
         onConfirm={resetModulesDatabase}
+      />
+
+      <ConfirmDialog
+        open={confirmDisconnectWorker}
+        onOpenChange={setConfirmDisconnectWorker}
+        title={t("settings.workers.confirmDisconnect")}
+        desc={t("settings.workers.confirmDisconnectDesc")}
+        onConfirm={disconnectWorker}
       />
     </div>
   );

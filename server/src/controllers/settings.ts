@@ -68,16 +68,9 @@ export const cleanupTasks = async (req: Request, res: Response) => {
   }
 };
 
-// GET /settings/workers - get list of connected workers
-export const getWorkers = async (req: Request, res: Response) => {
-  const workers = getRegistry().getAllWorkers();
-  res.json(
-    workers.map((w) => ({
-      id: w.id,
-      ip: w.ip,
-      connectedAt: w.connectedAt,
-      tasksCount: w.currentTasks.length,
-      toolsCount: w.availableTools.length,
-    }))
-  );
+// POST /settings/restart-server - restart the server
+export const restartServer = async (req: Request, res: Response) => {
+  logger.info("Server restart requested via API");
+  res.sendStatus(200);
+  gracefulShutdown("RESTART");
 };

@@ -1,6 +1,6 @@
-import { Badge } from "@/components/ui/badge";
-import { Monitor, Clock, Activity, Wrench } from "lucide-react";
+import { Monitor, Clock, Activity, Wrench, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { Button } from "@/components/ui/button";
 
 export type WorkerInfo = {
   id: number;
@@ -10,7 +10,13 @@ export type WorkerInfo = {
   toolsCount: number;
 };
 
-export default function WorkerCard({ worker }: { worker: WorkerInfo }) {
+export default function WorkerCard({
+  worker,
+  onDisconnect,
+}: {
+  worker: WorkerInfo;
+  onDisconnect: (id: number) => void;
+}) {
   const { t } = useTranslation();
 
   return (
@@ -23,9 +29,16 @@ export default function WorkerCard({ worker }: { worker: WorkerInfo }) {
             <p className="text-muted-foreground font-mono text-xs">{worker.ip || ""}</p>
           </div>
         </div>
-        <Badge variant={"default"} className="text-xs">
-          {t("settings.workers.online")}
-        </Badge>
+
+        <Button
+          variant="outline"
+          size="sm"
+          className="text-destructive h-7 text-xs"
+          onClick={() => onDisconnect(worker.id)}
+        >
+          <X className="size-4" />
+          {t("settings.workers.disconnect")}
+        </Button>
       </div>
 
       <div className="text-muted-foreground space-y-2 text-xs">
