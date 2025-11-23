@@ -186,9 +186,7 @@
     "tabs": {
       "general": "Général",
       "notifications": "Notifications",
-      "workers": "Workers",
-      "logs": "Logs",
-      "security": "Sécurité"
+      "workers": "Workers"
     },
     "general": {
       "title": "Paramètres généraux",
@@ -257,18 +255,6 @@
       "disconnectError": "Impossible de déconnecter le worker",
       "confirmDisconnect": "Déconnecter le worker",
       "confirmDisconnectDesc": "Êtes-vous sûr de vouloir déconnecter ce worker ? Les tâches en cours seront interrompues et le worker devra être redémarré manuellement."
-    },
-    "logs": {
-      "title": "Logs de l'application",
-      "description": "Consulter et télécharger les logs système",
-      "lines": "lignes",
-      "loadLogs": "Charger les logs",
-      "loading": "Chargement...",
-      "downloadLogs": "Télécharger les logs",
-      "clickToLoad": "Cliquez sur 'Charger les logs' pour voir les logs récents",
-      "downloadSuccess": "Logs téléchargés avec succès",
-      "errorLoadingLogs": "Impossible de charger les logs",
-      "errorDownloadingLogs": "Impossible de télécharger les logs"
     }
   }
 }
