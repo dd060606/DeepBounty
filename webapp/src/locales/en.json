@@ -187,9 +187,7 @@
     "tabs": {
       "general": "General",
       "notifications": "Notifications",
-      "workers": "Workers",
-      "logs": "Logs",
-      "security": "Security"
+      "workers": "Workers"
     },
     "general": {
       "title": "General Settings",
@@ -260,18 +258,6 @@
       "confirmDisconnectDesc": "Are you sure you want to disconnect this worker? Any running tasks will be interrupted and the worker will need to be restarted manually.",
       "restart": "Restart",
       "restartServer": "Restart Server"
-    },
-    "logs": {
-      "title": "Application Logs",
-      "description": "View and download system logs",
-      "lines": "lines",
-      "loadLogs": "Load Logs",
-      "loading": "Loading...",
-      "downloadLogs": "Download Logs",
-      "clickToLoad": "Click 'Load Logs' to view recent logs",
-      "downloadSuccess": "Logs downloaded successfully",
-      "errorLoadingLogs": "Failed to load logs",
-      "errorDownloadingLogs": "Failed to download logs"
     }
   }
 }

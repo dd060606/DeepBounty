@@ -11,8 +11,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Textarea } from "@/components/ui/textarea";
-import { AlertTriangle, Download, Power, Trash2 } from "lucide-react";
+import { AlertTriangle, Power, Trash2 } from "lucide-react";
 import SettingSection from "@/components/settings/SettingSection";
 import SettingItem from "@/components/settings/SettingItem";
 import SecretField from "@/components/settings/SecretField";
@@ -42,11 +41,6 @@ export default function Settings() {
   const [workerKey, setWorkerKey] = useState("");
   const [regeneratingWorker, setRegeneratingWorker] = useState(false);
   const [workers, setWorkers] = useState<WorkerInfo[]>([]);
-
-  // Logs
-  const [logs, setLogs] = useState("");
-  const [loadingLogs, setLoadingLogs] = useState(false);
-  const [logsLimit, setLogsLimit] = useState(100);
 
   // Confirm dialogs
   const [confirmCleanup, setConfirmCleanup] = useState(false);
@@ -197,36 +191,6 @@ export default function Settings() {
     }
   }
 
-  async function loadLogs() {
-    setLoadingLogs(true);
-    try {
-      const res = await ApiClient.get(`/logs?limit=${logsLimit}`);
-      setLogs(res.data.logs || "No logs available");
-    } catch {
-      toast.error(t("settings.logs.errorLoadingLogs"));
-      setLogs("Error loading logs");
-    } finally {
-      setLoadingLogs(false);
-    }
-  }
-
-  async function downloadLogs() {
-    try {
-      // Download logs as a file
-      const res = await ApiClient.get("/logs/download", { responseType: "blob" });
-      const url = window.URL.createObjectURL(new Blob([res.data]));
-      const link = document.createElement("a");
-      link.href = url;
-      link.setAttribute("download", `deepbounty-logs-${new Date().toISOString()}.txt`);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      toast.success(t("settings.logs.downloadSuccess"));
-    } catch {
-      toast.error(t("settings.logs.errorDownloadingLogs"));
-    }
-  }
-
   return (
     <div className="px-4 py-6 md:px-6">
       <div className="mb-6">
@@ -246,7 +210,6 @@ export default function Settings() {
           <TabsTrigger value="general">{t("settings.tabs.general")}</TabsTrigger>
           <TabsTrigger value="notifications">{t("settings.tabs.notifications")}</TabsTrigger>
           <TabsTrigger value="workers">{t("settings.tabs.workers")}</TabsTrigger>
-          <TabsTrigger value="logs">{t("settings.tabs.logs")}</TabsTrigger>
         </TabsList>
 
         {/* General Tab */}
@@ -356,7 +319,7 @@ export default function Settings() {
             >
               <Button variant="outline" onClick={restartServer} className="text-destructive">
                 <Power className="size-4" />
-                {t("</TabsContent>settings.advanced.restart")}
+                {t("settings.advanced.restart")}
               </Button>
             </SettingItem>
           </SettingSection>
@@ -422,48 +385,6 @@ export default function Settings() {
               )}
             </div>
           )}
-        </TabsContent>
-
-        {/* Logs Tab */}
-        <TabsContent value="logs" className="space-y-6">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h2 className="text-foreground text-lg font-semibold">{t("settings.logs.title")}</h2>
-              <p className="text-muted-foreground text-sm">{t("settings.logs.description")}</p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <Select
-                value={logsLimit.toString()}
-                onValueChange={(val) => setLogsLimit(Number(val))}
-              >
-                <SelectTrigger className="w-[140px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="100">100 {t("settings.logs.lines")}</SelectItem>
-                  <SelectItem value="500">500 {t("settings.logs.lines")}</SelectItem>
-                  <SelectItem value="1000">1000 {t("settings.logs.lines")}</SelectItem>
-                  <SelectItem value="5000">5000 {t("settings.logs.lines")}</SelectItem>
-                </SelectContent>
-              </Select>
-              <Button variant="outline" onClick={loadLogs} disabled={loadingLogs}>
-                {loadingLogs ? t("settings.logs.loading") : t("settings.logs.loadLogs")}
-              </Button>
-              <Button onClick={downloadLogs}>
-                <Download className="mr-2 size-4" />
-                {t("settings.logs.downloadLogs")}
-              </Button>
-            </div>
-          </div>
-
-          <div className="border-border bg-card/50 rounded-lg border p-4">
-            <Textarea
-              value={logs}
-              readOnly
-              className="h-[400px] font-mono text-xs"
-              placeholder={t("settings.logs.clickToLoad")}
-            />
-          </div>
         </TabsContent>
       </Tabs>
 
