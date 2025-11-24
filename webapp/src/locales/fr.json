@@ -202,12 +202,16 @@
       "swaggerUIDesc": "Activer l'interface de documentation API",
       "darkMode": "Mode sombre",
       "darkModeDesc": "Activer le mode sombre pour l'interface",
-      "settingsSaved": "Paramètres enregistrés avec succès",
       "errorSavingSettings": "Impossible d'enregistrer les paramètres",
       "secretCopied": "Copié dans le presse-papier",
       "copy": "Copier dans le presse-papier",
       "regenerate": "Régénérer",
-      "errorLoadingSettings": "Impossible de charger les paramètres"
+      "errorLoadingSettings": "Impossible de charger les paramètres",
+      "serverRestarting": "Le serveur redémarre...",
+      "confirmSwaggerToggle": "Confirmer le changement de Swagger UI",
+      "confirmSwaggerToggleDesc": "Ce changement prendra effet après le redémarrage du serveur. Voulez-vous redémarrer maintenant ou plus tard ?",
+      "restartNow": "Redémarrer maintenant",
+      "restartLater": "Redémarrer plus tard"
     },
     "advanced": {
       "title": "Paramètres avancés",
@@ -229,7 +233,6 @@
       "restart": "Redémarrer",
       "restartServer": "Redémarrer le serveur",
       "restartServerDesc": "Cela redémarrera le serveur immédiatement.",
-      "restartSuccess": "Le serveur va redémarrer.",
       "restartError": "Impossible de redémarrer le serveur"
     },
     "notifications": {
