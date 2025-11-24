@@ -1,5 +1,5 @@
-import { createAlert } from "@/utils/alertUtils.js";
-import { query } from "@/utils/db.js";
+import { createAlert } from "@/services/alerts.js";
+import { query, queryOne } from "@/db/database.js";
 import Logger from "@/utils/logger.js";
 import { Alert } from "@deepbounty/sdk/types";
 import { sql } from "drizzle-orm";
@@ -58,13 +58,13 @@ export async function addAlert(req: Request, res: Response) {
 export async function deleteAlert(req: Request, res: Response) {
   try {
     const { id } = req.params as { id: string };
-    const deleted = await query<{ id: number; name: string }>(
+    const deleted = await queryOne<{ id: number; name: string }>(
       sql`DELETE FROM alerts WHERE id = ${id} RETURNING id, name`
     );
-    if (deleted.length === 0) {
+    if (!deleted) {
       return res.status(404).json({ error: "Alert not found" });
     }
-    logger.info(`Deleted alert ${deleted[0].id} (${deleted[0].name})`);
+    logger.info(`Deleted alert ${deleted.id} (${deleted.name})`);
     res.sendStatus(200);
   } catch (error) {
     logger.error("Error deleting alert:", error);

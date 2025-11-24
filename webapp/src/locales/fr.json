@@ -9,7 +9,8 @@
     "subdomain": "Sous-domaine",
     "close": "Fermer",
     "add": "Ajouter",
-    "save": "Enregistrer"
+    "save": "Enregistrer",
+    "saving": "Enregistrement..."
   },
   "nav": {
     "alerts": "Alertes",
@@ -237,7 +238,29 @@
     },
     "notifications": {
       "title": "Services de notification",
-      "description": "Configurez les notifications pour les alertes"
+      "description": "Configurez les canaux de notification pour les alertes",
+      "configuration": "Configuration de {{service}}",
+      "configurationDesc": "Configurez les paramètres de connexion pour ce service",
+      "enabled": "Activer le service",
+      "enabledDesc": "Activer les notifications pour ce service",
+      "fieldDesc": "Entrez le {{field}} pour ce service",
+      "saveConfiguration": "Enregistrer la configuration",
+      "serviceSaved": "Configuration du service enregistrée avec succès",
+      "errorSavingService": "Impossible d'enregistrer la configuration du service",
+      "errorLoadingServices": "Impossible de charger les services de notification",
+      "noServices": "Aucun service de notification disponible",
+      "webhookUrl": "URL du Webhook",
+      "botToken": "Token du bot",
+      "chatId": "ID du chat",
+      "userKey": "Clé utilisateur",
+      "apiToken": "Token API",
+      "accessToken": "Token d'accès",
+      "smtpHost": "Hôte SMTP",
+      "smtpPort": "Port SMTP",
+      "username": "Nom d'utilisateur",
+      "password": "Mot de passe",
+      "fromEmail": "Email expéditeur",
+      "toEmail": "Email destinataire"
     },
     "workers": {
       "title": "Configuration des workers",

@@ -1,5 +1,3 @@
-import { Tool } from "./tools";
-
 export interface Module {
 	// Unique identifier (e.g., "example-module")
 	id: string;

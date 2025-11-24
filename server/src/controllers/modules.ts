@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import Logger from "@/utils/logger.js";
 import getRegistry from "@/utils/registry.js";
-import { query } from "@/utils/db.js";
+import { query, queryOne } from "@/db/database.js";
 import { sql } from "drizzle-orm";
 
 const logger = new Logger("Modules");
@@ -35,10 +35,10 @@ export const updateModuleSettings = async (req: Request, res: Response) => {
 
   try {
     // Update the module settings in the database
-    const result = await query(
+    const result = await queryOne(
       sql`UPDATE modules_configs SET "value" = ${JSON.stringify(req.body)} WHERE "moduleId" = ${moduleId} AND "key" = 'settings' RETURNING "moduleId"`
     );
-    if (result.length === 0) {
+    if (!result) {
       return res.status(404).json({ error: "Target not found" });
     }
     logger.info(`Updated settings for module ID '${moduleId}'`);

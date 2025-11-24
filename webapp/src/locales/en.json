@@ -9,7 +9,8 @@
     "subdomain": "Subdomain",
     "close": "Close",
     "add": "Add",
-    "save": "Save"
+    "save": "Save",
+    "saving": "Saving..."
   },
   "nav": {
     "alerts": "Alerts",
@@ -238,7 +239,29 @@
     },
     "notifications": {
       "title": "Notification Services",
-      "description": "Configure alerts notifications"
+      "description": "Configure notification channels for alerts",
+      "configuration": "{{service}} Configuration",
+      "configurationDesc": "Configure connection settings for this service",
+      "enabled": "Enable Service",
+      "enabledDesc": "Activate notifications for this service",
+      "fieldDesc": "Enter the {{field}} for this service",
+      "saveConfiguration": "Save Configuration",
+      "serviceSaved": "Service configuration saved successfully",
+      "errorSavingService": "Failed to save service configuration",
+      "errorLoadingServices": "Failed to load notification services",
+      "noServices": "No notification services available",
+      "webhookUrl": "Webhook URL",
+      "botToken": "Bot Token",
+      "chatId": "Chat ID",
+      "userKey": "User Key",
+      "apiToken": "API Token",
+      "accessToken": "Access Token",
+      "smtpHost": "SMTP Host",
+      "smtpPort": "SMTP Port",
+      "username": "Username",
+      "password": "Password",
+      "fromEmail": "From Email",
+      "toEmail": "To Email"
     },
     "workers": {
       "title": "Worker Configuration",

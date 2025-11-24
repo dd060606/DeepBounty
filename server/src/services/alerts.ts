@@ -1,6 +1,6 @@
 import { Alert } from "@deepbounty/sdk/types";
-import { query, queryOne } from "./db.js";
-import Logger from "./logger.js";
+import { query, queryOne } from "@/db/database.js";
+import Logger from "../utils/logger.js";
 import { sql } from "drizzle-orm";
 
 const logger = new Logger("Alerts");

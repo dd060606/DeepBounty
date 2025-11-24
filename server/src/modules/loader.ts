@@ -10,7 +10,7 @@ import { getTaskAPI } from "@/tasks/taskAPI.js";
 import getRegistry from "@/utils/registry.js";
 import { MODULES_DIR } from "@/utils/constants.js";
 import { validateModule } from "./validateModule.js";
-import { createAlert } from "@/utils/alertUtils.js";
+import { createAlert } from "@/services/alerts.js";
 
 const logger = new Logger("Modules-Loader");
 const registry = getRegistry();

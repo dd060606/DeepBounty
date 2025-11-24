@@ -6,7 +6,7 @@ import session from "express-session";
 import cors from "cors";
 import config, { generateRandomKey } from "./utils/config.js";
 import { requireAuth } from "./middlewares/auth.js";
-import { initDatabase } from "./utils/db.js";
+import { initDatabase } from "@/db/database.js";
 import { initModules } from "./modules/loader.js";
 import Setup from "./routes/setup.js";
 import Auth from "./routes/auth.js";
@@ -15,6 +15,7 @@ import Alerts from "./routes/alerts.js";
 import Modules from "./routes/modules.js";
 import Settings from "./routes/settings.js";
 import Workers from "./routes/workers.js";
+import Notifications from "./routes/notifications.js";
 
 // Initialize the app
 function initApp() {
@@ -91,5 +92,6 @@ app.use("/alerts", requireAuth, Alerts);
 app.use("/modules", requireAuth, Modules);
 app.use("/settings", requireAuth, Settings);
 app.use("/workers", requireAuth, Workers);
+app.use("/notifications", requireAuth, Notifications);
 
 export default app;
