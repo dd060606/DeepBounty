@@ -47,6 +47,8 @@ export default function Settings() {
   const [confirmResetModules, setConfirmResetModules] = useState(false);
   const [confirmDisconnectWorker, setConfirmDisconnectWorker] = useState(false);
   const [workerToDisconnect, setWorkerToDisconnect] = useState<number | null>(null);
+  const [confirmSwaggerToggle, setConfirmSwaggerToggle] = useState(false);
+  const [pendingSwaggerValue, setPendingSwaggerValue] = useState(false);
 
   useEffect(() => {
     // Load settings from API
@@ -138,13 +140,27 @@ export default function Settings() {
     }
   }
 
-  async function toggleSwagger(enabled: boolean) {
-    setSwaggerEnabled(enabled);
+  function initiateSwaggerToggle(enabled: boolean) {
+    setPendingSwaggerValue(enabled);
+    setConfirmSwaggerToggle(true);
+  }
+  async function toggleSwagger(restart: boolean) {
+    const enabled = pendingSwaggerValue;
+
     try {
-      await ApiClient.patch("/settings", { swaggerUi: enabled });
-      toast.success(t("settings.general.settingsSaved"));
+      await ApiClient.patch("/settings", { swaggerUi: enabled, restart });
+      setSwaggerEnabled(enabled);
+      setConfirmSwaggerToggle(false);
+      if (restart) {
+        toast.info(t("settings.general.serverRestarting"));
+        setTimeout(() => {
+          navigate("/", { replace: true });
+        }, 2000);
+      }
     } catch {
       toast.error(t("settings.general.errorSavingSettings"));
+    } finally {
+      setConfirmSwaggerToggle(false);
     }
   }
 
@@ -181,7 +197,7 @@ export default function Settings() {
   async function restartServer() {
     try {
       await ApiClient.post("/settings/restart-server");
-      toast.success(t("settings.advanced.restartSuccess"));
+      toast.info(t("settings.general.serverRestarting"));
       // The server is expected to restart after this action
       setTimeout(() => {
         navigate("/", { replace: true });
@@ -258,7 +274,7 @@ export default function Settings() {
               {loadingSettings ? (
                 <Skeleton className="h-8 w-10" />
               ) : (
-                <Switch checked={swaggerEnabled} onCheckedChange={toggleSwagger} />
+                <Switch checked={swaggerEnabled} onCheckedChange={initiateSwaggerToggle} />
               )}
             </SettingItem>
 
@@ -411,6 +427,23 @@ export default function Settings() {
         title={t("settings.workers.confirmDisconnect")}
         desc={t("settings.workers.confirmDisconnectDesc")}
         onConfirm={disconnectWorker}
+      />
+
+      {/* Swagger Toggle Confirm with Restart Options */}
+      <ConfirmDialog
+        open={confirmSwaggerToggle}
+        onOpenChange={(open) => {
+          if (!open) {
+            setConfirmSwaggerToggle(false);
+            setSwaggerEnabled(!pendingSwaggerValue);
+          }
+        }}
+        title={t("settings.general.confirmSwaggerToggle")}
+        desc={t("settings.general.confirmSwaggerToggleDesc")}
+        onConfirm={() => toggleSwagger(true)}
+        onCancel={() => toggleSwagger(false)}
+        confirmText={t("settings.general.restartNow")}
+        cancelText={t("settings.general.restartLater")}
       />
     </div>
   );

@@ -14,11 +14,23 @@ type DialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onConfirm: () => void;
+  onCancel?: () => void;
   title: string;
   desc: string;
+  confirmText?: string;
+  cancelText?: string;
 };
 
-export function ConfirmDialog({ open, onOpenChange, title, desc, onConfirm }: DialogProps) {
+export function ConfirmDialog({
+  open,
+  onOpenChange,
+  onCancel,
+  title,
+  desc,
+  onConfirm,
+  confirmText,
+  cancelText,
+}: DialogProps) {
   const { t } = useTranslation();
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
@@ -28,8 +40,12 @@ export function ConfirmDialog({ open, onOpenChange, title, desc, onConfirm }: Di
           <AlertDialogDescription>{desc}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogAction onClick={onConfirm}>{t("common.confirm")}</AlertDialogAction>
-          <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+          <AlertDialogAction onClick={onConfirm}>
+            {confirmText ?? t("common.confirm")}
+          </AlertDialogAction>
+          <AlertDialogCancel onClick={onCancel}>
+            {cancelText ?? t("common.cancel")}
+          </AlertDialogCancel>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

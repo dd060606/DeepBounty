@@ -203,12 +203,16 @@
       "swaggerUIDesc": "Enable API documentation interface",
       "darkMode": "Dark Mode",
       "darkModeDesc": "Enable dark mode for the interface",
-      "settingsSaved": "Settings saved successfully",
       "errorSavingSettings": "Failed to save settings",
       "secretCopied": "Copied to clipboard",
       "copy": "Copy to clipboard",
       "regenerate": "Regenerate",
-      "errorLoadingSettings": "Failed to load settings"
+      "errorLoadingSettings": "Failed to load settings",
+      "serverRestarting": "Server is restarting...",
+      "confirmSwaggerToggle": "Confirm Swagger UI Change",
+      "confirmSwaggerToggleDesc": "This change will take effect after restarting the server. Do you want to restart now or later?",
+      "restartNow": "Restart Now",
+      "restartLater": "Restart Later"
     },
     "advanced": {
       "title": "Advanced Settings",
@@ -230,7 +234,6 @@
       "restart": "Restart",
       "restartServer": "Restart the server",
       "restartServerDesc": "This will restart the server immediately.",
-      "restartSuccess": "The server will restart.",
       "restartError": "Failed to restart the server"
     },
     "notifications": {

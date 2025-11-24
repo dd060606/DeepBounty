@@ -4,7 +4,6 @@ import config, { generateRandomKey } from "@/utils/config.js";
 import { clearAllDatabases } from "@/modules/moduleStorage.js";
 import { gracefulShutdown } from "@/server.js";
 import { getTaskTemplateService } from "@/tasks/taskTemplateService.js";
-import getRegistry from "@/utils/registry.js";
 
 const logger = new Logger("Settings");
 
@@ -20,11 +19,15 @@ export const getSettings = async (req: Request, res: Response) => {
 
 // PATCH /settings - update settings
 export const updateSettings = async (req: Request, res: Response) => {
-  const { swaggerUi } = req.body;
+  const { swaggerUi, restart } = req.body;
   if (swaggerUi !== undefined) {
     config.set({ enableSwaggerUi: swaggerUi });
   }
   res.sendStatus(200);
+  if (restart) {
+    logger.info("Settings updated, restarting server...");
+    gracefulShutdown("RESTART");
+  }
 };
 
 // POST /settings/regenerate/worker-key - regenerate worker key
