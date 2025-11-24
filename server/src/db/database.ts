@@ -1,6 +1,6 @@
 import { drizzle } from "drizzle-orm/node-postgres";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
-import Logger from "./logger.js";
+import Logger from "@/utils/logger.js";
 import { SQL, sql } from "drizzle-orm";
 
 const logger = new Logger("DB");

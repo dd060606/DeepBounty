@@ -1,4 +1,4 @@
-import { query } from "@/utils/db.js";
+import { queryOne } from "@/db/database.js";
 import { Target, TaskContent, Tool } from "@deepbounty/sdk/types";
 import { sql } from "drizzle-orm";
 
@@ -38,14 +38,14 @@ export async function replaceTargetPlaceholders(
   if (!targetId) return Promise.resolve(commands);
 
   // Fetch target from database
-  const target = await query<Target>(sql`SELECT * FROM targets WHERE id = ${targetId}`);
-  if (target.length === 0) return Promise.resolve(commands);
+  const target = await queryOne<Target>(sql`SELECT * FROM targets WHERE id = ${targetId}`);
+  if (!target) return Promise.resolve(commands);
 
   return commands.map((cmd) =>
     cmd
-      .replace(/\{\{TARGET_DOMAIN\}\}/g, target[0].domain)
-      .replace(/\{\{TARGET_ID\}\}/g, String(target[0].id))
-      .replace(/\{\{TARGET_NAME\}\}/g, target[0].name)
+      .replace(/\{\{TARGET_DOMAIN\}\}/g, target.domain)
+      .replace(/\{\{TARGET_ID\}\}/g, String(target.id))
+      .replace(/\{\{TARGET_NAME\}\}/g, target.name)
   );
 }
 

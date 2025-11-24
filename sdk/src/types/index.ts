@@ -5,3 +5,4 @@ export * from "./workers.js";
 export * from "./websockets.js";
 export * from "./tasks.js";
 export * from "./tools.js";
+export * from "./notifications.js";

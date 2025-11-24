@@ -1,5 +1,5 @@
 import getTaskManager from "@/tasks/taskManager.js";
-import { query } from "@/utils/db.js";
+import { query, queryOne } from "@/db/database.js";
 import Logger from "@/utils/logger.js";
 import { Target } from "@deepbounty/sdk/types";
 import { sql } from "drizzle-orm";
@@ -60,14 +60,14 @@ export async function getTargetsFull(req: Request, res: Response) {
 export function addTarget(req: Request, res: Response) {
   const { name, domain, activeScan } = req.body;
 
-  query(
+  queryOne(
     sql`INSERT INTO targets (name, domain, "activeScan") VALUES (${name}, ${domain}, ${activeScan}) RETURNING *`
   )
     .then((result) => {
       logger.info(`Added new target: ${name} (${domain})`);
       //Sync tasks for the new target
       getTaskManager().syncAllTasks();
-      res.status(201).json(result[0]);
+      res.status(201).json(result);
     })
     .catch((error) => {
       logger.error("Error adding target:", error);
@@ -80,11 +80,11 @@ export function editTarget(req: Request, res: Response) {
   const { id } = req.params;
   const { name, domain, activeScan } = req.body;
 
-  query(
+  queryOne(
     sql`UPDATE targets SET name = ${name}, domain = ${domain}, "activeScan" = ${activeScan} WHERE id = ${id} RETURNING *`
   )
     .then((result) => {
-      if (result.length === 0) {
+      if (!result) {
         return res.status(404).json({ error: "Target not found" });
       }
       logger.info(`Updated target: ${name} (${domain})`);
@@ -93,7 +93,7 @@ export function editTarget(req: Request, res: Response) {
         getTaskManager().syncAllTasks();
       }
 
-      res.json(result[0]);
+      res.json(result);
     })
     .catch((error) => {
       logger.error("Error updating target:", error);
@@ -105,12 +105,12 @@ export function editTarget(req: Request, res: Response) {
 export function deleteTarget(req: Request, res: Response) {
   const { id } = req.params;
 
-  query<Target>(sql`DELETE FROM targets WHERE id = ${id} RETURNING *`)
+  queryOne<Target>(sql`DELETE FROM targets WHERE id = ${id} RETURNING *`)
     .then((result) => {
-      if (result.length === 0) {
+      if (!result) {
         return res.status(404).json({ error: "Target not found" });
       }
-      logger.info(`Deleted target: ${result[0].name} (${result[0].domain})`);
+      logger.info(`Deleted target: ${result.name} (${result.domain})`);
       res.sendStatus(200);
     })
     .catch((error) => {
@@ -160,11 +160,11 @@ export function setTargetSubdomains(req: Request, res: Response) {
 export function getTargetSettings(req: Request, res: Response) {
   const { id } = req.params;
 
-  query<{ settings: Record<string, any> }>(
+  queryOne<{ settings: Record<string, any> }>(
     sql`SELECT settings FROM targets_settings WHERE "targetId" = ${id}`
   )
-    .then((rows) => {
-      res.json(rows[0]?.settings || {});
+    .then((row) => {
+      res.json(row?.settings || {});
     })
     .catch((error) => {
       logger.error("Error fetching target settings:", error);

@@ -837,3 +837,185 @@ paths:
           description: Some overrides failed to delete
         "401":
           description: Unauthorized
+  # Settings
+  /settings:
+    get:
+      summary: Get all application settings
+      tags:
+        - Settings
+      security:
+        - sessionCookie: []
+      responses:
+        "200":
+          description: Application settings retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  workerKey:
+                    type: string
+                    example: "abc123def456"
+                  burpsuiteKey:
+                    type: string
+                    example: "xyz789uvw012"
+                  scanAllSubdomains:
+                    type: boolean
+                    example: true
+        "401":
+          description: Unauthorized
+    patch:
+      summary: Update application settings
+      tags:
+        - Settings
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                scanAllSubdomains:
+                  type: boolean
+                  example: true
+      responses:
+        "200":
+          description: Settings updated successfully
+        "400":
+          description: Invalid request
+        "401":
+          description: Unauthorized
+  /settings/regenerate/worker-key:
+    post:
+      summary: Regenerate worker authentication key
+      tags:
+        - Settings
+      security:
+        - sessionCookie: []
+      responses:
+        "200":
+          description: Worker key regenerated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  workerKey:
+                    type: string
+                    example: "new-worker-key-123"
+        "401":
+          description: Unauthorized
+  /settings/regenerate/burpsuite-key:
+    post:
+      summary: Regenerate Burp Suite authentication key
+      tags:
+        - Settings
+      security:
+        - sessionCookie: []
+      responses:
+        "200":
+          description: Burp Suite key regenerated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  burpsuiteKey:
+                    type: string
+                    example: "new-burpsuite-key-456"
+        "401":
+          description: Unauthorized
+  /settings/reset-modules:
+    post:
+      summary: Reset all module databases
+      description: Clears all module-specific data and resets their databases
+      tags:
+        - Settings
+      security:
+        - sessionCookie: []
+      responses:
+        "200":
+          description: Module databases reset successfully
+        "401":
+          description: Unauthorized
+  /settings/cleanup-tasks:
+    post:
+      summary: Clean up completed tasks
+      description: Removes old completed tasks from the database
+      tags:
+        - Settings
+      security:
+        - sessionCookie: []
+      responses:
+        "200":
+          description: Tasks cleaned up successfully
+        "401":
+          description: Unauthorized
+  /settings/restart-server:
+    post:
+      summary: Restart the server
+      description: Gracefully restarts the application server
+      tags:
+        - Settings
+      security:
+        - sessionCookie: []
+      responses:
+        "200":
+          description: Server restart initiated
+        "401":
+          description: Unauthorized
+  # Workers
+  /workers:
+    get:
+      summary: Get all connected workers
+      tags:
+        - Workers
+      security:
+        - sessionCookie: []
+      responses:
+        "200":
+          description: List of connected workers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      example: "worker-1"
+                    status:
+                      type: string
+                      example: "connected"
+                    connectedAt:
+                      type: string
+                      format: date-time
+                    lastSeen:
+                      type: string
+                      format: date-time
+        "401":
+          description: Unauthorized
+  /workers/{id}/disconnect:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Worker ID
+    post:
+      summary: Disconnect a worker
+      tags:
+        - Workers
+      security:
+        - sessionCookie: []
+      responses:
+        "200":
+          description: Worker disconnected successfully
+        "404":
+          description: Worker not found
+        "401":
+          description: Unauthorized

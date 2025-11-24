@@ -17,11 +17,18 @@ import SettingItem from "@/components/settings/SettingItem";
 import SecretField from "@/components/settings/SecretField";
 import WorkerCard, { type WorkerInfo } from "@/components/settings/WorkerCard";
 import WorkersSkeleton from "@/components/settings/WorkersSkeleton";
+import NotificationServicesSkeleton from "@/components/settings/NotificationServicesSkeleton";
 import ApiClient from "@/utils/api";
+import {
+  NOTIFICATION_PROVIDERS,
+  PROVIDER_ORDER,
+  type NotificationConfig,
+} from "@/utils/notificationProviders";
 import { ConfirmDialog } from "@/components/dialogs/ConfirmDialog";
 import { useTheme } from "@/components/theme-provider";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useNavigate } from "react-router";
+import type { NotificationService } from "@deepbounty/sdk/types";
 
 export default function Settings() {
   const { t, i18n } = useTranslation();
@@ -41,6 +48,23 @@ export default function Settings() {
   const [workerKey, setWorkerKey] = useState("");
   const [regeneratingWorker, setRegeneratingWorker] = useState(false);
   const [workers, setWorkers] = useState<WorkerInfo[]>([]);
+
+  // Notifications - Initialize with hardcoded providers
+  const [loadingNotifications, setLoadingNotifications] = useState(false);
+  const [notificationsLoaded, setNotificationsLoaded] = useState(false);
+  const [notificationServices, setNotificationServices] = useState<NotificationConfig[]>(
+    PROVIDER_ORDER.map(
+      (provider): NotificationConfig => ({
+        provider,
+        enabled: false,
+        config: {},
+      })
+    )
+  );
+  const [selectedProvider, setSelectedProvider] = useState<NotificationService["provider"] | null>(
+    PROVIDER_ORDER[0]
+  );
+  const [savingNotification, setSavingNotification] = useState(false);
 
   // Confirm dialogs
   const [confirmCleanup, setConfirmCleanup] = useState(false);
@@ -86,6 +110,32 @@ export default function Settings() {
     } finally {
       setLoadingWorkers(false);
       setWorkersLoaded(true);
+    }
+  }
+
+  async function loadNotifications() {
+    if (notificationsLoaded) return;
+    setLoadingNotifications(true);
+    try {
+      const res = await ApiClient.get("/notifications");
+      const apiServices = res.data || [];
+
+      // Merge API data with hardcoded providers
+      const mergedServices: NotificationConfig[] = PROVIDER_ORDER.map((provider) => {
+        const apiService = apiServices.find((s: NotificationConfig) => s.provider === provider);
+        return {
+          provider,
+          enabled: apiService?.enabled || false,
+          config: apiService?.config || {},
+        };
+      });
+
+      setNotificationServices(mergedServices);
+    } catch {
+      toast.error(t("settings.notifications.errorLoadingServices"));
+    } finally {
+      setLoadingNotifications(false);
+      setNotificationsLoaded(true);
     }
   }
 
@@ -194,6 +244,41 @@ export default function Settings() {
     }
   }
 
+  async function saveNotificationService() {
+    if (!selectedProvider) return;
+    const service = notificationServices.find((s) => s.provider === selectedProvider);
+    if (!service) return;
+
+    setSavingNotification(true);
+    try {
+      await ApiClient.post(`/notifications/${selectedProvider}`, {
+        enabled: service.enabled,
+        config: service.config,
+      });
+      toast.success(t("settings.notifications.serviceSaved"));
+    } catch {
+      toast.error(t("settings.notifications.errorSavingService"));
+    } finally {
+      setSavingNotification(false);
+    }
+  }
+
+  function toggleNotificationService(enabled: boolean) {
+    if (!selectedProvider) return;
+    setNotificationServices(
+      notificationServices.map((s) => (s.provider === selectedProvider ? { ...s, enabled } : s))
+    );
+  }
+
+  function updateNotificationConfig(key: string, value: string) {
+    if (!selectedProvider) return;
+    setNotificationServices(
+      notificationServices.map((s) =>
+        s.provider === selectedProvider ? { ...s, config: { ...s.config, [key]: value } } : s
+      )
+    );
+  }
+
   async function restartServer() {
     try {
       await ApiClient.post("/settings/restart-server");
@@ -219,6 +304,9 @@ export default function Settings() {
         onValueChange={(value) => {
           if (value === "workers" && !workersLoaded) {
             loadConnectedWorkers();
+          }
+          if (value === "notifications" && !notificationsLoaded) {
+            loadNotifications();
           }
         }}
       >
@@ -343,19 +431,93 @@ export default function Settings() {
 
         {/* Notifications Tab */}
         <TabsContent value="notifications" className="space-y-6">
-          <div className="mb-4 flex items-center justify-between">
-            <div>
-              <h2 className="text-foreground text-lg font-semibold">
-                {t("settings.notifications.title")}
-              </h2>
-              <p className="text-muted-foreground text-sm">
-                {t("settings.notifications.description")}
-              </p>
-            </div>
-          </div>
+          {loadingNotifications ? (
+            <NotificationServicesSkeleton />
+          ) : (
+            <>
+              <div>
+                <h2 className="text-foreground mb-2 text-lg font-semibold">
+                  {t("settings.notifications.title")}
+                </h2>
+                <p className="text-muted-foreground mb-6 text-sm">
+                  {t("settings.notifications.description")}
+                </p>
+
+                {/* Service Selection Buttons */}
+                <div className="mb-6 flex flex-wrap gap-3">
+                  {PROVIDER_ORDER.map((provider) => {
+                    const providerInfo = NOTIFICATION_PROVIDERS[provider];
+                    return (
+                      <Button
+                        key={provider}
+                        variant={selectedProvider === provider ? "default" : "outline"}
+                        onClick={() => setSelectedProvider(provider)}
+                      >
+                        {providerInfo.label}
+                      </Button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Service Configuration */}
+              {selectedProvider && (
+                <>
+                  <SettingSection
+                    title={t("settings.notifications.configuration", {
+                      service: NOTIFICATION_PROVIDERS[selectedProvider].label,
+                    })}
+                    description={t("settings.notifications.configurationDesc")}
+                  >
+                    {/* Enabled Toggle */}
+                    <SettingItem
+                      label={t("settings.notifications.enabled")}
+                      description={t("settings.notifications.enabledDesc")}
+                    >
+                      <Switch
+                        checked={
+                          notificationServices.find((s) => s.provider === selectedProvider)
+                            ?.enabled || false
+                        }
+                        onCheckedChange={toggleNotificationService}
+                      />
+                    </SettingItem>
+
+                    {/* Configuration Fields */}
+                    {NOTIFICATION_PROVIDERS[selectedProvider].fields.map((field) => (
+                      <SettingItem
+                        key={field.name}
+                        label={t(`settings.notifications.${field.label}`)}
+                        description={t("settings.notifications.fieldDesc", {
+                          field: t(`settings.notifications.${field.label}`),
+                        })}
+                      >
+                        <input
+                          type={field.type}
+                          placeholder={field.placeholder}
+                          value={
+                            notificationServices.find((s) => s.provider === selectedProvider)
+                              ?.config[field.name] || ""
+                          }
+                          onChange={(e) => updateNotificationConfig(field.name, e.target.value)}
+                          className="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring flex h-9 w-full rounded-md border px-3 py-2 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:ring-1 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 sm:w-sm"
+                        />
+                      </SettingItem>
+                    ))}
+                  </SettingSection>
+
+                  {/* Save Button */}
+                  <div className="flex justify-end">
+                    <Button onClick={saveNotificationService} disabled={savingNotification}>
+                      {savingNotification ? t("common.saving") : t("common.save")}
+                    </Button>
+                  </div>
+                </>
+              )}
+            </>
+          )}
         </TabsContent>
 
-        {/* Workers Tab */}
         <TabsContent value="workers" className="space-y-6">
           <SettingSection
             title={t("settings.workers.title")}

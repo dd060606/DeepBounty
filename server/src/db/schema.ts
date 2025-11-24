@@ -9,6 +9,7 @@ import {
   jsonb,
   smallint,
   unique,
+  pgEnum,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 
@@ -138,3 +139,13 @@ export const targetTaskOverrides = pgTable(
     unique("target_task_overrides_unique").on(table.targetId, table.taskTemplateId),
   ]
 );
+
+// Notification provider enum
+export const notificationProviderEnum = pgEnum("notification_provider", ["discord", "ntfysh"]);
+
+// Notification services table
+export const notificationServices = pgTable("notification_services", {
+  provider: notificationProviderEnum().primaryKey().notNull(),
+  config: jsonb().notNull(),
+  enabled: boolean().default(false).notNull(),
+});

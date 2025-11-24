@@ -1,6 +1,6 @@
 import { sql } from "drizzle-orm";
 import { TaskContent, TargetTaskOverride, TaskTemplate } from "@deepbounty/sdk/types";
-import { query } from "@/utils/db.js";
+import { query, queryOne } from "@/db/database.js";
 /**
  * Service for managing task templates in the database
  */
@@ -50,13 +50,13 @@ export class TaskTemplateService {
     }
 
     // Create new template
-    const result = await query<{ id: number }>(
+    const result = await queryOne<{ id: number }>(
       sql`INSERT INTO task_templates ("moduleId", "uniqueKey", name, description, content, interval, active) 
       VALUES (${moduleId}, ${uniqueKey}, ${name}, ${description}, ${JSON.stringify(content)}, ${interval}, true) 
       RETURNING id`
     );
 
-    return result[0].id;
+    return result.id;
   }
 
   /**
@@ -66,14 +66,12 @@ export class TaskTemplateService {
     moduleId: string,
     uniqueKey: string
   ): Promise<TaskTemplate | undefined> {
-    const result = await query<TaskTemplate>(sql`
+    const template = await queryOne<TaskTemplate>(sql`
       SELECT * FROM task_templates 
       WHERE "moduleId" = ${moduleId} AND "uniqueKey" = ${uniqueKey}
     `);
 
-    if (result.length === 0) return undefined;
-
-    const template = result[0];
+    if (!template) return undefined;
     return {
       id: template.id,
       moduleId: template.moduleId,
@@ -90,11 +88,11 @@ export class TaskTemplateService {
    * Get a task template by ID
    */
   async getTemplate(id: number): Promise<TaskTemplate | undefined> {
-    const result = await query<TaskTemplate>(sql`SELECT * FROM task_templates WHERE id = ${id}`);
+    const template = await queryOne<TaskTemplate>(
+      sql`SELECT * FROM task_templates WHERE id = ${id}`
+    );
 
-    if (result.length === 0) return undefined;
-
-    const template = result[0];
+    if (!template) return undefined;
     return {
       id: template.id,
       moduleId: template.moduleId,
@@ -149,22 +147,22 @@ export class TaskTemplateService {
    * Update a task template's global activation status
    */
   async setTemplateActive(id: number, active: boolean): Promise<boolean> {
-    const result = await query<{ id: number }>(
+    const result = await queryOne<{ id: number }>(
       sql`UPDATE task_templates SET active = ${active} WHERE id = ${id} RETURNING id`
     );
 
-    return result.length > 0;
+    return !!result;
   }
 
   /**
    * Update a task template's interval
    */
   async setTemplateInterval(id: number, interval: number): Promise<boolean> {
-    const result = await query<{ id: number }>(
+    const result = await queryOne<{ id: number }>(
       sql`UPDATE task_templates SET interval = ${interval} WHERE id = ${id} RETURNING id`
     );
 
-    return result.length > 0;
+    return !!result;
   }
 
   /**
@@ -180,20 +178,20 @@ export class TaskTemplateService {
 
     // Build query dynamically based on what needs updating
     if (updates.active !== undefined && updates.interval !== undefined) {
-      const result = await query<{ id: number }>(
+      const result = await queryOne<{ id: number }>(
         sql`UPDATE task_templates SET active = ${updates.active}, interval = ${updates.interval} WHERE id = ${id} RETURNING id`
       );
-      return result.length > 0;
+      return !!result;
     } else if (updates.active !== undefined) {
-      const result = await query<{ id: number }>(
+      const result = await queryOne<{ id: number }>(
         sql`UPDATE task_templates SET active = ${updates.active} WHERE id = ${id} RETURNING id`
       );
-      return result.length > 0;
+      return !!result;
     } else if (updates.interval !== undefined) {
-      const result = await query<{ id: number }>(
+      const result = await queryOne<{ id: number }>(
         sql`UPDATE task_templates SET interval = ${updates.interval} WHERE id = ${id} RETURNING id`
       );
-      return result.length > 0;
+      return !!result;
     }
 
     return false;
@@ -203,11 +201,11 @@ export class TaskTemplateService {
    * Delete a task template
    */
   async deleteTemplate(id: number): Promise<boolean> {
-    const result = await query<{ id: number }>(
+    const result = await queryOne<{ id: number }>(
       sql`DELETE FROM task_templates WHERE id = ${id} RETURNING id`
     );
 
-    return result.length > 0;
+    return !!result;
   }
 
   /**
@@ -228,13 +226,11 @@ export class TaskTemplateService {
     targetId: number,
     taskTemplateId: number
   ): Promise<TargetTaskOverride | undefined> {
-    const result = await query<TargetTaskOverride>(sql`
+    const override = await queryOne<TargetTaskOverride>(sql`
       SELECT * FROM target_task_overrides WHERE "targetId" = ${targetId} AND "taskTemplateId" = ${taskTemplateId}
     `);
 
-    if (result.length === 0) return undefined;
-
-    const override = result[0];
+    if (!override) return undefined;
     return {
       id: override.id,
       targetId: override.targetId,
@@ -279,13 +275,11 @@ export class TaskTemplateService {
     }
 
     // Create new override
-    const result = await query<TargetTaskOverride>(sql`
+    const override = await queryOne<TargetTaskOverride>(sql`
       INSERT INTO target_task_overrides ("targetId", "taskTemplateId", active)
       VALUES (${targetId}, ${taskTemplateId}, ${active})
       RETURNING *
     `);
-
-    const override = result[0];
     return {
       id: override.id,
       targetId: override.targetId,
@@ -298,13 +292,13 @@ export class TaskTemplateService {
    * Delete a target-specific override
    */
   async deleteTargetOverride(targetId: number, taskTemplateId: number): Promise<boolean> {
-    const result = await query(sql`
+    const result = await queryOne(sql`
         DELETE FROM target_task_overrides
         WHERE "targetId" = ${targetId} AND "taskTemplateId" = ${taskTemplateId}
         RETURNING id
       `);
 
-    return result.length > 0;
+    return !!result;
   }
 
   /**

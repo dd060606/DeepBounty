@@ -1,4 +1,4 @@
-import { query } from "@/utils/db.js";
+import { query, queryOne } from "@/db/database.js";
 import Logger from "@/utils/logger.js";
 import { ModuleSetting } from "@deepbounty/sdk/types";
 import { sql } from "drizzle-orm";
@@ -9,11 +9,11 @@ export class ModuleConfig {
   constructor(private moduleId: string) {}
 
   async get<T = any>(key: string, defaultValue?: T): Promise<T> {
-    const rows = await query<{ value: any }>(
+    const row = await queryOne<{ value: any }>(
       sql`SELECT "value" FROM modules_configs WHERE "moduleId" = ${this.moduleId} AND "key" = ${key} LIMIT 1`
     );
-    if (!rows || rows.length === 0) return defaultValue as T;
-    return rows[0].value as T;
+    if (!row) return defaultValue as T;
+    return row.value as T;
   }
 
   async set<T = any>(key: string, value: T): Promise<void> {
