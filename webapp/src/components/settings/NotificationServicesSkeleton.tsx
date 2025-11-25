@@ -6,7 +6,7 @@ export default function NotificationServicesSkeleton() {
       {/* Service buttons */}
       <div className="flex flex-wrap gap-3">
         {[1, 2, 3, 4].map((i) => (
-          <Skeleton key={i} className="h-24 w-28" />
+          <Skeleton key={i} className="h-12 w-28" />
         ))}
       </div>
 
@@ -18,12 +18,12 @@ export default function NotificationServicesSkeleton() {
         </div>
         <div className="space-y-4">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="flex items-start justify-between gap-4">
-              <div className="flex-1 space-y-2">
+            <div key={i} className="flex items-start gap-20">
+              <div className="space-y-2">
                 <Skeleton className="h-4 w-32" />
                 <Skeleton className="h-3 w-64" />
               </div>
-              <Skeleton className="h-9 w-32" />
+              <Skeleton className="h-9 w-64" />
             </div>
           ))}
         </div>

@@ -1,40 +1,67 @@
 import { Request, Response } from "express";
 import Logger from "@/utils/logger.js";
-import { query, queryOne } from "@/db/database.js";
-import { sql } from "drizzle-orm";
+import config from "@/utils/config.js";
 import { NotificationService } from "@deepbounty/sdk/types";
+import { NOTIFICATION_PROVIDERS } from "@/services/notifications/notifier.js";
 
 const logger = new Logger("Notifications");
 
-// GET /notifications - get all notification services
+// GET /notifications - get all notification providers with their current configuration
 export const getNotificationServices = async (req: Request, res: Response) => {
-  try {
-    const services = await query<NotificationService>(
-      sql`SELECT provider, config, enabled FROM notification_services ORDER BY provider`
-    );
-    res.json(services);
-  } catch (error) {
-    logger.error("Error fetching notification services:", error);
-    res.status(500).json({ error: "Internal server error" });
-  }
+  const { notificationServices } = config.get();
+
+  // Create a map of configured services by provider
+  const configuredServices = new Map(
+    notificationServices.map((service) => [service.provider, service])
+  );
+
+  // Merge providers with their current configuration or default values
+  const result = Object.entries(NOTIFICATION_PROVIDERS).reduce(
+    (acc, [key, provider]) => {
+      const configured = configuredServices.get(key as NotificationService["provider"]);
+
+      acc[key] = {
+        ...provider,
+        config: configured?.config || {},
+        enabled: configured?.enabled ?? false,
+      };
+
+      return acc;
+    },
+    {} as Record<string, any>
+  );
+
+  res.status(200).json(result);
 };
 
 // PUT /notifications/:provider - create or update a notification service
 export const updateNotificationService = async (req: Request, res: Response) => {
   try {
     const { provider } = req.params;
-    const { config, enabled } = req.body;
+    const { config: serviceConfig, enabled } = req.body;
 
-    const service = await queryOne<NotificationService>(
-      sql`INSERT INTO notification_services (provider, config, enabled)
-          VALUES (${provider}, ${JSON.stringify(config)}, ${enabled})
-          ON CONFLICT (provider) 
-          DO UPDATE SET config = EXCLUDED.config, enabled = EXCLUDED.enabled
-          RETURNING provider, config, enabled`
-    );
+    const currentConfig = config.get();
+    const services = currentConfig.notificationServices || [];
+
+    // Find existing service or create new one
+    const existingIndex = services.findIndex((s) => s.provider === provider);
+
+    const updatedService: NotificationService = {
+      provider: provider as any,
+      config: serviceConfig,
+      enabled,
+    };
+
+    if (existingIndex >= 0) {
+      services[existingIndex] = updatedService;
+    } else {
+      services.push(updatedService);
+    }
+
+    config.set({ notificationServices: services });
 
     logger.info(`Notification service '${provider}' updated`);
-    res.json(service);
+    res.json(updatedService);
   } catch (error) {
     logger.error("Error updating notification service:", error);
     res.status(500).json({ error: "Internal server error" });

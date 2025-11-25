@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { randomBytes } from "crypto";
+import { NotificationService } from "@deepbounty/sdk/types";
 
 const CONFIG_DIR = path.join(process.cwd(), "config");
 const CONFIG_PATH = path.join(CONFIG_DIR, "config.json");
@@ -11,6 +12,7 @@ export type Config = {
   enableSwaggerUi: boolean;
   workerKey: string;
   burpsuiteKey: string;
+  notificationServices: NotificationService[];
   [key: string]: any;
 };
 
@@ -19,6 +21,7 @@ const DEFAULT_CONFIG: Config = {
   enableSwaggerUi: false,
   workerKey: generateRandomKey(),
   burpsuiteKey: generateRandomKey(),
+  notificationServices: [],
 };
 
 let cachedConfig: Config | null = null;

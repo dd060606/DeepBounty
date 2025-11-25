@@ -2,5 +2,14 @@
   "password": "BCRYPT_HASHED_PASSWORD",
   "enableSwaggerUi": false,
   "workerKey": "RANDOMLY_GENERATED_32_CHARACTER_HEX_STRING",
-  "burpsuiteKey": "RANDOMLY_GENERATED_32_CHARACTER_HEX_STRING"
+  "burpsuiteKey": "RANDOMLY_GENERATED_32_CHARACTER_HEX_STRING",
+  "notificationServices": [
+    {
+      "provider": "discord",
+      "enabled": true,
+      "config": {
+        "webhookUrl": "https://discord.com/api/webhooks/your/webhook/url"
+      }
+    }
+  ]
 }
