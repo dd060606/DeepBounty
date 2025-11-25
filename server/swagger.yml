@@ -966,6 +966,174 @@ paths:
           description: Server restart initiated
         "401":
           description: Unauthorized
+  # Notifications
+  /notifications:
+    get:
+      summary: Get all notification providers with their current configuration
+      description: Returns all available notification providers (Discord, ntfy.sh) along with their configuration schema and current values
+      tags:
+        - Notifications
+      security:
+        - sessionCookie: []
+      responses:
+        "200":
+          description: Notification providers with configuration
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: object
+                  properties:
+                    label:
+                      type: string
+                      example: "Discord"
+                    fields:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          name:
+                            type: string
+                            example: "webhookUrl"
+                          label:
+                            type: string
+                            example: "Webhook URL"
+                          type:
+                            type: string
+                            enum: [text, password, url]
+                            example: "url"
+                          placeholder:
+                            type: string
+                            example: "https://discord.com/api/webhooks/..."
+                          required:
+                            type: boolean
+                            example: true
+                    config:
+                      type: object
+                      description: Current configuration values
+                      example: { "webhookUrl": "https://discord.com/api/webhooks/123/abc" }
+                    enabled:
+                      type: boolean
+                      description: Whether this notification service is enabled
+                      example: true
+              example:
+                discord:
+                  label: "Discord"
+                  fields:
+                    - name: "webhookUrl"
+                      label: "Webhook URL"
+                      type: "url"
+                      placeholder: "https://discord.com/api/webhooks/..."
+                      required: true
+                  config:
+                    webhookUrl: "https://discord.com/api/webhooks/123/abc"
+                  enabled: true
+                ntfysh:
+                  label: "ntfy.sh"
+                  fields:
+                    - name: "topic"
+                      label: "Topic"
+                      type: "text"
+                      placeholder: "your-topic"
+                      required: true
+                    - name: "apiKey"
+                      label: "API Key"
+                      type: "password"
+                      placeholder: "Optional API key for authentication"
+                      required: false
+                  config: {}
+                  enabled: false
+        "401":
+          description: Unauthorized
+  /notifications/{provider}:
+    parameters:
+      - name: provider
+        in: path
+        required: true
+        schema:
+          type: string
+          enum: [discord, ntfysh]
+        description: Notification provider name
+    put:
+      summary: Create or update a notification service configuration
+      description: Configure a notification service with the required credentials and enable/disable it
+      tags:
+        - Notifications
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - config
+                - enabled
+              properties:
+                config:
+                  type: object
+                  description: Provider-specific configuration
+                  oneOf:
+                    - title: Discord Configuration
+                      type: object
+                      required:
+                        - webhookUrl
+                      properties:
+                        webhookUrl:
+                          type: string
+                          format: uri
+                          example: "https://discord.com/api/webhooks/123456789/abcdefghijklmnop"
+                    - title: ntfy.sh Configuration
+                      type: object
+                      required:
+                        - topic
+                      properties:
+                        topic:
+                          type: string
+                          example: "my-bug-bounty-alerts"
+                        apiKey:
+                          type: string
+                          example: "tk_abc123def456"
+                enabled:
+                  type: boolean
+                  description: Whether to enable this notification service
+                  example: true
+            examples:
+              discord:
+                summary: Configure Discord webhook
+                value:
+                  config:
+                    webhookUrl: "https://discord.com/api/webhooks/123456789/abcdefghijklmnop"
+                  enabled: true
+              ntfysh:
+                summary: Configure ntfy.sh topic
+                value:
+                  config:
+                    topic: "my-bug-bounty-alerts"
+                    apiKey: "tk_abc123def456"
+                  enabled: true
+      responses:
+        "200":
+          description: Notification service configured successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  provider:
+                    type: string
+                    example: "discord"
+                  config:
+                    type: object
+                  enabled:
+                    type: boolean
+                    example: true
+        "400":
+          description: Invalid request or configuration
+        "401":
+          description: Unauthorized
   # Workers
   /workers:
     get:

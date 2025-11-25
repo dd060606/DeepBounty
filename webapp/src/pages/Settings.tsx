@@ -19,16 +19,30 @@ import WorkerCard, { type WorkerInfo } from "@/components/settings/WorkerCard";
 import WorkersSkeleton from "@/components/settings/WorkersSkeleton";
 import NotificationServicesSkeleton from "@/components/settings/NotificationServicesSkeleton";
 import ApiClient from "@/utils/api";
-import {
-  NOTIFICATION_PROVIDERS,
-  PROVIDER_ORDER,
-  type NotificationConfig,
-} from "@/utils/notificationProviders";
 import { ConfirmDialog } from "@/components/dialogs/ConfirmDialog";
 import { useTheme } from "@/components/theme-provider";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useNavigate } from "react-router";
-import type { NotificationService } from "@deepbounty/sdk/types";
+import type {
+  NotificationService,
+  NotificationProvider,
+  NotificationConfigField,
+} from "@deepbounty/sdk/types";
+import { Input } from "@/components/ui/input";
+
+interface NotificationProvidersResponse {
+  [key: string]: NotificationProvider & {
+    enabled?: boolean;
+    config?: Record<string, string>;
+  };
+}
+
+// Flexible state type for managing notification configs
+interface NotificationState {
+  provider: NotificationService["provider"];
+  enabled: boolean;
+  config: Record<string, string>;
+}
 
 export default function Settings() {
   const { t, i18n } = useTranslation();
@@ -49,20 +63,15 @@ export default function Settings() {
   const [regeneratingWorker, setRegeneratingWorker] = useState(false);
   const [workers, setWorkers] = useState<WorkerInfo[]>([]);
 
-  // Notifications - Initialize with hardcoded providers
+  // Notifications
   const [loadingNotifications, setLoadingNotifications] = useState(false);
   const [notificationsLoaded, setNotificationsLoaded] = useState(false);
-  const [notificationServices, setNotificationServices] = useState<NotificationConfig[]>(
-    PROVIDER_ORDER.map(
-      (provider): NotificationConfig => ({
-        provider,
-        enabled: false,
-        config: {},
-      })
-    )
+  const [notificationProviders, setNotificationProviders] = useState<NotificationProvidersResponse>(
+    {}
   );
+  const [notificationServices, setNotificationServices] = useState<NotificationState[]>([]);
   const [selectedProvider, setSelectedProvider] = useState<NotificationService["provider"] | null>(
-    PROVIDER_ORDER[0]
+    null
   );
   const [savingNotification, setSavingNotification] = useState(false);
 
@@ -118,19 +127,32 @@ export default function Settings() {
     setLoadingNotifications(true);
     try {
       const res = await ApiClient.get("/notifications");
-      const apiServices = res.data || [];
+      const data = res.data || {};
 
-      // Merge API data with hardcoded providers
-      const mergedServices: NotificationConfig[] = PROVIDER_ORDER.map((provider) => {
-        const apiService = apiServices.find((s: NotificationConfig) => s.provider === provider);
-        return {
-          provider,
-          enabled: apiService?.enabled || false,
-          config: apiService?.config || {},
-        };
+      // Extract providers configuration and services state
+      const providers: NotificationProvidersResponse = {};
+      const services: NotificationState[] = [];
+
+      Object.keys(data).forEach((key) => {
+        if (data[key].label && data[key].fields) {
+          // This is a provider configuration
+          providers[key] = data[key];
+          services.push({
+            provider: key as NotificationService["provider"],
+            enabled: data[key].enabled || false,
+            config: data[key].config || {},
+          });
+        }
       });
 
-      setNotificationServices(mergedServices);
+      setNotificationProviders(providers);
+      setNotificationServices(services);
+
+      // Select first provider by default
+      const firstProvider = Object.keys(providers)[0];
+      if (firstProvider) {
+        setSelectedProvider(firstProvider as NotificationService["provider"]);
+      }
     } catch {
       toast.error(t("settings.notifications.errorLoadingServices"));
     } finally {
@@ -251,7 +273,7 @@ export default function Settings() {
 
     setSavingNotification(true);
     try {
-      await ApiClient.post(`/notifications/${selectedProvider}`, {
+      await ApiClient.put(`/notifications/${selectedProvider}`, {
         enabled: service.enabled,
         config: service.config,
       });
@@ -445,13 +467,15 @@ export default function Settings() {
 
                 {/* Service Selection Buttons */}
                 <div className="mb-6 flex flex-wrap gap-3">
-                  {PROVIDER_ORDER.map((provider) => {
-                    const providerInfo = NOTIFICATION_PROVIDERS[provider];
+                  {Object.keys(notificationProviders).map((provider) => {
+                    const providerInfo = notificationProviders[provider];
                     return (
                       <Button
                         key={provider}
                         variant={selectedProvider === provider ? "default" : "outline"}
-                        onClick={() => setSelectedProvider(provider)}
+                        onClick={() =>
+                          setSelectedProvider(provider as NotificationService["provider"])
+                        }
                       >
                         {providerInfo.label}
                       </Button>
@@ -461,11 +485,11 @@ export default function Settings() {
               </div>
 
               {/* Service Configuration */}
-              {selectedProvider && (
+              {selectedProvider && notificationProviders[selectedProvider] && (
                 <>
                   <SettingSection
                     title={t("settings.notifications.configuration", {
-                      service: NOTIFICATION_PROVIDERS[selectedProvider].label,
+                      service: notificationProviders[selectedProvider].label,
                     })}
                     description={t("settings.notifications.configurationDesc")}
                   >
@@ -484,34 +508,41 @@ export default function Settings() {
                     </SettingItem>
 
                     {/* Configuration Fields */}
-                    {NOTIFICATION_PROVIDERS[selectedProvider].fields.map((field) => (
-                      <SettingItem
-                        key={field.name}
-                        label={t(`settings.notifications.${field.label}`)}
-                        description={t("settings.notifications.fieldDesc", {
-                          field: t(`settings.notifications.${field.label}`),
-                        })}
-                      >
-                        <input
-                          type={field.type}
-                          placeholder={field.placeholder}
-                          value={
-                            notificationServices.find((s) => s.provider === selectedProvider)
-                              ?.config[field.name] || ""
+                    {notificationProviders[selectedProvider].fields.map(
+                      (field: NotificationConfigField) => (
+                        <SettingItem
+                          key={field.name}
+                          label={
+                            <>
+                              {t(`settings.notifications.${selectedProvider}.${field.name}`)}
+                              {field.required && <span className="text-destructive ml-1">*</span>}
+                            </>
                           }
-                          onChange={(e) => updateNotificationConfig(field.name, e.target.value)}
-                          className="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring flex h-9 w-full rounded-md border px-3 py-2 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:ring-1 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 sm:w-sm"
-                        />
-                      </SettingItem>
-                    ))}
+                          description={t(
+                            `settings.notifications.${selectedProvider}.${field.name}Desc`
+                          )}
+                        >
+                          <Input
+                            type={field.type}
+                            placeholder={field.placeholder}
+                            value={
+                              (notificationServices.find((s) => s.provider === selectedProvider)
+                                ?.config[field.name] as string) || ""
+                            }
+                            onChange={(e) => updateNotificationConfig(field.name, e.target.value)}
+                            className="w-full sm:w-xs"
+                            required={field.required}
+                          />
+                        </SettingItem>
+                      )
+                    )}
+                    {/* Save Button */}
+                    <div className="flex justify-end">
+                      <Button onClick={saveNotificationService} disabled={savingNotification}>
+                        {savingNotification ? t("common.saving") : t("common.save")}
+                      </Button>
+                    </div>
                   </SettingSection>
-
-                  {/* Save Button */}
-                  <div className="flex justify-end">
-                    <Button onClick={saveNotificationService} disabled={savingNotification}>
-                      {savingNotification ? t("common.saving") : t("common.save")}
-                    </Button>
-                  </div>
                 </>
               )}
             </>
