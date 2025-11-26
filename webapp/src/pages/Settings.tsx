@@ -74,6 +74,7 @@ export default function Settings() {
     null
   );
   const [savingNotification, setSavingNotification] = useState(false);
+  const [testingNotification, setTestingNotification] = useState(false);
 
   // Confirm dialogs
   const [confirmCleanup, setConfirmCleanup] = useState(false);
@@ -282,6 +283,24 @@ export default function Settings() {
       toast.error(t("settings.notifications.errorSavingService"));
     } finally {
       setSavingNotification(false);
+    }
+  }
+
+  async function testNotificationService() {
+    if (!selectedProvider) return;
+    const service = notificationServices.find((s) => s.provider === selectedProvider);
+    if (!service) return;
+
+    setTestingNotification(true);
+    try {
+      await ApiClient.post(`/notifications/${selectedProvider}/test`, {
+        config: service.config,
+      });
+      toast.success(t("settings.notifications.testSent"));
+    } catch {
+      toast.error(t("settings.notifications.errorTestingService"));
+    } finally {
+      setTestingNotification(false);
     }
   }
 
@@ -536,9 +555,21 @@ export default function Settings() {
                         </SettingItem>
                       )
                     )}
-                    {/* Save Button */}
-                    <div className="flex justify-end">
-                      <Button onClick={saveNotificationService} disabled={savingNotification}>
+                    {/* Save and Test Buttons */}
+                    <div className="flex justify-end gap-3">
+                      <Button
+                        variant="outline"
+                        onClick={testNotificationService}
+                        disabled={testingNotification || savingNotification}
+                      >
+                        {testingNotification
+                          ? t("settings.notifications.testing")
+                          : t("settings.notifications.testNotification")}
+                      </Button>
+                      <Button
+                        onClick={saveNotificationService}
+                        disabled={savingNotification || testingNotification}
+                      >
                         {savingNotification ? t("common.saving") : t("common.save")}
                       </Button>
                     </div>
