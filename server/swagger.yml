@@ -1134,6 +1134,64 @@ paths:
           description: Invalid request or configuration
         "401":
           description: Unauthorized
+  /notifications/{provider}/test:
+    parameters:
+      - name: provider
+        in: path
+        required: true
+        schema:
+          type: string
+          enum: [discord, ntfysh]
+        description: Notification provider name
+    post:
+      summary: Test a notification service configuration
+      description: Send a test notification using the currently saved configuration for the provider
+      tags:
+        - Notifications
+      security:
+        - sessionCookie: []
+      responses:
+        "200":
+          description: Test notification sent successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Test notification sent successfully"
+        "400":
+          description: Failed to send test notification (invalid configuration, network error, etc.)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Failed to send test notification"
+                  details:
+                    type: string
+                    example: "Discord webhook test failed: 404 Not Found"
+        "404":
+          description: Notification service not configured
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Notification service not configured"
+                  details:
+                    type: string
+                    example: "No configuration found for provider 'discord'"
+        "401":
+          description: Unauthorized
   # Workers
   /workers:
     get:

@@ -53,6 +53,7 @@ export const NOTIFICATION_PROVIDERS: Record<string, NotificationProvider> = {
 
 export interface INotifier {
   send(alert: Alert): Promise<void>;
+  test(): Promise<void>;
 }
 
 export class NotificationBuilder {

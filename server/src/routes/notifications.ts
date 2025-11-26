@@ -1,5 +1,9 @@
 import { Router } from "express";
-import { getNotificationServices, updateNotificationService } from "@/controllers/notifications.js";
+import {
+  getNotificationServices,
+  updateNotificationService,
+  testNotificationService,
+} from "@/controllers/notifications.js";
 import { validateBody, validateParams } from "@/middlewares/validate.js";
 import { notificationServiceSchema, providerParamSchema } from "@/schemas/notificationSchema.js";
 
@@ -15,5 +19,8 @@ router.put(
   validateBody(notificationServiceSchema),
   updateNotificationService
 );
+
+// POST /notifications/:provider/test
+router.post("/:provider/test", validateParams(providerParamSchema), testNotificationService);
 
 export default router;
