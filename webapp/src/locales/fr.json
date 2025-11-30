@@ -246,10 +246,16 @@
       "testNotification": "Envoyer un test",
       "testing": "Envoi...",
       "testSent": "Notification de test envoyée avec succès",
-      "errorTestingService": "Impossible d'envoyer la notification de test. Veuillez vérifier votre configuration",
+      "errorTestingService": "Impossible d'envoyer la notification de test: {{error}}",
       "serviceSaved": "Configuration du service enregistrée avec succès",
       "errorSavingService": "Impossible d'enregistrer la configuration du service",
       "errorLoadingServices": "Impossible de charger les services de notification",
+      "discord": {
+        "webhookUrl": "URL du webhook",
+        "webhookUrlDesc": "URL du webhook Discord pour envoyer les notifications",
+        "notificationRoleID": "ID du rôle de notification",
+        "notificationRoleIDDesc": "ID du rôle à mentionner pour recevoir les notifications"
+      },
       "ntfysh": {
         "serverRootUrl": "URL du serveur",
         "serverRootUrlDesc": "URL de base du serveur ntfy.sh",

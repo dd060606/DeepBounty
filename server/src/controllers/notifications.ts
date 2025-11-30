@@ -92,7 +92,7 @@ export const testNotificationService = async (req: Request, res: Response) => {
   } catch (error) {
     logger.error(`Error testing notification service '${provider}':`, error);
     res.status(400).json({
-      error: "Failed to send test notification",
+      error: error instanceof Error ? error.message : "Failed to send test notification",
     });
   }
 };

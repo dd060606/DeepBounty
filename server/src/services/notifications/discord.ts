@@ -1,33 +1,45 @@
 import { Alert, DiscordConfig } from "@deepbounty/sdk/types";
 import { INotifier } from "./notifier.js";
+import axios from "axios";
 
 export class DiscordNotifier implements INotifier {
-  private webhookUrl: string;
+  private webhookUrl?: string;
+  private notificationRoleID?: string;
 
   constructor(config: DiscordConfig) {
     this.webhookUrl = config.webhookUrl;
+    this.notificationRoleID = config.notificationRoleID;
   }
 
   async send(alert: Alert): Promise<void> {
-    // Send a message to the Discord webhook
+    await this.sendNotification(`${alert.targetName} Alert`, alert.name);
+  }
+
+  private async sendNotification(title: string, description: string): Promise<void> {
+    // Check if webhookUrl is defined
+    if (!this.webhookUrl) {
+      throw new Error("webhookUrl is required.");
+    }
+    // Prepare role mention if notificationRoleID is provided
+    const roleMention = this.notificationRoleID ? `<@&${this.notificationRoleID}>` : null;
+    // Send the notification to Discord webhook
+    try {
+      await axios.post(this.webhookUrl, {
+        content: roleMention,
+        embeds: [{ title, description, color: 1424001 }],
+        attachments: [],
+      });
+    } catch (error: any) {
+      throw new Error(
+        `Discord notification failed: ${error.response?.status} ${error.response?.statusText}`
+      );
+    }
   }
 
   async test(): Promise<void> {
-    const testPayload = {
-      content:
-        "🔔 **Test Notification from DeepBounty**\n\nThis is a test message to verify your Discord webhook configuration is working correctly.",
-    };
-
-    const response = await fetch(this.webhookUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(testPayload),
-    });
-
-    if (!response.ok) {
-      throw new Error(`Discord webhook test failed: ${response.status} ${response.statusText}`);
-    }
+    await this.sendNotification(
+      "Test Notification from DeepBounty",
+      "This is a test message to verify your Discord configuration is working correctly."
+    );
   }
 }

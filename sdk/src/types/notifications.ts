@@ -13,6 +13,7 @@ export type NotificationService =
 // Specific configurations for each notification service
 export interface DiscordConfig {
 	webhookUrl: string;
+	notificationRoleID?: string;
 }
 
 export interface ntfyshConfig {
