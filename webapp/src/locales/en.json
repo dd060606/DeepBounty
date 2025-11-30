@@ -247,10 +247,16 @@
       "testNotification": "Send Test",
       "testing": "Sending...",
       "testSent": "Test notification sent successfully",
-      "errorTestingService": "Failed to send test notification. Please check your configuration",
+      "errorTestingService": "Failed to send test notification: {{error}}",
       "serviceSaved": "Service configuration saved successfully",
       "errorSavingService": "Failed to save service configuration",
       "errorLoadingServices": "Failed to load notification services",
+      "discord": {
+        "webhookUrl": "Webhook URL",
+        "webhookUrlDesc": "Discord webhook URL to send notifications",
+        "notificationRoleID": "Notification Role ID",
+        "notificationRoleIDDesc": "Role ID to mention for receiving notifications"
+      },
       "ntfysh": {
         "serverRootUrl": "Server Root URL",
         "serverRootUrlDesc": "Base URL of the ntfy.sh server",

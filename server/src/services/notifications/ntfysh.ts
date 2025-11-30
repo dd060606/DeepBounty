@@ -23,8 +23,11 @@ export class ntfyshNotifier implements INotifier {
 
   private async sendNotification(title: string, description: string): Promise<void> {
     // Check if serverRootUrl and topic are defined
-    if (!this.serverRootUrl || !this.topic) {
-      throw new Error("ntfy.sh configuration is incomplete: serverRootUrl and topic are required.");
+    if (!this.serverRootUrl) {
+      throw new Error("serverRootUrl is required.");
+    }
+    if (!this.topic) {
+      throw new Error("topic is required.");
     }
     // Strip trailing slash from serverRootUrl if present
     const serverUrl = this.serverRootUrl?.endsWith("/")
@@ -48,6 +51,7 @@ export class ntfyshNotifier implements INotifier {
           ? { Authorization: `Bearer ${this.token}` }
           : {}),
     };
+    // Send the notification to ntfy.sh
     try {
       await axios.post(url, description, { headers });
     } catch (error: any) {
@@ -58,7 +62,7 @@ export class ntfyshNotifier implements INotifier {
   }
 
   async test(): Promise<void> {
-    this.sendNotification(
+    await this.sendNotification(
       "Test Notification from DeepBounty",
       "This is a test message to verify your ntfy.sh configuration is working correctly."
     );
