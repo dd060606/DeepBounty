@@ -10,6 +10,11 @@ components:
       type: apiKey
       in: cookie
       name: connect.sid
+    burpsuiteKey:
+      type: http
+      scheme: bearer
+      bearerFormat: API Key
+      description: Burp Suite API key
 
 paths:
   #Setup
@@ -1192,6 +1197,63 @@ paths:
                     example: "No configuration found for provider 'discord'"
         "401":
           description: Unauthorized
+  # Scope
+  /scope:
+    get:
+      summary: Get all scan-enabled subdomains
+      description: Returns all subdomains from targets with activeScan enabled, for Burp Suite integration
+      tags:
+        - Scope
+      security:
+        - sessionCookie: []
+        - burpsuiteKey: []
+      responses:
+        "200":
+          description: Scope data with version and subdomains
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  version:
+                    type: integer
+                    description: Current scope version, increments on any scope change
+                    example: 42
+                  subdomains:
+                    type: array
+                    items:
+                      type: string
+                    description: Array of all subdomains from targets with activeScan enabled
+                    example: ["api.example.com", "www.example.com", "admin.test.com"]
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal server error
+  /scope/version:
+    get:
+      summary: Get current scope version (lightweight polling)
+      description: Returns only the version number to check if scope has changed. Optimized for frequent polling (e.g., every 10 seconds)
+      tags:
+        - Scope
+      security:
+        - sessionCookie: []
+        - burpsuiteKey: []
+      responses:
+        "200":
+          description: Current scope version
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  version:
+                    type: integer
+                    description: Current scope version, increments on any scope change
+                    example: 42
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal server error
   # Workers
   /workers:
     get:

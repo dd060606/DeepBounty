@@ -4,6 +4,7 @@ import Logger from "@/utils/logger.js";
 import { Target } from "@deepbounty/sdk/types";
 import { sql } from "drizzle-orm";
 import { Request, Response } from "express";
+import { incrementScopeVersion } from "@/controllers/scope.js";
 
 const logger = new Logger("Targets");
 
@@ -111,6 +112,7 @@ export function deleteTarget(req: Request, res: Response) {
         return res.status(404).json({ error: "Target not found" });
       }
       logger.info(`Deleted target: ${result.name} (${result.domain})`);
+      incrementScopeVersion();
       res.sendStatus(200);
     })
     .catch((error) => {
@@ -148,6 +150,7 @@ export function setTargetSubdomains(req: Request, res: Response) {
     })
     .then(() => {
       logger.info(`Updated subdomains for target ID ${id}`);
+      incrementScopeVersion();
       res.sendStatus(200);
     })
     .catch((error) => {
