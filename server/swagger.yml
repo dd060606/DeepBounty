@@ -1197,6 +1197,84 @@ paths:
                     example: "No configuration found for provider 'discord'"
         "401":
           description: Unauthorized
+  # Ingest
+  /ingest/burp:
+    post:
+      summary: Ingest traffic data from Burp Suite
+      description: Receives HTTP traffic data from Burp Suite extension and logs it for processing
+      tags:
+        - Ingest
+      security:
+        - sessionCookie: []
+        - burpsuiteKey: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - url
+                - method
+                - statusCode
+                - mimeType
+              properties:
+                url:
+                  type: string
+                  description: The request URL
+                  example: "https://example.com/api/users"
+                method:
+                  type: string
+                  description: The HTTP method
+                  example: "GET"
+                statusCode:
+                  type: integer
+                  description: The HTTP status code
+                  example: 200
+                requestHeaders:
+                  type: object
+                  additionalProperties:
+                    type: string
+                  description: The request headers
+                  example: { "User-Agent": "Mozilla/5.0", "Accept": "application/json" }
+                responseHeaders:
+                  type: object
+                  additionalProperties:
+                    type: string
+                  description: The response headers
+                  example: { "Content-Type": "application/json", "Content-Length": "1234" }
+                requestBody:
+                  type: string
+                  description: The request body
+                  example: ""
+                responseBody:
+                  type: string
+                  description: The response body
+                  example: '{"users": []}'
+                mimeType:
+                  type: string
+                  description: The MIME type
+                  example: "application/json"
+      responses:
+        "200":
+          description: Traffic data received and logged successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Traffic data received"
+        "400":
+          description: Invalid request data
+        "401":
+          description: Unauthorized
+        "500":
+          description: Internal server error
   # Scope
   /scope:
     get:
