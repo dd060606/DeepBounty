@@ -13,10 +13,12 @@ import Auth from "./routes/auth.js";
 import Targets from "./routes/targets.js";
 import Alerts from "./routes/alerts.js";
 import Modules from "./routes/modules.js";
+import Tasks from "./routes/tasks.js";
 import Settings from "./routes/settings.js";
 import Workers from "./routes/workers.js";
 import Notifications from "./routes/notifications.js";
 import Scope from "./routes/scope.js";
+import Ingest from "./routes/ingest.js";
 
 // Initialize the app
 function initApp() {
@@ -31,7 +33,7 @@ initApp();
 
 const app = express();
 
-app.use(express.json());
+app.use(express.json({ limit: "50mb" }));
 
 app.use(helmet());
 
@@ -91,9 +93,11 @@ app.use("/auth", Auth);
 app.use("/targets", requireAuth, Targets);
 app.use("/alerts", requireAuth, Alerts);
 app.use("/modules", requireAuth, Modules);
+app.use("/tasks", requireAuth, Tasks);
 app.use("/settings", requireAuth, Settings);
 app.use("/workers", requireAuth, Workers);
 app.use("/notifications", requireAuth, Notifications);
 app.use("/scope", Scope);
+app.use("/ingest", Ingest);
 
 export default app;
