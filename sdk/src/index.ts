@@ -1,4 +1,5 @@
 import { Alert, ModuleSetting, TaskContent, TaskResult, Tool } from "./types";
+import { IEventBus } from "./events";
 
 export interface Logger {
 	info: (...args: any[]) => void;
@@ -96,6 +97,7 @@ export interface ServerAPI {
 	logger: Logger;
 	config: ConfigAPI;
 	storage: StorageAPI;
+	events: IEventBus;
 	/**
 	 * Register a task template that can be scheduled for all targets
 	 * @param uniqueKey Unique identifier for this task within the module (e.g., "subdomain-scan")
@@ -157,5 +159,13 @@ export interface PluginLifecycle {
 export type PluginFactory = (
 	api: ServerAPI
 ) => PluginLifecycle | Promise<PluginLifecycle>;
+
+// Re-export EventBus and related types
+export {
+	IEventBus,
+	EventSubscription,
+	CoreEvents,
+	EventHandler,
+} from "./events";
 
 export default {} as any; // Type-only module for plugins to import types during compile
