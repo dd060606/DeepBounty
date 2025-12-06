@@ -55,6 +55,14 @@ export default class ExamplePlugin implements PluginLifecycle {
 			true
 		);
 		*/
+
+		// Subscribe to events
+		this.api.events.subscribe("http:traffic", async (data) => {
+			this.api.logger.info(
+				`Received HTTP traffic event: ${data.method} ${data.url} - ${data.statusCode}`
+			);
+			// Process the HTTP traffic data as needed
+		});
 	}
 
 	async stop() {

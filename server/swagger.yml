@@ -1266,9 +1266,6 @@ paths:
                   success:
                     type: boolean
                     example: true
-                  message:
-                    type: string
-                    example: "Traffic data received"
         "400":
           description: Invalid request data
         "401":

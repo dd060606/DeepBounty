@@ -11,6 +11,7 @@ import getRegistry from "@/utils/registry.js";
 import { MODULES_DIR } from "@/utils/constants.js";
 import { validateModule } from "./validateModule.js";
 import { createAlert } from "@/services/alerts.js";
+import { getEventBus } from "@/services/eventBus.js";
 
 const logger = new Logger("Modules-Loader");
 const registry = getRegistry();
@@ -24,6 +25,7 @@ function readFirstExistingFile(files: string[]): string | null {
 function buildModuleSDK(moduleId: string, moduleName: string): ServerAPI {
   const taskAPI = getTaskAPI(moduleId);
   const storage = new ModuleStorage(moduleId);
+  const eventBus = getEventBus();
 
   return Object.freeze({
     version: "1.0.0",
@@ -36,6 +38,7 @@ function buildModuleSDK(moduleId: string, moduleName: string): ServerAPI {
       createTable: storage.createTable.bind(storage),
       dropTable: storage.dropTable.bind(storage),
     },
+    events: eventBus,
     registerTaskTemplate: async (
       uniqueKey,
       name,

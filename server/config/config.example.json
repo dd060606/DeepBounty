@@ -5,11 +5,23 @@
   "burpsuiteKey": "RANDOMLY_GENERATED_32_CHARACTER_HEX_STRING",
   "notificationServices": [
     {
-      "provider": "discord",
-      "enabled": true,
+      "provider": "ntfysh",
       "config": {
-        "webhookUrl": "https://discord.com/api/webhooks/your/webhook/url"
-      }
+        "serverRootUrl": "YOUR_NTFYSH_SERVER_URL",
+        "topic": "/yourtopic",
+        "username": "",
+        "password": "",
+        "token": "tk_aaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "enabled": true
+    },
+    {
+      "provider": "discord",
+      "config": {
+        "webhookUrl": "https://discord.com/api/webhooks/...",
+        "notificationRoleID": "YOUR_DISCORD_NOTIFICATION_ROLE_ID"
+      },
+      "enabled": true
     }
   ]
 }
