@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import Logger from "@/utils/logger.js";
-import { getEventBus } from "@/services/eventBus.js";
+import { getEventBus } from "@/events/eventBus.js";
 
 const logger = new Logger("Ingest");
 

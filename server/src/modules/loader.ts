@@ -11,10 +11,12 @@ import getRegistry from "@/utils/registry.js";
 import { MODULES_DIR } from "@/utils/constants.js";
 import { validateModule } from "./validateModule.js";
 import { createAlert } from "@/services/alerts.js";
-import { getEventBus } from "@/services/eventBus.js";
+import { getEventBus } from "@/events/eventBus.js";
+import { ModuleEventBus } from "@/events/moduleEventBus.js";
 
 const logger = new Logger("Modules-Loader");
 const registry = getRegistry();
+const moduleEventBuses = new Map<string, ModuleEventBus>();
 
 function readFirstExistingFile(files: string[]): string | null {
   for (const f of files) if (fs.existsSync(f)) return f;
@@ -25,7 +27,10 @@ function readFirstExistingFile(files: string[]): string | null {
 function buildModuleSDK(moduleId: string, moduleName: string): ServerAPI {
   const taskAPI = getTaskAPI(moduleId);
   const storage = new ModuleStorage(moduleId);
-  const eventBus = getEventBus();
+
+  // Create a secure, isolated event bus for this module
+  const moduleBus = new ModuleEventBus(getEventBus(), moduleId);
+  moduleEventBuses.set(moduleId, moduleBus);
 
   return Object.freeze({
     version: "1.0.0",
@@ -38,7 +43,7 @@ function buildModuleSDK(moduleId: string, moduleName: string): ServerAPI {
       createTable: storage.createTable.bind(storage),
       dropTable: storage.dropTable.bind(storage),
     },
-    events: eventBus,
+    events: moduleBus,
     registerTaskTemplate: async (
       uniqueKey,
       name,
@@ -186,6 +191,13 @@ export function shutdownModules(): void {
       // Call stop() method if defined
       if (typeof m.stop === "function") {
         m.stop();
+      }
+
+      // Cleanup event listeners for this module
+      const moduleBus = moduleEventBuses.get(m.id);
+      if (moduleBus) {
+        moduleBus.cleanup();
+        moduleEventBuses.delete(m.id);
       }
     });
   } catch (e) {
