@@ -1,5 +1,4 @@
-import type { Alert, TaskResult } from "./types";
-import { HttpTraffic } from "./types/burpsuite";
+import { TrafficContext, HttpTraffic } from "./types/burpsuite";
 
 /**
  * Predefined core events emitted by the server
@@ -8,6 +7,8 @@ import { HttpTraffic } from "./types/burpsuite";
 export interface CoreEvents {
 	// HTTP traffic events (Burp Suite, etc.)
 	"http:traffic": HttpTraffic;
+	// JavaScript code detected in HTTP responses
+	"http:js": { context: TrafficContext; js: string };
 }
 
 /**
