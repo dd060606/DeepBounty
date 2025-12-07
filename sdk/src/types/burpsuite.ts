@@ -1,15 +1,17 @@
 /**
  * HTTP traffic data from Burp Suite
  */
-export interface HttpTraffic {
+export interface TrafficContext {
 	url: string;
 	method: string;
 	statusCode: number;
+	mimeType: string;
+}
+export interface TrafficContent {
 	requestHeaders: Record<string, string>;
 	responseHeaders: Record<string, string>;
 	requestBody: string;
 	responseBody: string;
-	mimeType: string;
-	timestamp: Date;
-	targetId?: number;
 }
+
+export interface HttpTraffic extends TrafficContext, TrafficContent {}

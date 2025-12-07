@@ -1,23 +1,20 @@
 import { Request, Response } from "express";
 import Logger from "@/utils/logger.js";
 import { getEventBus } from "@/events/eventBus.js";
+import { HttpTraffic, TrafficContext } from "@deepbounty/sdk/types/burpsuite";
+import { extractJSFromHTML } from "@/utils/http.js";
 
 const logger = new Logger("Ingest");
 
-interface TrafficData {
-  url: string;
-  method: string;
-  statusCode: number;
-  requestHeaders: Record<string, string>;
-  responseHeaders: Record<string, string>;
-  requestBody: string;
-  responseBody: string;
-  mimeType: string;
-}
-
 export async function ingestBurpTraffic(req: Request, res: Response) {
   try {
-    const traffic: TrafficData = req.body;
+    const traffic: HttpTraffic = req.body;
+    const context: TrafficContext = {
+      method: traffic.method,
+      url: traffic.url,
+      mimeType: traffic.mimeType,
+      statusCode: traffic.statusCode,
+    };
 
     // Respond immediately to avoid blocking Burp Suite
     res.status(200).json({ success: true });
@@ -25,13 +22,19 @@ export async function ingestBurpTraffic(req: Request, res: Response) {
     // Emit event asynchronously for modules to process
     setImmediate(() => {
       try {
-        getEventBus().emit("http:traffic", {
-          ...traffic,
-          timestamp: new Date(),
-          targetId: undefined, // TODO: Match target by domain if needed
-        });
+        getEventBus().emit("http:traffic", traffic);
+        // Detect specific MIME types for further processing
+        if (traffic.mimeType === "script") {
+          getEventBus().emit("http:js", { js: traffic.responseBody, context });
+        }
+        if (traffic.mimeType === "HTML") {
+          const js = extractJSFromHTML(traffic.responseBody);
+          if (js) {
+            getEventBus().emit("http:js", { js, context });
+          }
+        }
       } catch (error) {
-        logger.error("Error emitting http:traffic event:", error);
+        logger.error("Error emitting http events:", error);
       }
     });
   } catch (error) {
