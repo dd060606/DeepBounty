@@ -35,6 +35,7 @@ export async function replaceTargetPlaceholders(
   commands: string[],
   targetId: number | undefined
 ): Promise<string[]> {
+  // For GLOBAL or CUSTOM tasks without target, return commands as-is
   if (!targetId) return Promise.resolve(commands);
 
   // Fetch target from database
@@ -47,6 +48,38 @@ export async function replaceTargetPlaceholders(
       .replace(/\{\{TARGET_ID\}\}/g, String(target.id))
       .replace(/\{\{TARGET_NAME\}\}/g, target.name)
   );
+}
+
+// Replace custom data placeholders with actual custom data
+export function replaceCustomDataPlaceholders(
+  commands: string[],
+  customData: Record<string, any> | undefined
+): string[] {
+  if (!customData) return commands;
+
+  return commands.map((cmd) => {
+    let replaced = cmd;
+
+    // Replace {{CUSTOM_DATA.key}} placeholders
+    Object.keys(customData).forEach((key) => {
+      const placeholder = new RegExp(`\\{\\{${key}\\}\\}`, "g");
+      const value = customData[key];
+
+      // Handle different value types
+      if (Array.isArray(value)) {
+        // Join arrays with spaces for shell commands
+        replaced = replaced.replace(placeholder, value.join(" "));
+      } else if (typeof value === "object") {
+        // Stringify objects
+        replaced = replaced.replace(placeholder, JSON.stringify(value));
+      } else {
+        // Convert to string for primitives
+        replaced = replaced.replace(placeholder, String(value));
+      }
+    });
+
+    return replaced;
+  });
 }
 
 // Return commands to install required tools

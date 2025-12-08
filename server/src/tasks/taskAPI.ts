@@ -29,6 +29,7 @@ export class TaskAPI {
     description: string,
     taskContent: TaskContent,
     interval: number,
+    schedulingType: "TARGET_BASED" | "GLOBAL" | "CUSTOM" = "TARGET_BASED",
     onComplete?: (result: TaskResult) => void
   ): Promise<number> {
     const templateId = await this.taskManager.registerTaskTemplate(
@@ -37,7 +38,8 @@ export class TaskAPI {
       name,
       description,
       taskContent,
-      interval
+      interval,
+      schedulingType
     );
 
     // Store callback if provided
@@ -54,6 +56,23 @@ export class TaskAPI {
   async unregisterTaskTemplate(templateId: number): Promise<boolean> {
     this.taskCallbacks.delete(templateId);
     return await this.taskManager.unregisterTaskTemplate(templateId);
+  }
+
+  /**
+   * Create a task instance manually (for CUSTOM scheduling type)
+   * @param templateId - ID of the template to create an instance for
+   * @param targetId - Optional target ID for this instance
+   * @param customData - Optional custom data to attach to this instance
+   * @param oneTime - If true, delete the scheduled task after execution (default: false)
+   * @returns The scheduled task ID
+   */
+  async createTaskInstance(
+    templateId: number,
+    targetId?: number,
+    customData?: Record<string, any>,
+    oneTime: boolean = false
+  ): Promise<number> {
+    return await this.taskManager.createTaskInstance(templateId, targetId, customData, oneTime);
   }
 
   // Handle task completion and notify waiting callbacks

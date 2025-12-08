@@ -50,6 +50,7 @@ function buildModuleSDK(moduleId: string, moduleName: string): ServerAPI {
       description,
       taskContent,
       interval,
+      schedulingType,
       onComplete
     ) => {
       return await taskAPI.registerTaskTemplate(
@@ -58,11 +59,15 @@ function buildModuleSDK(moduleId: string, moduleName: string): ServerAPI {
         description,
         taskContent,
         interval,
+        schedulingType,
         onComplete
       );
     },
     unregisterTaskTemplate: async (templateId) => {
       return await taskAPI.unregisterTaskTemplate(templateId);
+    },
+    createTaskInstance: async (templateId, targetId, customData, oneTime) => {
+      return await taskAPI.createTaskInstance(templateId, targetId, customData, oneTime);
     },
     registerTool(tool) {
       registry.registerTool(tool);

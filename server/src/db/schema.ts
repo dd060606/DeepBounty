@@ -13,6 +13,9 @@ import {
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 
+// Enum for task scheduling types
+export const schedulingTypeEnum = pgEnum("scheduling_type", ["TARGET_BASED", "GLOBAL", "CUSTOM"]);
+
 // Targets table
 export const targets = pgTable("targets", {
   id: serial().primaryKey().notNull(),
@@ -109,6 +112,8 @@ export const taskTemplates = pgTable(
     content: jsonb().notNull(),
     // Interval in seconds
     interval: integer().notNull(),
+    // Scheduling type
+    schedulingType: schedulingTypeEnum().default("TARGET_BASED").notNull(),
     // Global activation status
     active: boolean().default(true).notNull(),
   },

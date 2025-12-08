@@ -29,6 +29,13 @@
       "when": 1762599514427,
       "tag": "0003_friendly_captain_stacy",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1765208300361,
+      "tag": "0004_powerful_firebrand",
+      "breakpoints": true
     }
   ]
 }
