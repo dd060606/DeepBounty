@@ -23,8 +23,9 @@ export async function ingestBurpTraffic(req: Request, res: Response) {
     setImmediate(() => {
       try {
         getEventBus().emit("http:traffic", traffic);
+
         // Detect specific MIME types for further processing
-        if (traffic.mimeType === "script") {
+        if (traffic.mimeType === "SCRIPT") {
           getEventBus().emit("http:js", { js: traffic.responseBody, context });
         }
         if (traffic.mimeType === "HTML") {

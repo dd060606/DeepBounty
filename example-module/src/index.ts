@@ -1,4 +1,4 @@
-import type { ServerAPI, PluginLifecycle } from "@deepbounty/sdk";
+import type { ServerAPI, PluginLifecycle, CoreEvents } from "@deepbounty/sdk";
 import { sendTestRequest } from "./utils";
 import { FIND_SUBDOMAINS_TASK, subdomainsCallback } from "./tasks/subfinder";
 import { SUBFINDER } from "./tools";
@@ -57,12 +57,14 @@ export default class ExamplePlugin implements PluginLifecycle {
 		*/
 
 		// Subscribe to events
-		this.api.events.subscribe("http:traffic", async (data) => {
-			this.api.logger.info(
-				`Received HTTP traffic event: ${data.method} ${data.url} - ${data.statusCode}`
-			);
-			// Process the HTTP traffic data as needed
-		});
+		this.api.events.subscribe(
+			"http:js",
+			async ({ context, js }: CoreEvents["http:js"]) => {
+				this.api.logger.info(
+					`Received HTTP JS event: ${context.method} ${context.url} - ${js.slice(0, 100)}${js.length} bytes of JS`
+				);
+			}
+		);
 	}
 
 	async stop() {
