@@ -1,0 +1,2 @@
+CREATE TYPE "public"."scheduling_type" AS ENUM('TARGET_BASED', 'GLOBAL', 'CUSTOM');--> statement-breakpoint
+ALTER TABLE "task_templates" ADD COLUMN "schedulingType" "scheduling_type" DEFAULT 'TARGET_BASED' NOT NULL;

@@ -3,6 +3,7 @@ import {
   installToolsTask,
   replaceTargetPlaceholders,
   replaceToolPlaceholders,
+  replaceCustomDataPlaceholders,
 } from "./taskBuilder.js";
 import getRegistry from "../utils/registry.js";
 import { getMissingTools } from "@/utils/taskUtils.js";
@@ -85,7 +86,8 @@ class TaskManager {
     name: string,
     description: string,
     content: TaskContent,
-    interval: number
+    interval: number,
+    schedulingType: "TARGET_BASED" | "GLOBAL" | "CUSTOM" = "TARGET_BASED"
   ): Promise<number> {
     // Create or update template in database
     const templateId = await this.templateService.createTemplate(
@@ -94,7 +96,8 @@ class TaskManager {
       name,
       description,
       content,
-      interval
+      interval,
+      schedulingType
     );
 
     // Create scheduled tasks for all active targets
@@ -131,79 +134,212 @@ class TaskManager {
     const template = await this.templateService.getTemplate(templateId);
     if (!template) return;
 
-    // Get all targets where this task should run
-    const targets = await this.templateService.getTargetsForTask(templateId);
-
     // Get existing scheduled tasks for this template
     const existingTasks = this.registry.getScheduledTasksByTemplate(templateId);
-    const existingTargetIds = new Set(
-      existingTasks.filter((t) => t.targetId !== undefined).map((t) => t.targetId!)
-    );
 
-    // Update existing tasks with new interval and content if changed
-    existingTasks.forEach((task) => {
-      const needsUpdate =
-        task.interval !== template.interval ||
-        JSON.stringify(task.content) !== JSON.stringify(template.content) ||
-        task.active !== template.active;
+    // Branch based on scheduling type
+    switch (template.schedulingType) {
+      case "TARGET_BASED": {
+        // Get all targets where this task should run
+        const targets = await this.templateService.getTargetsForTask(templateId);
+        const existingTargetIds = new Set(
+          existingTasks.filter((t) => t.targetId !== undefined).map((t) => t.targetId!)
+        );
 
-      if (needsUpdate) {
-        // Calculate new nextExecutionAt based on the new interval
-        // If the task hasn't run yet or lastExecutedAt is not set, schedule from now
-        const baseTime = task.lastExecutedAt || new Date();
-        const timeSinceLastExecution = Date.now() - baseTime.getTime();
+        // Update existing tasks with new interval and content if changed
+        existingTasks.forEach((task) => {
+          const needsUpdate =
+            task.interval !== template.interval ||
+            JSON.stringify(task.content) !== JSON.stringify(template.content) ||
+            task.active !== template.active;
 
-        // If interval changed, reschedule appropriately
-        let nextExecutionAt: Date;
-        if (task.interval !== template.interval) {
-          // If time since last execution exceeds new interval, execute soon
-          if (timeSinceLastExecution >= template.interval * 1000) {
-            nextExecutionAt = new Date(Date.now() + 5000); // Execute in 5 seconds
-          } else {
-            // Schedule based on remaining time with new interval
-            const remainingTime = template.interval * 1000 - timeSinceLastExecution;
-            nextExecutionAt = new Date(Date.now() + remainingTime);
+          if (needsUpdate) {
+            // Calculate new nextExecutionAt based on the new interval
+            const baseTime = task.lastExecutedAt || new Date();
+            const timeSinceLastExecution = Date.now() - baseTime.getTime();
+
+            let nextExecutionAt: Date;
+            if (task.interval !== template.interval) {
+              if (timeSinceLastExecution >= template.interval * 1000) {
+                nextExecutionAt = new Date(Date.now() + 5000);
+              } else {
+                const remainingTime = template.interval * 1000 - timeSinceLastExecution;
+                nextExecutionAt = new Date(Date.now() + remainingTime);
+              }
+            } else {
+              nextExecutionAt = task.nextExecutionAt;
+            }
+
+            this.registry.updateScheduledTask(task.id, {
+              content: template.content,
+              interval: template.interval,
+              active: template.active,
+              nextExecutionAt,
+            });
           }
-        } else {
-          // Keep existing nextExecutionAt if interval didn't change
-          nextExecutionAt = task.nextExecutionAt;
+        });
+
+        // Create new scheduled tasks for targets that don't have one
+        for (const target of targets) {
+          if (!existingTargetIds.has(target.id)) {
+            const taskId = this.registry.generateTaskId();
+            const now = new Date();
+            const scheduledTask: ScheduledTask = {
+              id: taskId,
+              templateId,
+              content: template.content,
+              interval: template.interval,
+              moduleId: template.moduleId,
+              targetId: target.id,
+              nextExecutionAt: new Date(now.getTime() + template.interval * 1000),
+              active: true,
+            };
+            this.registry.registerScheduledTask(scheduledTask);
+          }
         }
 
-        this.registry.updateScheduledTask(task.id, {
-          content: template.content,
-          interval: template.interval,
-          active: template.active,
-          nextExecutionAt,
+        // Remove scheduled tasks for targets that are no longer applicable
+        const validTargetIds = new Set(targets.map((t) => t.id));
+        existingTasks.forEach((task) => {
+          if (task.targetId !== undefined && !validTargetIds.has(task.targetId)) {
+            this.registry.deleteScheduledTask(task.id);
+          }
         });
+        break;
       }
-    });
 
-    // Create new scheduled tasks for targets that don't have one
-    for (const target of targets) {
-      if (!existingTargetIds.has(target.id)) {
-        const taskId = this.registry.generateTaskId();
-        const now = new Date();
-        const scheduledTask: ScheduledTask = {
-          id: taskId,
-          templateId,
-          content: template.content,
-          interval: template.interval,
-          moduleId: template.moduleId,
-          targetId: target.id,
-          nextExecutionAt: new Date(now.getTime() + template.interval * 1000),
-          active: true,
-        };
-        this.registry.registerScheduledTask(scheduledTask);
+      case "GLOBAL": {
+        // For GLOBAL tasks, ensure there's exactly ONE scheduled task without targetId
+        const globalTasks = existingTasks.filter((t) => t.targetId === undefined);
+
+        if (globalTasks.length === 0) {
+          // Create the single global task
+          const taskId = this.registry.generateTaskId();
+          const now = new Date();
+          const scheduledTask: ScheduledTask = {
+            id: taskId,
+            templateId,
+            content: template.content,
+            interval: template.interval,
+            moduleId: template.moduleId,
+            targetId: undefined,
+            nextExecutionAt: new Date(now.getTime() + template.interval * 1000),
+            active: true,
+          };
+          this.registry.registerScheduledTask(scheduledTask);
+        } else {
+          // Update the first global task, delete the rest (should never happen but handle it)
+          const mainTask = globalTasks[0];
+          const needsUpdate =
+            mainTask.interval !== template.interval ||
+            JSON.stringify(mainTask.content) !== JSON.stringify(template.content) ||
+            mainTask.active !== template.active;
+
+          if (needsUpdate) {
+            const baseTime = mainTask.lastExecutedAt || new Date();
+            const timeSinceLastExecution = Date.now() - baseTime.getTime();
+
+            let nextExecutionAt: Date;
+            if (mainTask.interval !== template.interval) {
+              if (timeSinceLastExecution >= template.interval * 1000) {
+                nextExecutionAt = new Date(Date.now() + 5000);
+              } else {
+                const remainingTime = template.interval * 1000 - timeSinceLastExecution;
+                nextExecutionAt = new Date(Date.now() + remainingTime);
+              }
+            } else {
+              nextExecutionAt = mainTask.nextExecutionAt;
+            }
+
+            this.registry.updateScheduledTask(mainTask.id, {
+              content: template.content,
+              interval: template.interval,
+              active: template.active,
+              nextExecutionAt,
+            });
+          }
+
+          // Remove duplicate global tasks
+          for (let i = 1; i < globalTasks.length; i++) {
+            this.registry.deleteScheduledTask(globalTasks[i].id);
+          }
+        }
+
+        // Remove any target-specific tasks that shouldn't exist for GLOBAL
+        existingTasks.forEach((task) => {
+          if (task.targetId !== undefined) {
+            this.registry.deleteScheduledTask(task.id);
+          }
+        });
+        break;
+      }
+
+      case "CUSTOM": {
+        // For CUSTOM tasks, don't create any scheduled tasks automatically
+        // The module will create instances manually via createTaskInstance
+        // Just update existing tasks if template content/interval changed
+        existingTasks.forEach((task) => {
+          const needsUpdate =
+            task.interval !== template.interval ||
+            JSON.stringify(task.content) !== JSON.stringify(template.content);
+
+          if (needsUpdate) {
+            this.registry.updateScheduledTask(task.id, {
+              content: template.content,
+              interval: task.interval, // Keep custom interval if set
+            });
+          }
+        });
+        break;
       }
     }
+  }
 
-    // Remove scheduled tasks for targets that are no longer applicable
-    const validTargetIds = new Set(targets.map((t) => t.id));
-    existingTasks.forEach((task) => {
-      if (task.targetId !== undefined && !validTargetIds.has(task.targetId)) {
-        this.registry.deleteScheduledTask(task.id);
-      }
-    });
+  /**
+   * Create a task instance manually (for CUSTOM scheduling type)
+   * @param templateId - ID of the template to create an instance for
+   * @param targetId - Optional target ID for this instance
+   * @param customData - Optional custom data to attach to this instance
+   * @param oneTime - If true, delete the scheduled task after execution
+   * @returns The scheduled task ID
+   */
+  async createTaskInstance(
+    templateId: number,
+    targetId?: number,
+    customData?: Record<string, any>,
+    oneTime: boolean = false
+  ): Promise<number> {
+    const template = await this.templateService.getTemplate(templateId);
+    if (!template) {
+      throw new Error(`Template ${templateId} not found`);
+    }
+
+    // Verify this is a CUSTOM template
+    if (template.schedulingType !== "CUSTOM") {
+      throw new Error(`Cannot manually create instances for ${template.schedulingType} templates`);
+    }
+
+    const taskId = this.registry.generateTaskId();
+    const now = new Date();
+    const scheduledTask: ScheduledTask = {
+      id: taskId,
+      templateId,
+      content: template.content,
+      interval: template.interval,
+      moduleId: template.moduleId,
+      targetId,
+      nextExecutionAt: new Date(now.getTime() + template.interval * 1000),
+      active: true,
+      customData,
+      oneTime,
+    };
+
+    this.registry.registerScheduledTask(scheduledTask);
+    logger.info(
+      `Created CUSTOM task instance ${taskId} for template ${templateId}${targetId ? ` (target: ${targetId})` : ""}`
+    );
+
+    return taskId;
   }
 
   /**
@@ -320,22 +456,31 @@ class TaskManager {
     for (const scheduledTask of dueTasks) {
       // Skip inactive tasks
       if (!scheduledTask.active) {
-        // Update next execution time even for inactive tasks
+        // Update next execution time even for inactive tasks (if not oneTime)
+        if (!scheduledTask.oneTime) {
+          const now = new Date();
+          this.registry.updateScheduledTask(scheduledTask.id, {
+            lastExecutedAt: now,
+            nextExecutionAt: new Date(now.getTime() + scheduledTask.interval * 1000),
+          });
+        }
+        continue;
+      }
+
+      this.createExecution(scheduledTask);
+
+      // Handle oneTime tasks: delete after execution
+      if (scheduledTask.oneTime) {
+        this.registry.deleteScheduledTask(scheduledTask.id);
+        logger.info(`Deleted one-time task ${scheduledTask.id} after execution`);
+      } else {
+        // Update next execution time for recurring tasks
         const now = new Date();
         this.registry.updateScheduledTask(scheduledTask.id, {
           lastExecutedAt: now,
           nextExecutionAt: new Date(now.getTime() + scheduledTask.interval * 1000),
         });
-        continue;
       }
-
-      this.createExecution(scheduledTask);
-      // Update next execution time
-      const now = new Date();
-      this.registry.updateScheduledTask(scheduledTask.id, {
-        lastExecutedAt: now,
-        nextExecutionAt: new Date(now.getTime() + scheduledTask.interval * 1000),
-      });
     }
   }
 
@@ -359,6 +504,7 @@ class TaskManager {
         extractResult: scheduledTask.content.extractResult,
       },
       targetId: scheduledTask.targetId,
+      customData: scheduledTask.customData,
     };
     this.registry.registerTaskExecution(execution);
     this.pendingQueue.push(executionId);
@@ -438,6 +584,12 @@ class TaskManager {
         executionToSend.content.commands = await replaceTargetPlaceholders(
           executionToSend.content.commands,
           executionToSend.targetId
+        );
+
+        // Replace custom data placeholders if applicable
+        executionToSend.content.commands = replaceCustomDataPlaceholders(
+          executionToSend.content.commands,
+          executionToSend.customData
         );
 
         // Assign execution to chosen worker
@@ -538,10 +690,16 @@ class TaskManager {
       this.transport?.updateWorkerTools(workerId, taskRequiredTools);
     }
 
+    // Enrich result with customData from execution
+    const enrichedResult: TaskResult = {
+      ...result,
+      customData: execution.customData,
+    };
+
     // Notify listeners
     this.completionListeners.forEach((cb) => {
       try {
-        cb(updatedExecution, result);
+        cb(updatedExecution, enrichedResult);
       } catch {}
     });
   }

@@ -1,5 +1,8 @@
 import { Tool } from "./tools";
 
+// Scheduling type for task templates
+export type SchedulingType = "TARGET_BASED" | "GLOBAL" | "CUSTOM";
+
 export interface TaskContent {
 	// List of shell commands to execute
 	commands: string[];
@@ -26,6 +29,8 @@ export interface TaskTemplate {
 	content: TaskContent;
 	// Interval for task execution in seconds
 	interval: number;
+	// Scheduling type (TARGET_BASED, GLOBAL, or CUSTOM)
+	schedulingType: SchedulingType;
 	// Global activation status
 	active: boolean;
 }
@@ -50,6 +55,10 @@ export interface ScheduledTask {
 	nextExecutionAt: Date;
 	// Whether this task is active
 	active: boolean;
+	// Custom data for CUSTOM scheduling type
+	customData?: Record<string, any>;
+	// If true, delete task after execution (for one-time CUSTOM tasks)
+	oneTime?: boolean;
 }
 
 // Task instance being executed by a worker
@@ -68,6 +77,8 @@ export interface TaskExecution {
 	content: TaskContent;
 	// Target ID (if this execution is for a specific target)
 	targetId?: number;
+	// Custom data passed from scheduled task
+	customData?: Record<string, any>;
 }
 
 // Result of a completed task execution
@@ -80,6 +91,8 @@ export interface TaskResult {
 	error?: string;
 	// Target ID (if this execution was for a specific target)
 	targetId?: number;
+	// Custom data from the execution
+	customData?: Record<string, any>;
 }
 
 // Override for target-specific task activation

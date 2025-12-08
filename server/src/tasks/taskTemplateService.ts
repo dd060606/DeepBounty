@@ -16,7 +16,8 @@ export class TaskTemplateService {
     name: string,
     description: string | undefined,
     content: TaskContent,
-    interval: number
+    interval: number,
+    schedulingType: "TARGET_BASED" | "GLOBAL" | "CUSTOM" = "TARGET_BASED"
   ): Promise<number> {
     // Check if template already exists
     const existing = await this.getTemplateByUniqueKey(moduleId, uniqueKey);
@@ -33,7 +34,8 @@ export class TaskTemplateService {
           SET name = ${name}, 
               description = ${description}, 
               content = ${JSON.stringify(content)}, 
-              interval = ${interval}
+              interval = ${interval},
+              "schedulingType" = ${schedulingType}
           WHERE id = ${existing.id}
         `);
       } else {
@@ -42,7 +44,8 @@ export class TaskTemplateService {
           UPDATE task_templates 
           SET name = ${name}, 
               description = ${description}, 
-              content = ${JSON.stringify(content)}
+              content = ${JSON.stringify(content)},
+              "schedulingType" = ${schedulingType}
           WHERE id = ${existing.id}
         `);
       }
@@ -51,8 +54,8 @@ export class TaskTemplateService {
 
     // Create new template
     const result = await queryOne<{ id: number }>(
-      sql`INSERT INTO task_templates ("moduleId", "uniqueKey", name, description, content, interval, active) 
-      VALUES (${moduleId}, ${uniqueKey}, ${name}, ${description}, ${JSON.stringify(content)}, ${interval}, true) 
+      sql`INSERT INTO task_templates ("moduleId", "uniqueKey", name, description, content, interval, "schedulingType", active) 
+      VALUES (${moduleId}, ${uniqueKey}, ${name}, ${description}, ${JSON.stringify(content)}, ${interval}, ${schedulingType}, true) 
       RETURNING id`
     );
 
@@ -80,6 +83,7 @@ export class TaskTemplateService {
       description: template.description ?? undefined,
       content: template.content as TaskContent,
       interval: template.interval,
+      schedulingType: template.schedulingType || "TARGET_BASED",
       active: template.active,
     };
   }
@@ -101,6 +105,7 @@ export class TaskTemplateService {
       description: template.description ?? undefined,
       content: template.content as TaskContent,
       interval: template.interval,
+      schedulingType: template.schedulingType || "TARGET_BASED",
       active: template.active,
     };
   }
@@ -119,6 +124,7 @@ export class TaskTemplateService {
       description: template.description ?? undefined,
       content: template.content as TaskContent,
       interval: template.interval,
+      schedulingType: template.schedulingType || "TARGET_BASED",
       active: template.active,
     }));
   }
@@ -139,6 +145,7 @@ export class TaskTemplateService {
       description: template.description ?? undefined,
       content: template.content as TaskContent,
       interval: template.interval,
+      schedulingType: template.schedulingType || "TARGET_BASED",
       active: template.active,
     }));
   }

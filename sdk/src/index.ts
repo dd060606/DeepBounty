@@ -105,6 +105,7 @@ export interface ServerAPI {
 	 * @param description Task description
 	 * @param taskContent The task content including commands and tools
 	 * @param interval Interval in seconds between task executions
+	 * @param schedulingType How to schedule tasks: "TARGET_BASED" (one per target), "GLOBAL" (single instance), or "CUSTOM" (manual control)
 	 * @param onComplete Optional callback executed when the task completes
 	 * @returns The ID of the registered task template
 	 */
@@ -114,6 +115,7 @@ export interface ServerAPI {
 		description: string,
 		taskContent: TaskContent,
 		interval: number,
+		schedulingType?: "TARGET_BASED" | "GLOBAL" | "CUSTOM",
 		onComplete?: (result: TaskResult) => void
 	): Promise<number>;
 
@@ -123,6 +125,21 @@ export interface ServerAPI {
 	 * @returns true if the template was unregistered, false if it didn't exist
 	 */
 	unregisterTaskTemplate(templateId: number): Promise<boolean>;
+
+	/**
+	 * Create a task instance manually (for CUSTOM scheduling type)
+	 * @param templateId The ID of the task template
+	 * @param targetId Optional target ID for this instance
+	 * @param customData Optional custom data to attach to this instance (accessible via {{KEY}} placeholders)
+	 * @param oneTime If true, delete the scheduled task after execution (default: false)
+	 * @returns The scheduled task ID
+	 */
+	createTaskInstance(
+		templateId: number,
+		targetId?: number,
+		customData?: Record<string, any>,
+		oneTime?: boolean
+	): Promise<number>;
 
 	/** Register a tool
 	 * @param tool The tool to register

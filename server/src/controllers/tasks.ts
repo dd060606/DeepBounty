@@ -18,6 +18,7 @@ export async function getAllTemplates(req: Request, res: Response) {
           name: t.name,
           description: t.description,
           interval: t.interval,
+          schedulingType: t.schedulingType,
           active: t.active,
         };
       })
@@ -42,6 +43,7 @@ export async function getTemplatesByModuleId(req: Request, res: Response) {
           name: t.name,
           description: t.description,
           interval: t.interval,
+          schedulingType: t.schedulingType,
           active: t.active,
         };
       })
