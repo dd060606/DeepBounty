@@ -698,7 +698,16 @@ class TaskManager {
           workerId: chosen.id,
           status: "running",
         });
-        logger.info(`Sending task execution ${execution.executionId} to worker ${chosen.id}`);
+
+        // Get template name for logging
+        const scheduledTask = this.registry.getScheduledTask(execution.scheduledTaskId);
+        const templateName = scheduledTask?.templateId
+          ? (await this.templateService.getTemplate(scheduledTask.templateId))?.name
+          : "unknown";
+
+        logger.info(
+          `Sending task execution ${execution.executionId} (${templateName}) to worker ${chosen.id}`
+        );
         const sent = this.transport.sendTask(chosen.id, executionToSend);
         if (sent) {
           this.pendingQueue.shift();
