@@ -105,8 +105,9 @@ export interface ServerAPI {
 	 * @param description Task description
 	 * @param taskContent The task content including commands and tools
 	 * @param interval Interval in seconds between task executions
-	 * @param schedulingType How to schedule tasks: "TARGET_BASED" (one per target), "GLOBAL" (single instance), or "CUSTOM" (manual control)
-	 * @param onComplete Optional callback executed when the task completes
+	 * @param schedulingType How to schedule tasks: "TARGET_BASED" (one per target), "GLOBAL" (single instance), or "CUSTOM" (callback-based)
+	 * @param onComplete Optional callback executed when a task instance completes
+	 * @param onSchedule Optional callback for CUSTOM mode, invoked at interval to create instances
 	 * @returns The ID of the registered task template
 	 */
 	registerTaskTemplate(
@@ -116,7 +117,8 @@ export interface ServerAPI {
 		taskContent: TaskContent,
 		interval: number,
 		schedulingType?: "TARGET_BASED" | "GLOBAL" | "CUSTOM",
-		onComplete?: (result: TaskResult) => void
+		onComplete?: (result: TaskResult) => void,
+		onSchedule?: (templateId: number) => void | Promise<void>
 	): Promise<number>;
 
 	/**
@@ -168,14 +170,14 @@ export interface ServerAPI {
 	): Promise<Alert>;
 }
 
-export interface PluginLifecycle {
+export interface ModuleLifecycle {
 	run?(api: ServerAPI): Promise<void> | void;
 	stop?(): Promise<void> | void;
 }
 
-export type PluginFactory = (
+export type ModuleFactory = (
 	api: ServerAPI
-) => PluginLifecycle | Promise<PluginLifecycle>;
+) => ModuleLifecycle | Promise<ModuleLifecycle>;
 
 // Re-export EventBus and related types
 export {
@@ -185,4 +187,4 @@ export {
 	EventHandler,
 } from "./events";
 
-export default {} as any; // Type-only module for plugins to import types during compile
+export default {} as any; // Type-only module for modules to import types during compile

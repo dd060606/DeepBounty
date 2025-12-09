@@ -1,18 +1,18 @@
 # Example Module for DeepBounty
 
-This is an example plugin for the [DeepBounty](https://github.com/dd060606/deepbounty) project.  
-It demonstrates how to create a plugin using the `@deepbounty/sdk`.
+This is an example module for the [DeepBounty](https://github.com/dd060606/deepbounty) project.  
+It demonstrates how to create a module using the `@deepbounty/sdk`.
 
 ## 🚀 Development
 
 1. Install dependencies:
-   ```bash
-   npm install
-   ```
+    ```bash
+    npm install
+    ```
 2. Build:
-   ```bash
-   npm run build
-   ```
+    ```bash
+    npm run build
+    ```
 
 ## 📦 Usage
 

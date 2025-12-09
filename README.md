@@ -8,10 +8,10 @@ DeepBounty helps security researchers automate common bug bounty hunting tasks u
 
 ## Key ideas
 
--   Modular by design: extend the core with TypeScript modules via an SDK.
--   Scalable workers: execute scans in sandboxed Docker environments, horizontally scalable.
--   Web UI: modern interface to manage targets and view alerts.
--   Planned: a Burp Suite extension to feed captured requests/JS and build a complete sitemap, enhancing module analyses.
+- Modular by design: extend the core with TypeScript modules via an SDK.
+- Scalable workers: execute scans in sandboxed Docker environments, horizontally scalable.
+- Web UI: modern interface to manage targets and view alerts.
+- Planned: a Burp Suite extension to feed captured requests/JS and build a complete sitemap, enhancing module analyses.
 
 ## Architecture
 
@@ -57,25 +57,29 @@ DeepBounty helps security researchers automate common bug bounty hunting tasks u
 
 ## Components
 
--   Server (Core)
-    -   Orchestrates scans and data flow between modules, workers, and the webapp.
-    -   Exposes APIs for module integration and real-time alerting.
--   Workers
-    -   Execute scanning/analysis in sandboxed Docker environments.
-    -   Multiple workers can connect to a single server for resilience and scale.
--   Webapp
-    -   Modern UI to manage targets and review alerts/findings.
--   Modules (Plugins)
-    -   Extend functionality using the TypeScript SDK to add scanners, analyzers, and automations.
--   Burp Suite Extension (Planned)
-    -   Sends captured request data and page JS to the server to enrich analysis and build a full sitemap.
+- Server (Core)
+    - Orchestrates scans and data flow between modules, workers, and the webapp.
+    - Exposes APIs for module integration and real-time alerting.
+- Workers
+    - Execute scanning/analysis in sandboxed Docker environments.
+    - Multiple workers can connect to a single server for resilience and scale.
+- Webapp
+    - Modern UI to manage targets and review alerts/findings.
+- Modules (Plugins)
+    - Extend functionality using the TypeScript SDK to add scanners, analyzers, and automations.
+- Burp Suite Extension (Planned)
+    - Sends captured request data and page JS to the server to enrich analysis and build a full sitemap.
 
 ## Tech stack
 
--   Backend: Node.js, Express, TypeScript
--   Frontend: React, TypeScript, TailwindCSS, shadcn/ui
--   Execution: Docker-based workers
--   Modules: TypeScript SDK
+- Backend: Node.js, Express, TypeScript
+- Frontend: React, TypeScript, TailwindCSS, shadcn/ui
+- Execution: Docker-based workers
+- Modules: TypeScript SDK
+
+## Documentation
+
+- **[ARCHITECTURE.md](./ARCHITECTURE.md)** - Comprehensive architectural documentation, perfect for AI-assisted development and deep understanding of the codebase structure, module system, and integration patterns.
 
 ---
 
