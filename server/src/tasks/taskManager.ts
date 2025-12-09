@@ -27,6 +27,9 @@ interface TaskTransport {
 // Listener for task completion events
 type TaskCompletionListener = (execution: TaskExecution, result: TaskResult) => void;
 
+// Callback for CUSTOM scheduling mode (called when schedule is due)
+type ScheduleCallback = (templateId: number) => void | Promise<void>;
+
 class TaskManager {
   private static instance: TaskManager | null = null;
   private readonly registry = getRegistry();
@@ -35,6 +38,8 @@ class TaskManager {
   private pendingQueue: number[] = [];
   private transport?: TaskTransport;
   private completionListeners: TaskCompletionListener[] = [];
+  // Map of template ID to onSchedule callback (for CUSTOM mode)
+  private scheduleCallbacks: Map<number, ScheduleCallback> = new Map();
   // Scheduler interval handle
   private schedulerInterval?: NodeJS.Timeout;
 
@@ -78,6 +83,8 @@ class TaskManager {
    * @param description - Detailed description of what the task does
    * @param content - Task content including commands and required tools
    * @param interval - Execution interval in seconds
+   * @param schedulingType - How to schedule tasks
+   * @param onSchedule - For CUSTOM mode: callback invoked at interval to create instances
    * @returns Promise resolving to the template ID
    */
   async registerTaskTemplate(
@@ -87,7 +94,8 @@ class TaskManager {
     description: string,
     content: TaskContent,
     interval: number,
-    schedulingType: "TARGET_BASED" | "GLOBAL" | "CUSTOM" = "TARGET_BASED"
+    schedulingType: "TARGET_BASED" | "GLOBAL" | "CUSTOM" = "TARGET_BASED",
+    onSchedule?: (templateId: number) => void | Promise<void>
   ): Promise<number> {
     // Create or update template in database
     const templateId = await this.templateService.createTemplate(
@@ -99,6 +107,11 @@ class TaskManager {
       interval,
       schedulingType
     );
+
+    // Store onSchedule callback for CUSTOM mode
+    if (schedulingType === "CUSTOM" && onSchedule) {
+      this.scheduleCallbacks.set(templateId, onSchedule);
+    }
 
     // Create scheduled tasks for all active targets
     await this.syncTasksForTemplate(templateId);
@@ -119,6 +132,9 @@ class TaskManager {
     scheduledTasks.forEach((task) => {
       this.registry.deleteScheduledTask(task.id);
     });
+
+    // Remove schedule callback if exists
+    this.scheduleCallbacks.delete(templateId);
 
     // Delete template from database
     return await this.templateService.deleteTemplate(templateId);
@@ -275,19 +291,71 @@ class TaskManager {
       }
 
       case "CUSTOM": {
-        // For CUSTOM tasks, don't create any scheduled tasks automatically
-        // The module will create instances manually via createTaskInstance
-        // Just update existing tasks if template content/interval changed
-        existingTasks.forEach((task) => {
+        // For CUSTOM tasks, create ONE scheduler task that triggers the onSchedule callback
+        // The callback then creates task instances via createTaskInstance
+        const schedulerTasks = existingTasks.filter((t) => t.targetId === undefined);
+
+        if (schedulerTasks.length === 0) {
+          // Create the scheduler task
+          const taskId = this.registry.generateTaskId();
+          const now = new Date();
+          const scheduledTask: ScheduledTask = {
+            id: taskId,
+            templateId,
+            content: template.content,
+            interval: template.interval,
+            moduleId: template.moduleId,
+            targetId: undefined,
+            nextExecutionAt: new Date(now.getTime() + template.interval * 1000),
+            active: true,
+            customData: { __isScheduler: true }, // Mark as scheduler task
+          };
+          this.registry.registerScheduledTask(scheduledTask);
+        } else {
+          // Update the scheduler task
+          const mainTask = schedulerTasks[0];
           const needsUpdate =
-            task.interval !== template.interval ||
-            JSON.stringify(task.content) !== JSON.stringify(template.content);
+            mainTask.interval !== template.interval ||
+            JSON.stringify(mainTask.content) !== JSON.stringify(template.content) ||
+            mainTask.active !== template.active;
 
           if (needsUpdate) {
-            this.registry.updateScheduledTask(task.id, {
+            const baseTime = mainTask.lastExecutedAt || new Date();
+            const timeSinceLastExecution = Date.now() - baseTime.getTime();
+
+            let nextExecutionAt: Date;
+            if (mainTask.interval !== template.interval) {
+              if (timeSinceLastExecution >= template.interval * 1000) {
+                nextExecutionAt = new Date(Date.now() + 5000);
+              } else {
+                const remainingTime = template.interval * 1000 - timeSinceLastExecution;
+                nextExecutionAt = new Date(Date.now() + remainingTime);
+              }
+            } else {
+              nextExecutionAt = mainTask.nextExecutionAt;
+            }
+
+            this.registry.updateScheduledTask(mainTask.id, {
               content: template.content,
-              interval: task.interval, // Keep custom interval if set
+              interval: template.interval,
+              active: template.active,
+              nextExecutionAt,
             });
+          }
+
+          // Remove duplicate scheduler tasks
+          for (let i = 1; i < schedulerTasks.length; i++) {
+            this.registry.deleteScheduledTask(schedulerTasks[i].id);
+          }
+        }
+
+        // Remove any target-specific tasks (modules create these via createTaskInstance)
+        existingTasks.forEach((task) => {
+          if (task.targetId !== undefined || !task.customData?.__isScheduler) {
+            // Don't delete manually created instances, only old non-scheduler tasks
+            if (task.customData?.__isScheduler === undefined) {
+              this.registry.deleteScheduledTask(task.id);
+            }
           }
         });
         break;
@@ -467,6 +535,39 @@ class TaskManager {
         continue;
       }
 
+      // Check if this is a CUSTOM scheduler task
+      if (scheduledTask.customData?.__isScheduler) {
+        // Call the onSchedule callback instead of creating an execution
+        const callback = this.scheduleCallbacks.get(scheduledTask.templateId);
+        if (callback) {
+          try {
+            const result = callback(scheduledTask.templateId);
+            if (result instanceof Promise) {
+              result.catch((err) => {
+                logger.error(
+                  `Error in onSchedule callback for template ${scheduledTask.templateId}:`,
+                  err
+                );
+              });
+            }
+          } catch (err) {
+            logger.error(
+              `Error in onSchedule callback for template ${scheduledTask.templateId}:`,
+              err
+            );
+          }
+        }
+
+        // Update next execution time
+        const now = new Date();
+        this.registry.updateScheduledTask(scheduledTask.id, {
+          lastExecutedAt: now,
+          nextExecutionAt: new Date(now.getTime() + scheduledTask.interval * 1000),
+        });
+        continue;
+      }
+
+      // Regular task execution
       this.createExecution(scheduledTask);
 
       // Handle oneTime tasks: delete after execution

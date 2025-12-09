@@ -51,7 +51,8 @@ function buildModuleSDK(moduleId: string, moduleName: string): ServerAPI {
       taskContent,
       interval,
       schedulingType,
-      onComplete
+      onComplete,
+      onSchedule
     ) => {
       return await taskAPI.registerTaskTemplate(
         uniqueKey,
@@ -60,7 +61,8 @@ function buildModuleSDK(moduleId: string, moduleName: string): ServerAPI {
         taskContent,
         interval,
         schedulingType,
-        onComplete
+        onComplete,
+        onSchedule
       );
     },
     unregisterTaskTemplate: async (templateId) => {

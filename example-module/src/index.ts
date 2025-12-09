@@ -1,10 +1,10 @@
-import type { ServerAPI, PluginLifecycle, CoreEvents } from "@deepbounty/sdk";
+import type { ServerAPI, ModuleLifecycle, CoreEvents } from "@deepbounty/sdk";
 import { sendTestRequest } from "./utils";
 import { FIND_SUBDOMAINS_TASK, subdomainsCallback } from "./tasks/subfinder";
 import { SUBFINDER } from "./tools";
 import { initializeStorage } from "./storage";
 
-export default class ExamplePlugin implements PluginLifecycle {
+export default class ExampleModule implements ModuleLifecycle {
 	constructor(private api: ServerAPI) {}
 
 	private registerTools() {
@@ -31,7 +31,7 @@ export default class ExamplePlugin implements PluginLifecycle {
 		this.registerTools();
 		this.registerTasks();
 
-		this.api.logger.info("Example plugin: run");
+		this.api.logger.info("Example module: run");
 
 		// Send a web request using a external library (axios)
 		const response = await sendTestRequest();
@@ -69,6 +69,6 @@ export default class ExamplePlugin implements PluginLifecycle {
 	}
 
 	async stop() {
-		this.api.logger.info("Example plugin: stop");
+		this.api.logger.info("Example module: stop");
 	}
 }

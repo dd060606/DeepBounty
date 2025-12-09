@@ -42,11 +42,22 @@ export async function replaceTargetPlaceholders(
   const target = await queryOne<Target>(sql`SELECT * FROM targets WHERE id = ${targetId}`);
   if (!target) return Promise.resolve(commands);
 
+  // Fetch target settings
+  const targetSettings = await queryOne<{ settings: Record<string, any> } | undefined>(
+    sql`SELECT settings FROM targets_settings WHERE "targetId" = ${targetId}`
+  );
+
+  const settings = targetSettings?.settings || {};
+  const userAgent = settings.userAgent || "";
+  const customHeader = settings.customHeader || "";
+
   return commands.map((cmd) =>
     cmd
       .replace(/\{\{TARGET_DOMAIN\}\}/g, target.domain)
       .replace(/\{\{TARGET_ID\}\}/g, String(target.id))
       .replace(/\{\{TARGET_NAME\}\}/g, target.name)
+      .replace(/\{\{USER_AGENT\}\}/g, userAgent)
+      .replace(/\{\{CUSTOM_HEADER\}\}/g, customHeader)
   );
 }
 
