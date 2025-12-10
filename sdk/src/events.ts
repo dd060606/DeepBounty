@@ -9,6 +9,8 @@ export interface CoreEvents {
 	"http:traffic": HttpTraffic;
 	// JavaScript code detected in HTTP responses
 	"http:js": { context: TrafficContext; js: string };
+	// HTML content detected in HTTP responses
+	"http:html": { context: TrafficContext; html: string };
 }
 
 /**

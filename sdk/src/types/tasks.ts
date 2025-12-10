@@ -67,6 +67,8 @@ export interface TaskExecution {
 	executionId: number;
 	// Reference to the scheduled task
 	scheduledTaskId: number;
+	// Reference to the task template
+	templateId?: number;
 	// Assigned worker ID
 	workerId?: number;
 	// Execution status

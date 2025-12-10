@@ -2,7 +2,6 @@ import { Request, Response } from "express";
 import Logger from "@/utils/logger.js";
 import { getEventBus } from "@/events/eventBus.js";
 import { HttpTraffic, TrafficContext } from "@deepbounty/sdk/types/burpsuite";
-import { extractJSFromHTML } from "@/utils/http.js";
 
 const logger = new Logger("Ingest");
 
@@ -29,10 +28,7 @@ export async function ingestBurpTraffic(req: Request, res: Response) {
           getEventBus().emit("http:js", { js: traffic.responseBody, context });
         }
         if (traffic.mimeType === "HTML") {
-          const js = extractJSFromHTML(traffic.responseBody);
-          if (js) {
-            getEventBus().emit("http:js", { js, context });
-          }
+          getEventBus().emit("http:html", { html: traffic.responseBody, context });
         }
       } catch (error) {
         logger.error("Error emitting http events:", error);

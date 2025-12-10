@@ -403,10 +403,6 @@ class TaskManager {
     };
 
     this.registry.registerScheduledTask(scheduledTask);
-    logger.info(
-      `Created CUSTOM task instance ${taskId} for template ${templateId}${targetId ? ` (target: ${targetId})` : ""}`
-    );
-
     return taskId;
   }
 
@@ -595,6 +591,7 @@ class TaskManager {
     const execution: TaskExecution = {
       executionId,
       scheduledTaskId: scheduledTask.id,
+      templateId: scheduledTask.templateId,
       status: "pending",
       createdAt: new Date(),
       content: {

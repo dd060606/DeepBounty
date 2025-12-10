@@ -30,17 +30,19 @@ export const getModules = async (req: Request, res: Response) => {
   }
 };
 
+// POST /modules/:id/settings - update module settings
 export const updateModuleSettings = async (req: Request, res: Response) => {
   const moduleId = req.params.id;
 
   try {
-    // Update the module settings in the database
-    const result = await queryOne(
-      sql`UPDATE modules_configs SET "value" = ${JSON.stringify(req.body)} WHERE "moduleId" = ${moduleId} AND "key" = 'settings' RETURNING "moduleId"`
+    // Update or insert the module settings in the database
+    await query(
+      sql`INSERT INTO modules_configs ("moduleId", "key", "value")
+       VALUES (${moduleId}, 'settings', ${JSON.stringify(req.body)}::jsonb)
+       ON CONFLICT ("moduleId", "key")
+       DO UPDATE SET "value" = EXCLUDED."value"`
     );
-    if (!result) {
-      return res.status(404).json({ error: "Target not found" });
-    }
+
     logger.info(`Updated settings for module ID '${moduleId}'`);
     res.status(204).send();
   } catch (error) {
