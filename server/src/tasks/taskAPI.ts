@@ -1,4 +1,4 @@
-import { TaskContent, TaskResult, Tool } from "@deepbounty/sdk/types";
+import { TaskContent, TaskResult, Tool, TaskExecution } from "@deepbounty/sdk/types";
 import getTaskManager from "./taskManager.js";
 import Logger from "@/utils/logger.js";
 
@@ -16,7 +16,7 @@ export class TaskAPI {
   constructor(private moduleId: string) {
     // Listen for task completion events
     this.taskManager.onTaskComplete((execution, result) => {
-      this.handleTaskComplete(result);
+      this.handleTaskComplete(execution, result);
     });
   }
 
@@ -76,24 +76,30 @@ export class TaskAPI {
   }
 
   // Handle task completion and notify waiting callbacks
-  private handleTaskComplete(result: TaskResult) {
-    // Get the scheduled task to find the template ID
-    const scheduledTask = this.taskManager.getScheduledTask(result.scheduledTaskId);
-    if (!scheduledTask) {
-      logger.warn(`Scheduled task ${result.scheduledTaskId} not found for result callback`);
+  private handleTaskComplete(execution: TaskExecution, result: TaskResult) {
+    let templateId = execution.templateId;
+
+    // Fallback: Get the scheduled task to find the template ID
+    if (!templateId) {
+      const scheduledTask = this.taskManager.getScheduledTask(result.scheduledTaskId);
+      if (scheduledTask) {
+        templateId = scheduledTask.templateId;
+      }
+    }
+
+    if (!templateId) {
+      logger.warn(
+        `Template ID not found for task execution ${execution.executionId} (scheduled task ${result.scheduledTaskId})`
+      );
       return;
     }
 
     // Look up the callback using the template ID
-    const callback = this.taskCallbacks.get(scheduledTask.templateId);
+    const callback = this.taskCallbacks.get(templateId);
     if (!callback) {
       // Silently return if no callback (this is normal for some tasks)
       return;
     }
-
-    logger.info(
-      `Executing callback for template ${scheduledTask.templateId}, execution ${result.executionId}, success: ${result.success}`
-    );
 
     // Notify callback
     try {
