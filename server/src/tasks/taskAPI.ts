@@ -60,10 +60,11 @@ export class TaskAPI {
 
   /**
    * Create a task instance manually (for CUSTOM scheduling type)
+   * Task instances always start immediately upon creation.
    * @param templateId - ID of the template to create an instance for
    * @param targetId - Optional target ID for this instance
    * @param customData - Optional custom data to attach to this instance
-   * @param oneTime - If true, delete the scheduled task after execution (default: false)
+   * @param oneTime - If true, delete after execution. If false, reschedule for next interval (default: false)
    * @returns The scheduled task ID
    */
   async createTaskInstance(

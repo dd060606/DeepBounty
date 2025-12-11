@@ -263,12 +263,14 @@ await api.registerTaskTemplate(
 - **Behavior**: No automatic task instances. A scheduler task triggers an `onSchedule` callback at regular intervals.
 - **Use Case**: Dynamic scheduling, batching, conditional execution based on runtime data
 - **Example**: Module is called every hour, analyzes targets, and creates optimized batched instances
+- **Immediate Execution**: Task instances created via `createTaskInstance` start immediately, without waiting for the next interval
 - **How It Works**:
     1. One scheduler task is created with the template's interval
     2. When the interval expires, the `onSchedule` callback is invoked with the template ID
     3. Inside `onSchedule`, module calls `api.createTaskInstance()` to create actual task instances
-    4. Task instances execute and return results
-    5. The `onComplete` callback receives results from each instance (if provided)
+    4. Task instances start executing immediately (no waiting for next scheduler cycle)
+    5. Task instances execute and return results
+    6. The `onComplete` callback receives results from each instance (if provided)
 
 ````typescript
 // Register template with CUSTOM scheduling
@@ -417,22 +419,25 @@ await api.registerTaskTemplate(
 
 ### One-Time Tasks
 
-Tasks can be flagged as `oneTime` to automatically delete after execution:
+For CUSTOM scheduling mode, task instances can be flagged as `oneTime` to automatically delete after execution:
 
 ```typescript
 await api.createTaskInstance(
 	templateId,
 	targetId,
 	{ url: "https://example.com/new-endpoint" },
-	true // oneTime: delete after execution
+	true // oneTime: deletes after execution
 );
 ```
 
+**Behavior**:
+
+- **Auto-Cleanup**: When `oneTime=true`, the scheduled task is automatically deleted after execution completes
+
 **Use Cases**:
 
-- On-demand scans triggered by events
-- One-off checks (e.g., new endpoint discovered)
-- Resource cleanup tasks
+- **One-time (`oneTime=true`)**: On-demand scans, one-off checks, resource cleanup
+- **Recurring (`oneTime=false`)**: Periodic monitoring of specific endpoints, continuous validation
 
 ---
 
@@ -620,10 +625,10 @@ async createTaskInstance(
   templateId: number,             // Template to instantiate
   targetId?: number,              // Optional target association
   customData?: Record<string, any>, // Custom placeholder data
-  oneTime?: boolean               // Delete after execution (default: false)
+  oneTime?: boolean               // Auto-delete after execution (default: false).
 ): Promise<number>; // Returns scheduled task ID
 
-// Example
+// Example: One-time task (deleted after execution)
 const taskId = await api.createTaskInstance(
   templateId,
   undefined,
@@ -631,7 +636,7 @@ const taskId = await api.createTaskInstance(
     HOSTNAME: "api.example.com",
     ENDPOINTS: JSON.stringify(["/v1", "/v2", "/admin"])
   },
-  true // One-time task
+  true // Deletes after execution
 );
 ````
 
@@ -1117,12 +1122,12 @@ api.events.subscribe("http:traffic", async ({ request, response }) => {
 	if (response.status === 200 && !isKnownEndpoint(request.url)) {
 		api.logger.info(`New endpoint: ${request.url}`);
 
-		// Create one-time targeted scan
+		// Create one-time targeted scan that executes immediately
 		await api.createTaskInstance(
 			targetedScanTemplateId,
 			getTargetIdFromUrl(request.url),
 			{ ENDPOINT: request.url },
-			true
+			true // oneTime: task starts immediately without waiting
 		);
 	}
 });

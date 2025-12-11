@@ -44,8 +44,8 @@ class TaskManager {
   private schedulerInterval?: NodeJS.Timeout;
 
   private constructor() {
-    // Start the scheduler (check every 10 seconds)
-    this.startScheduler(10000);
+    // Start the scheduler (check every 5 seconds)
+    this.startScheduler(5000);
   }
 
   /**
@@ -365,10 +365,11 @@ class TaskManager {
 
   /**
    * Create a task instance manually (for CUSTOM scheduling type)
+   * Task instances always start immediately upon creation.
    * @param templateId - ID of the template to create an instance for
    * @param targetId - Optional target ID for this instance
    * @param customData - Optional custom data to attach to this instance
-   * @param oneTime - If true, delete the scheduled task after execution
+   * @param oneTime - If true, delete after execution. If false, reschedule for next interval (default: false)
    * @returns The scheduled task ID
    */
   async createTaskInstance(
@@ -389,6 +390,10 @@ class TaskManager {
 
     const taskId = this.registry.generateTaskId();
     const now = new Date();
+
+    // CUSTOM task instances always start immediately
+    // If oneTime=false, they will reschedule after execution
+    // If oneTime=true, they will be deleted after execution
     const scheduledTask: ScheduledTask = {
       id: taskId,
       templateId,
@@ -396,13 +401,17 @@ class TaskManager {
       interval: template.interval,
       moduleId: template.moduleId,
       targetId,
-      nextExecutionAt: new Date(now.getTime() + template.interval * 1000),
+      nextExecutionAt: now, // Always immediate for CUSTOM instances
       active: true,
       customData,
       oneTime,
     };
 
     this.registry.registerScheduledTask(scheduledTask);
+
+    // Immediately create an execution and try to assign it
+    this.createExecution(scheduledTask);
+
     return taskId;
   }
 
