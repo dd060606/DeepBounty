@@ -79,8 +79,6 @@ DeepBounty helps security researchers automate common bug bounty hunting tasks u
 
 ## Documentation
 
-- **[ARCHITECTURE.md](./ARCHITECTURE.md)** - Comprehensive architectural documentation, perfect for AI-assisted development and deep understanding of the codebase structure, module system, and integration patterns.
+- **[ARCHITECTURE.md](./ARCHITECTURE.md)** - How the project is structured, perfect for AI-assisted development and deep understanding of the codebase structure, module system, and integration patterns.
 
 ---
-
-More docs, setup, and examples are coming soon.
