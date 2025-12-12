@@ -670,9 +670,8 @@ api.registerTool(SUBFINDER_TOOL);
 
 ```typescript
 async createAlert(
-  targetId: number,               // Target ID
   name: string,                   // Alert title
-  subdomain: string,              // Subdomain/hostname
+  subdomain: string,              // Subdomain/hostname (auto-detects target)
   score: number,                  // 0=Info, 1=Low, 2=Medium, 3=High, 4=Critical
   description: string,            // Detailed description
   endpoint: string,               // Specific path/endpoint
@@ -681,7 +680,6 @@ async createAlert(
 
 // Example
 await api.createAlert(
-  targetId,
   "Exposed Admin Panel",
   "admin.example.com",
   3, // High severity
@@ -690,6 +688,15 @@ await api.createAlert(
   true
 );
 ```
+
+**Target Auto-Detection**:
+
+The `subdomain` parameter is used to automatically detect which target the alert belongs to. It checks:
+1. Exact match with target's main domain (`targets.domain`)
+2. Exact match with registered subdomains (`targets_subdomains.subdomain`)
+3. Wildcard pattern match (e.g., `*.example.com` matches `api.example.com`, `*.cdn.apple.com` matches `static.cdn.apple.com`)
+
+If no target is found, an error is thrown.
 
 ---
 
@@ -1033,7 +1040,6 @@ export default class MyModule implements ModuleLifecycle {
 			.filter((f) => f.severity === "high")
 			.forEach((f) => {
 				this.api.createAlert(
-					result.targetId!,
 					f.title,
 					f.subdomain,
 					3, // High

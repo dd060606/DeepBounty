@@ -149,17 +149,16 @@ export interface ServerAPI {
 
 	/**
 	 * Create a new alert for a target
-	 * @param targetId The ID of the target
+	 * The target is automatically detected from the subdomain parameter
 	 * @param name The title of the alert
-	 * @param subdomain The subdomain where the vulnerability was found
+	 * @param subdomain The subdomain where the vulnerability was found (can be main domain or subdomain)
 	 * @param score The severity score (0=Informational, 1=Low, 2=Medium, 3=High, 4=Critical)
 	 * @param description Detailed description of the alert
 	 * @param endpoint Specific endpoint/path where the vulnerability was found
 	 * @param confirmed Whether the vulnerability has been confirmed (default: false)
-	 * @returns The created alert ID
+	 * @returns The created alert
 	 */
 	createAlert(
-		targetId: number,
 		name: string,
 		subdomain: string,
 		score: number,

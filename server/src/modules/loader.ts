@@ -75,7 +75,6 @@ function buildModuleSDK(moduleId: string, moduleName: string): ServerAPI {
       registry.registerTool(tool);
     },
     createAlert: async (
-      targetId: number,
       name: string,
       subdomain: string,
       score: number,
@@ -84,7 +83,6 @@ function buildModuleSDK(moduleId: string, moduleName: string): ServerAPI {
       confirmed: boolean = false
     ) => {
       return await createAlert({
-        targetId,
         name,
         subdomain,
         score,
