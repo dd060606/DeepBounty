@@ -68,8 +68,8 @@ function buildModuleSDK(moduleId: string, moduleName: string): ServerAPI {
     unregisterTaskTemplate: async (templateId) => {
       return await taskAPI.unregisterTaskTemplate(templateId);
     },
-    createTaskInstance: async (templateId, targetId, customData, oneTime) => {
-      return await taskAPI.createTaskInstance(templateId, targetId, customData, oneTime);
+    createTaskInstance: async (templateId, targetId, customData) => {
+      return await taskAPI.createTaskInstance(templateId, targetId, customData);
     },
     registerTool(tool) {
       registry.registerTool(tool);

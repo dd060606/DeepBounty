@@ -64,16 +64,14 @@ export class TaskAPI {
    * @param templateId - ID of the template to create an instance for
    * @param targetId - Optional target ID for this instance
    * @param customData - Optional custom data to attach to this instance
-   * @param oneTime - If true, delete after execution. If false, reschedule for next interval (default: false)
    * @returns The scheduled task ID
    */
   async createTaskInstance(
     templateId: number,
     targetId?: number,
-    customData?: Record<string, any>,
-    oneTime: boolean = false
+    customData?: Record<string, any>
   ): Promise<number> {
-    return await this.taskManager.createTaskInstance(templateId, targetId, customData, oneTime);
+    return await this.taskManager.createTaskInstance(templateId, targetId, customData);
   }
 
   // Handle task completion and notify waiting callbacks
