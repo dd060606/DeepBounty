@@ -365,18 +365,16 @@ class TaskManager {
 
   /**
    * Create a task instance manually (for CUSTOM scheduling type)
-   * Task instances always start immediately upon creation.
+   * Task instances always start immediately upon creation and are automatically deleted after execution.
    * @param templateId - ID of the template to create an instance for
    * @param targetId - Optional target ID for this instance
    * @param customData - Optional custom data to attach to this instance
-   * @param oneTime - If true, delete after execution. If false, reschedule for next interval (default: false)
    * @returns The scheduled task ID
    */
   async createTaskInstance(
     templateId: number,
     targetId?: number,
-    customData?: Record<string, any>,
-    oneTime: boolean = false
+    customData?: Record<string, any>
   ): Promise<number> {
     const template = await this.templateService.getTemplate(templateId);
     if (!template) {
@@ -391,9 +389,8 @@ class TaskManager {
     const taskId = this.registry.generateTaskId();
     const now = new Date();
 
-    // CUSTOM task instances always start immediately
-    // If oneTime=false, they will reschedule after execution
-    // If oneTime=true, they will be deleted after execution
+    // CUSTOM task instances are always one-time tasks
+    // They execute immediately and are automatically deleted after execution
     const scheduledTask: ScheduledTask = {
       id: taskId,
       templateId,
@@ -404,7 +401,7 @@ class TaskManager {
       nextExecutionAt: now, // Always immediate for CUSTOM instances
       active: true,
       customData,
-      oneTime,
+      oneTime: true, // Always true for manually created instances
     };
 
     this.registry.registerScheduledTask(scheduledTask);
@@ -584,7 +581,6 @@ class TaskManager {
           ? (await this.templateService.getTemplate(scheduledTask.templateId))?.name || "unknown"
           : "unknown";
         this.registry.deleteScheduledTask(scheduledTask.id);
-        logger.info(`Deleted one-time task ${scheduledTask.id} (${templateName}) after execution`);
       } else {
         // Update next execution time for recurring tasks
         const now = new Date();

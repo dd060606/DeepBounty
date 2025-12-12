@@ -130,18 +130,16 @@ export interface ServerAPI {
 
 	/**
 	 * Create a task instance manually (for CUSTOM scheduling type)
-	 * Task instances always start immediately upon creation.
+	 * Task instances are always one-time and automatically deleted after execution.
 	 * @param templateId The ID of the task template
 	 * @param targetId Optional target ID for this instance
 	 * @param customData Optional custom data to attach to this instance (accessible via {{KEY}} placeholders)
-	 * @param oneTime If true, delete after execution. If false, reschedule for next interval (default: false)
 	 * @returns The scheduled task ID
 	 */
 	createTaskInstance(
 		templateId: number,
 		targetId?: number,
-		customData?: Record<string, any>,
-		oneTime?: boolean
+		customData?: Record<string, any>
 	): Promise<number>;
 
 	/** Register a tool

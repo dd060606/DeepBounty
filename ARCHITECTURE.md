@@ -303,8 +303,7 @@ const templateId = await api.registerTaskTemplate(
 				{
 					HOSTNAME: hostname,
 					PORT: ports.join(","),
-				},
-				true // One-time execution
+				}
 			);
 		}
 	}
@@ -417,27 +416,29 @@ await api.registerTaskTemplate(
 );
 ```
 
-### One-Time Tasks
+### Task Instances (CUSTOM mode)
 
-For CUSTOM scheduling mode, task instances can be flagged as `oneTime` to automatically delete after execution:
+For CUSTOM scheduling mode, task instances are **always one-time** and automatically deleted after execution:
 
 ```typescript
 await api.createTaskInstance(
 	templateId,
 	targetId,
-	{ url: "https://example.com/new-endpoint" },
-	true // oneTime: deletes after execution
+	{ url: "https://example.com/new-endpoint" }
 );
 ```
 
 **Behavior**:
 
-- **Auto-Cleanup**: When `oneTime=true`, the scheduled task is automatically deleted after execution completes
+- **Auto-Cleanup**: Task instances are automatically deleted after execution completes
+- **No Rescheduling**: Unlike template-based tasks, instances don't reschedule on interval
+- **Manual Creation**: Instances must be created explicitly (typically in `onSchedule` callback)
 
 **Use Cases**:
 
-- **One-time (`oneTime=true`)**: On-demand scans, one-off checks, resource cleanup
-- **Recurring (`oneTime=false`)**: Periodic monitoring of specific endpoints, continuous validation
+- On-demand scans triggered by events
+- One-off checks for specific targets or conditions
+- Dynamic batching based on runtime data
 
 ---
 
@@ -612,8 +613,7 @@ const customTemplateId = await api.registerTaskTemplate(
       await api.createTaskInstance(
         templateId,
         undefined,
-        { TARGETS: batch.join(",") },
-        true
+        { TARGETS: batch.join(",") }
       );
     }
   }
@@ -624,19 +624,17 @@ const customTemplateId = await api.registerTaskTemplate(
 async createTaskInstance(
   templateId: number,             // Template to instantiate
   targetId?: number,              // Optional target association
-  customData?: Record<string, any>, // Custom placeholder data
-  oneTime?: boolean               // Auto-delete after execution (default: false).
+  customData?: Record<string, any> // Custom placeholder data
 ): Promise<number>; // Returns scheduled task ID
 
-// Example: One-time task (deleted after execution)
+// Example: Task instance (automatically deleted after execution)
 const taskId = await api.createTaskInstance(
   templateId,
   undefined,
   {
     HOSTNAME: "api.example.com",
     ENDPOINTS: JSON.stringify(["/v1", "/v2", "/admin"])
-  },
-  true // Deletes after execution
+  }
 );
 ````
 
@@ -1104,8 +1102,7 @@ const templateId = await api.registerTaskTemplate(
 						.map((id) => getTargetDomain(id))
 						.join(","),
 					TARGET_IDS: targetIds.join(","),
-				},
-				true // One-time
+				}
 			);
 		}
 	}
@@ -1122,12 +1119,11 @@ api.events.subscribe("http:traffic", async ({ request, response }) => {
 	if (response.status === 200 && !isKnownEndpoint(request.url)) {
 		api.logger.info(`New endpoint: ${request.url}`);
 
-		// Create one-time targeted scan that executes immediately
+		// Create targeted scan
 		await api.createTaskInstance(
 			targetedScanTemplateId,
 			getTargetIdFromUrl(request.url),
-			{ ENDPOINT: request.url },
-			true // oneTime: task starts immediately without waiting
+			{ ENDPOINT: request.url }
 		);
 	}
 });
@@ -1150,8 +1146,7 @@ api.events.subscribe(
 			await api.createTaskInstance(
 				portScanTemplateId,
 				targetId,
-				{ HOST: subdomain },
-				true
+				{ HOST: subdomain }
 			);
 		}
 	}
