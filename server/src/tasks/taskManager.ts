@@ -504,7 +504,9 @@ class TaskManager {
       clearInterval(this.schedulerInterval);
     }
     this.schedulerInterval = setInterval(() => {
-      this.checkDueTasks();
+      this.checkDueTasks().catch((err) => {
+        logger.error(`Error checking due tasks: ${err.message}`);
+      });
     }, checkInterval);
   }
 
@@ -524,7 +526,7 @@ class TaskManager {
    * Called periodically by the scheduler
    * @private
    */
-  private checkDueTasks() {
+  private async checkDueTasks() {
     const dueTasks = this.registry.getDueScheduledTasks();
     for (const scheduledTask of dueTasks) {
       // Skip inactive tasks
@@ -577,8 +579,12 @@ class TaskManager {
 
       // Handle oneTime tasks: delete after execution
       if (scheduledTask.oneTime) {
+        // Get template name before deleting for logging
+        const templateName = scheduledTask.templateId
+          ? (await this.templateService.getTemplate(scheduledTask.templateId))?.name || "unknown"
+          : "unknown";
         this.registry.deleteScheduledTask(scheduledTask.id);
-        logger.info(`Deleted one-time task ${scheduledTask.id} after execution`);
+        logger.info(`Deleted one-time task ${scheduledTask.id} (${templateName}) after execution`);
       } else {
         // Update next execution time for recurring tasks
         const now = new Date();

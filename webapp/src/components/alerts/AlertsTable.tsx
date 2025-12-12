@@ -4,15 +4,17 @@ import { faviconUrl } from "@/utils/domains";
 import type { Alert } from "@deepbounty/sdk/types";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "react-i18next";
-import { ArrowUpDown, ListFilter } from "lucide-react";
+import { ArrowUpDown, ListFilter, MoreHorizontal, Trash2 } from "lucide-react";
 import type { Column, ColumnDef } from "@tanstack/react-table";
 import { DataTable } from "@/components/ui/data-table";
 import SeverityBadge from "./SeverityBadge";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
+  DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuPortal,
   DropdownMenuSeparator,
@@ -26,6 +28,8 @@ import { formatDate } from "@/utils/date";
 type Props = {
   alerts: Alert[];
   onRowClick?: (alert: Alert) => void;
+  onDelete?: (alertId: number) => void;
+  onDeleteMultiple?: (alertIds: number[]) => void;
 };
 
 // A header component that allows sorting
@@ -38,9 +42,10 @@ function TableHeader({ column, title }: { column: Column<Alert>; title: string }
   );
 }
 
-export default function AlertsTable({ alerts, onRowClick }: Props) {
+export default function AlertsTable({ alerts, onRowClick, onDelete, onDeleteMultiple }: Props) {
   const { t } = useTranslation();
   const [query, setQuery] = useState("");
+  const [rowSelection, setRowSelection] = useState({});
   // Filters
   const [severityFilter, setSeverityFilter] = useState({
     critical: true,
@@ -56,6 +61,31 @@ export default function AlertsTable({ alerts, onRowClick }: Props) {
 
   // Columns definition
   const alertsColumns: ColumnDef<Alert>[] = [
+    {
+      id: "select",
+      header: ({ table }) => (
+        <Checkbox
+          checked={
+            table.getIsAllPageRowsSelected() ||
+            (table.getIsSomePageRowsSelected() && "indeterminate")
+          }
+          className="size-5"
+          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+          aria-label="Select all"
+        />
+      ),
+      cell: ({ row }) => (
+        <Checkbox
+          checked={row.getIsSelected()}
+          className="size-5"
+          onCheckedChange={(value) => row.toggleSelected(!!value)}
+          aria-label="Select row"
+          onClick={(e) => e.stopPropagation()}
+        />
+      ),
+      enableSorting: false,
+      enableHiding: false,
+    },
     {
       accessorKey: "id",
       cell: ({ row }) => `#${row.original.id}`,
@@ -120,6 +150,38 @@ export default function AlertsTable({ alerts, onRowClick }: Props) {
         return <div>{formatDate(row.original.createdAt)}</div>;
       },
     },
+    {
+      id: "actions",
+      enableHiding: false,
+      cell: ({ row }) => {
+        const alert = row.original;
+
+        return (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="h-8 w-8 p-0" onClick={(e) => e.stopPropagation()}>
+                <span className="sr-only">Open menu</span>
+                <MoreHorizontal className="size-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>{t("common.actions")}</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className="text-destructive focus:text-destructive"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete?.(alert.id);
+                }}
+              >
+                <Trash2 className="mr-2 size-4" />
+                {t("common.delete")}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        );
+      },
+    },
   ];
 
   // Filter alerts based on search query
@@ -146,6 +208,21 @@ export default function AlertsTable({ alerts, onRowClick }: Props) {
     });
   }, [alerts, query, severityFilter, statusFilter]);
 
+  // Get selected alert IDs
+  const selectedAlertIds = useMemo(() => {
+    return Object.keys(rowSelection)
+      .filter((key) => rowSelection[key as keyof typeof rowSelection])
+      .map((key) => filtered[Number.parseInt(key)]?.id)
+      .filter((id): id is number => id !== undefined);
+  }, [rowSelection, filtered]);
+
+  const handleDeleteSelected = () => {
+    if (selectedAlertIds.length > 0) {
+      onDeleteMultiple?.(selectedAlertIds);
+      setRowSelection({});
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -155,80 +232,102 @@ export default function AlertsTable({ alerts, onRowClick }: Props) {
           placeholder={t("alerts.searchPlaceholder")}
           className="sm:max-w-xl"
         />
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
+        <div className="flex gap-2">
+          {selectedAlertIds.length > 0 && (
             <Button
-              variant="outline"
-              className="flex w-full items-center justify-center gap-2 sm:w-auto"
+              variant="destructive"
+              onClick={handleDeleteSelected}
+              className="flex items-center gap-2"
             >
-              <ListFilter />
-              {t("alerts.filter")}
+              <Trash2 className="size-4" />
+              {t("alerts.deleteSelected")} ({selectedAlertIds.length})
             </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent>
-            <DropdownMenuLabel>{t("alerts.filter")}</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuSub>
-              <DropdownMenuSubTrigger direction="left">{t("alerts.score")}</DropdownMenuSubTrigger>
-              <DropdownMenuPortal>
-                <DropdownMenuSubContent>
-                  <DropdownMenuCheckboxItem
-                    checked={severityFilter.critical}
-                    onCheckedChange={(v) =>
-                      setSeverityFilter((s) => ({ ...s, critical: Boolean(v) }))
-                    }
-                  >
-                    {t("alerts.critical")}
-                  </DropdownMenuCheckboxItem>
-                  <DropdownMenuCheckboxItem
-                    checked={severityFilter.high}
-                    onCheckedChange={(v) => setSeverityFilter((s) => ({ ...s, high: Boolean(v) }))}
-                  >
-                    {t("alerts.high")}
-                  </DropdownMenuCheckboxItem>
-                  <DropdownMenuCheckboxItem
-                    checked={severityFilter.medium}
-                    onCheckedChange={(v) =>
-                      setSeverityFilter((s) => ({ ...s, medium: Boolean(v) }))
-                    }
-                  >
-                    {t("alerts.medium")}
-                  </DropdownMenuCheckboxItem>
-                  <DropdownMenuCheckboxItem
-                    checked={severityFilter.low}
-                    onCheckedChange={(v) => setSeverityFilter((s) => ({ ...s, low: Boolean(v) }))}
-                  >
-                    {t("alerts.low")}
-                  </DropdownMenuCheckboxItem>
-                  <DropdownMenuCheckboxItem
-                    checked={severityFilter.informational}
-                    onCheckedChange={(v) =>
-                      setSeverityFilter((s) => ({ ...s, informational: Boolean(v) }))
-                    }
-                  >
-                    {t("alerts.informational")}
-                  </DropdownMenuCheckboxItem>
-                </DropdownMenuSubContent>
-              </DropdownMenuPortal>
-            </DropdownMenuSub>
-            <DropdownMenuCheckboxItem
-              checked={statusFilter.confirmed}
-              onCheckedChange={(v) => setStatusFilter((s) => ({ ...s, confirmed: Boolean(v) }))}
-            >
-              {t("alerts.confirmed")}
-            </DropdownMenuCheckboxItem>
-            <DropdownMenuCheckboxItem
-              checked={statusFilter.unconfirmed}
-              onCheckedChange={(v) => setStatusFilter((s) => ({ ...s, unconfirmed: Boolean(v) }))}
-            >
-              {t("alerts.unconfirmed")}
-            </DropdownMenuCheckboxItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+          )}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                className="flex w-full items-center justify-center gap-2 sm:w-auto"
+              >
+                <ListFilter />
+                {t("alerts.filter")}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              <DropdownMenuLabel>{t("alerts.filter")}</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger direction="left">
+                  {t("alerts.score")}
+                </DropdownMenuSubTrigger>
+                <DropdownMenuPortal>
+                  <DropdownMenuSubContent>
+                    <DropdownMenuCheckboxItem
+                      checked={severityFilter.critical}
+                      onCheckedChange={(v) =>
+                        setSeverityFilter((s) => ({ ...s, critical: Boolean(v) }))
+                      }
+                    >
+                      {t("alerts.critical")}
+                    </DropdownMenuCheckboxItem>
+                    <DropdownMenuCheckboxItem
+                      checked={severityFilter.high}
+                      onCheckedChange={(v) =>
+                        setSeverityFilter((s) => ({ ...s, high: Boolean(v) }))
+                      }
+                    >
+                      {t("alerts.high")}
+                    </DropdownMenuCheckboxItem>
+                    <DropdownMenuCheckboxItem
+                      checked={severityFilter.medium}
+                      onCheckedChange={(v) =>
+                        setSeverityFilter((s) => ({ ...s, medium: Boolean(v) }))
+                      }
+                    >
+                      {t("alerts.medium")}
+                    </DropdownMenuCheckboxItem>
+                    <DropdownMenuCheckboxItem
+                      checked={severityFilter.low}
+                      onCheckedChange={(v) => setSeverityFilter((s) => ({ ...s, low: Boolean(v) }))}
+                    >
+                      {t("alerts.low")}
+                    </DropdownMenuCheckboxItem>
+                    <DropdownMenuCheckboxItem
+                      checked={severityFilter.informational}
+                      onCheckedChange={(v) =>
+                        setSeverityFilter((s) => ({ ...s, informational: Boolean(v) }))
+                      }
+                    >
+                      {t("alerts.informational")}
+                    </DropdownMenuCheckboxItem>
+                  </DropdownMenuSubContent>
+                </DropdownMenuPortal>
+              </DropdownMenuSub>
+              <DropdownMenuCheckboxItem
+                checked={statusFilter.confirmed}
+                onCheckedChange={(v) => setStatusFilter((s) => ({ ...s, confirmed: Boolean(v) }))}
+              >
+                {t("alerts.confirmed")}
+              </DropdownMenuCheckboxItem>
+              <DropdownMenuCheckboxItem
+                checked={statusFilter.unconfirmed}
+                onCheckedChange={(v) => setStatusFilter((s) => ({ ...s, unconfirmed: Boolean(v) }))}
+              >
+                {t("alerts.unconfirmed")}
+              </DropdownMenuCheckboxItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
 
       {filtered.length !== 0 ? (
-        <DataTable columns={alertsColumns} data={filtered} onRowClick={onRowClick} />
+        <DataTable
+          columns={alertsColumns}
+          data={filtered}
+          onRowClick={onRowClick}
+          rowSelection={rowSelection}
+          onRowSelectionChange={setRowSelection}
+        />
       ) : (
         // Empty message
         <div className="text-muted-foreground border-border bg-card/60 mx-auto max-w-2xl rounded-xl border p-8 text-center">

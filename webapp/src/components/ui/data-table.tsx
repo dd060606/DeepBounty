@@ -5,6 +5,8 @@ import {
   getSortedRowModel,
   type SortingState,
   useReactTable,
+  type RowSelectionState,
+  type OnChangeFn,
 } from "@tanstack/react-table";
 
 import {
@@ -21,12 +23,16 @@ interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
   onRowClick?: (row: TData) => void;
+  rowSelection?: RowSelectionState;
+  onRowSelectionChange?: OnChangeFn<RowSelectionState>;
 }
 
 export function DataTable<TData, TValue>({
   columns,
   data,
   onRowClick,
+  rowSelection,
+  onRowSelectionChange,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = useState<SortingState>([]);
 
@@ -36,8 +42,10 @@ export function DataTable<TData, TValue>({
     getCoreRowModel: getCoreRowModel(),
     onSortingChange: setSorting,
     getSortedRowModel: getSortedRowModel(),
+    onRowSelectionChange: onRowSelectionChange,
     state: {
       sorting,
+      rowSelection: rowSelection || {},
     },
   });
 
