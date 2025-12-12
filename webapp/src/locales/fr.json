@@ -10,7 +10,9 @@
     "close": "Fermer",
     "add": "Ajouter",
     "save": "Enregistrer",
-    "saving": "Enregistrement..."
+    "saving": "Enregistrement...",
+    "actions": "Actions",
+    "delete": "Supprimer"
   },
   "nav": {
     "alerts": "Alertes",
@@ -40,12 +42,25 @@
     "endpoint": "Endpoint",
     "description": "Description",
     "filter": "Filtrer",
+    "deleteSelected": "Supprimer la sélection",
+    "deleteConfirm": {
+      "title": "Supprimer l'alerte",
+      "description": "Êtes-vous sûr de vouloir supprimer cette alerte ?",
+      "titleMultiple": "Supprimer les alertes",
+      "descriptionMultiple": "Êtes-vous sûr de vouloir supprimer {{count}} alertes ?"
+    },
     "empty": {
       "title": "Aucune alerte",
       "hint": "Les nouvelles alertes apparaîtront ici."
     },
     "errors": {
-      "loadAlerts": "Impossible de charger les alertes"
+      "loadAlerts": "Impossible de charger les alertes",
+      "deleteAlert": "Impossible de supprimer l'alerte",
+      "deleteAlerts": "Impossible de supprimer les alertes"
+    },
+    "success": {
+      "deleteAlert": "Alerte supprimée avec succès",
+      "deleteAlerts": "{{count}} alertes supprimées avec succès"
     }
   },
   "auth": {
@@ -135,7 +150,6 @@
     },
     "actions": {
       "edit": "Modifier",
-      "delete": "Supprimer",
       "confirmDelete": "Supprimer cette cible ?",
       "confirmDeleteDesc": "Cette action ne peut pas être annulée. Cette cible et tous ses sous-domaines seront définitivement supprimés.",
       "confirm": "Confirmer",
