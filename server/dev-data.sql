@@ -4,7 +4,10 @@ INSERT INTO public.targets (id, name,"domain","activeScan","createdAt") VALUES
 
 INSERT INTO public.targets_subdomains ("targetId",subdomain) values
      (1,'*.google.com'),
+     (1,'*.cdn.google.com'),
+     (1,'storage.googleapis.com'),
 	 (2,'login.teamviewer.com'),
+	 (2,'*.api.teamviewer.com'),
 	 (2,'teamviewer.com');
 
 INSERT INTO public.alerts ("targetId",name,subdomain,score,confirmed,description,endpoint,"createdAt") VALUES
