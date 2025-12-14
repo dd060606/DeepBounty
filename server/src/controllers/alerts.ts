@@ -37,9 +37,8 @@ export async function getAlerts(req: Request, res: Response) {
 // POST /alerts - create a new alert
 export async function addAlert(req: Request, res: Response) {
   try {
-    const { targetId, name, subdomain, score, confirmed = false, description, endpoint } = req.body;
+    const { name, subdomain, score, confirmed = false, description, endpoint } = req.body;
     const alert = await createAlert({
-      targetId,
       name,
       subdomain,
       score,
