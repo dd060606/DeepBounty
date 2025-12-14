@@ -1,6 +1,10 @@
 import { Alert, NotificationProvider, NotificationService } from "@deepbounty/sdk/types";
 import { DiscordNotifier } from "./discord.js";
 import { ntfyshNotifier } from "./ntfysh.js";
+import config from "@/utils/config.js";
+import Logger from "@/utils/logger.js";
+
+const logger = new Logger("Notifier");
 
 export const NOTIFICATION_PROVIDERS: Record<NotificationService["provider"], NotificationProvider> =
   {
@@ -59,7 +63,7 @@ export const NOTIFICATION_PROVIDERS: Record<NotificationService["provider"], Not
   };
 
 export interface INotifier {
-  send(alert: Alert): Promise<void>;
+  send(alertName: string, targetName: string): Promise<void>;
   test(): Promise<void>;
 }
 
@@ -72,4 +76,33 @@ export class NotificationBuilder {
         return new ntfyshNotifier(service.config);
     }
   }
+}
+
+/**
+ * Send an alert notification to all configured and enabled notification providers
+ * @param alert - The alert to send
+ * @returns Promise that resolves when all notifications are sent (or failed)
+ */
+export async function sendAlertNotification(alertName: string, targetName: string): Promise<void> {
+  const configuration = config.get();
+  const notificationServices = configuration.notificationServices || [];
+
+  // Filter enabled services
+  const enabledServices = notificationServices.filter((service) => service.enabled);
+
+  if (enabledServices.length === 0) {
+    return;
+  }
+
+  // Send to all enabled providers in parallel
+  await Promise.allSettled(
+    enabledServices.map(async (service) => {
+      try {
+        const notifier = NotificationBuilder.create(service);
+        await notifier.send(alertName, targetName);
+      } catch (error) {
+        logger.error(`Failed to send notification via ${service.provider}:`, error);
+      }
+    })
+  );
 }

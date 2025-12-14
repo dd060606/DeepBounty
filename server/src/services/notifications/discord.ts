@@ -11,8 +11,8 @@ export class DiscordNotifier implements INotifier {
     this.notificationRoleID = config.notificationRoleID;
   }
 
-  async send(alert: Alert): Promise<void> {
-    await this.sendNotification(`${alert.targetName} Alert`, alert.name);
+  async send(alertName: string, targetName: string): Promise<void> {
+    await this.sendNotification(`${targetName} Alert`, alertName);
   }
 
   private async sendNotification(title: string, description: string): Promise<void> {

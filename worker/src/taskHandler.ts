@@ -31,6 +31,8 @@ export const executeTask = async (task: TaskExecution): Promise<TaskResult> => {
         cwd: "/tools",
         // Use bash to support all shell features
         shell: "/bin/bash",
+        // Increase maxBuffer to handle large outputs (100MB instead of default 1MB)
+        maxBuffer: 100 * 1024 * 1024,
       });
 
       if (stderr) {
