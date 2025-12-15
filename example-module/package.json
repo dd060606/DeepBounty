@@ -1,26 +1,26 @@
 {
-  "name": "example-module",
-  "version": "1.0.0",
-  "description": "Example module for DeepBounty",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
-  "scripts": {
-    "build": "node build.js"
-  },
-  "keywords": [
-    "deepbounty",
-    "module"
-  ],
-  "author": "Your name",
-  "license": "GPL-3.0-only",
-  "devDependencies": {
-    "@tsconfig/node22": "^22.0.2",
-    "@types/node": "^24.3.0",
-    "esbuild": "^0.25.9",
-    "typescript": "^5.9.2"
-  },
-  "dependencies": {
-    "@deepbounty/sdk": "^1.1.7",
-    "axios": "^1.11.0"
-  }
+	"name": "example-module",
+	"version": "1.0.0",
+	"description": "Example module for DeepBounty",
+	"main": "dist/index.js",
+	"types": "dist/index.d.ts",
+	"scripts": {
+		"build": "node build.js"
+	},
+	"keywords": [
+		"deepbounty",
+		"module"
+	],
+	"author": "Your name",
+	"license": "GPL-3.0-only",
+	"devDependencies": {
+		"@tsconfig/node22": "^22.0.2",
+		"@types/node": "^24.3.0",
+		"esbuild": "^0.25.9",
+		"typescript": "^5.9.2"
+	},
+	"dependencies": {
+		"@deepbounty/sdk": "^1.1.9",
+		"axios": "^1.11.0"
+	}
 }

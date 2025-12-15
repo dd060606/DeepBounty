@@ -1,6 +1,23 @@
 import { TrafficContext, HttpTraffic } from "./types/burpsuite";
 
 /**
+ * Event origin metadata
+ */
+export type EventOrigin = "server" | "module";
+
+/**
+ * Event wrapper with origin metadata
+ */
+export interface EventMetadata<T> {
+	/** Origin of the event */
+	origin: EventOrigin;
+	/** Module ID if origin is "module", undefined if origin is "server" */
+	moduleId?: string;
+	/** Actual event data */
+	data: T;
+}
+
+/**
  * Predefined core events emitted by the server
  * Modules can also emit custom events for inter-module communication
  */
@@ -15,8 +32,11 @@ export interface CoreEvents {
 
 /**
  * Event handler function signature
+ * Receives event data wrapped with metadata about its origin
  */
-export type EventHandler<T = any> = (data: T) => void | Promise<void>;
+export type EventHandler<T = any> = (
+	event: EventMetadata<T>
+) => void | Promise<void>;
 
 /**
  * Subscription object returned when subscribing to events
@@ -45,7 +65,7 @@ export interface IEventBus {
 	 * Emit an event with data
 	 * Non-blocking, async execution with rate limiting and error isolation
 	 * @param event - Event name
-	 * @param data - Event data
+	 * @param data - Event data (will be wrapped with origin metadata internally)
 	 */
 	emit<K extends keyof CoreEvents>(event: K, data: CoreEvents[K]): void;
 	emit<T = any>(event: string, data: T): void;

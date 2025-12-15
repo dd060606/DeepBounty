@@ -58,14 +58,14 @@ export default class ExampleModule implements ModuleLifecycle {
 		*/
 
 		// Subscribe to events
-		this.api.events.subscribe(
-			"http:js",
-			async ({ context, js }: CoreEvents["http:js"]) => {
+		this.api.events.subscribe("http:js", async (event) => {
+			if (event.origin == "server") {
+				const { context, js } = event.data;
 				this.api.logger.info(
 					`Received HTTP JS event: ${context.method} ${context.url} - ${js.slice(0, 100)}${js.length} bytes of JS`
 				);
 			}
-		);
+		});
 	}
 
 	async stop() {
