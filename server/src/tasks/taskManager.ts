@@ -411,9 +411,11 @@ class TaskManager {
 
     // Mark as executed to prevent the scheduler from creating a duplicate execution
     // The scheduler will delete this task when it sees it's oneTime=true and already executed
+    // We set nextExecutionAt to a very distant future to ensure the scheduler doesn't pick it up
+    // before it's cleaned up by handleWorkerResult
     this.registry.updateScheduledTask(taskId, {
       lastExecutedAt: now,
-      nextExecutionAt: new Date(now.getTime() + template.interval * 1000), // Far in the future
+      nextExecutionAt: new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000),
     });
 
     return taskId;
@@ -827,6 +829,14 @@ class TaskManager {
         cb(updatedExecution, enrichedResult);
       } catch {}
     });
+
+    // Cleanup one-time scheduled tasks
+    // This ensures that manually created task instances are removed from the registry
+    // after they have completed execution
+    const scheduledTask = this.registry.getScheduledTask(execution.scheduledTaskId);
+    if (scheduledTask && scheduledTask.oneTime) {
+      this.registry.deleteScheduledTask(scheduledTask.id);
+    }
   }
 
   /**
