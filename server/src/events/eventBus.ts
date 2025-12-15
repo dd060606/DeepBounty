@@ -1,5 +1,11 @@
 import Logger from "@/utils/logger.js";
-import { CoreEvents, EventHandler, EventSubscription, IEventBus } from "@deepbounty/sdk";
+import {
+  CoreEvents,
+  EventHandler,
+  EventSubscription,
+  IEventBus,
+  EventMetadata,
+} from "@deepbounty/sdk";
 import pLimit from "p-limit";
 
 const logger = new Logger("EventBus");
@@ -52,6 +58,7 @@ export class EventBus implements IEventBus {
   /**
    * Emit an event with data
    * Non-blocking, async execution with rate limiting and error isolation
+   * Events from the global bus are marked with origin="server"
    * @param event - Event name
    * @param data - Event data
    */
@@ -69,11 +76,47 @@ export class EventBus implements IEventBus {
       return;
     }
 
+    // Wrap event data with metadata (origin="server" for global bus)
+    const eventMetadata: EventMetadata<any> = {
+      origin: "server",
+      data,
+    };
+
     // Process each handler with rate limiting and error isolation
     handlers.forEach((handler) => {
       this.limit(async () => {
         try {
-          await handler(data);
+          await handler(eventMetadata);
+        } catch (error) {
+          // Error isolation - log but don't throw to prevent cascading failures
+          logger.error(`Error in handler for event '${event}':`, error);
+        }
+      });
+    });
+  }
+
+  /**
+   * Emit raw event data without wrapping (internal use only)
+   * Used by ModuleEventBus to emit pre-wrapped events
+   * @internal
+   */
+  emitRaw(event: string, eventMetadata: EventMetadata<any>): void {
+    const handlers = this.listeners.get(event);
+    if (!handlers || handlers.size === 0) return;
+
+    // Check global backpressure to prevent OOM
+    if (this.limit.pendingCount > 5000) {
+      logger.warn(
+        `Global event queue full (${this.limit.pendingCount}). Dropping event '${event}'.`
+      );
+      return;
+    }
+
+    // Process each handler with rate limiting and error isolation
+    handlers.forEach((handler) => {
+      this.limit(async () => {
+        try {
+          await handler(eventMetadata);
         } catch (error) {
           // Error isolation - log but don't throw to prevent cascading failures
           logger.error(`Error in handler for event '${event}':`, error);

@@ -823,26 +823,70 @@ interface EventSubscription {
 ### Usage Examples
 
 ```typescript
-// Subscribe to core event
-const sub = api.events.subscribe("http:js", async ({ context, js }) => {
-  api.logger.info(`Received JS from ${context.url}`);
-  // Analyze JavaScript code
+// Subscribe to core event with origin filtering
+const sub = api.events.subscribe("http:js", async (event) => {
+  // Event is wrapped with metadata: { origin, moduleId?, data }
+  if (event.origin === "server") {
+    api.logger.info(`Received JS from server: ${event.data.context.url}`);
+    // Analyze JavaScript code from server
+    const { context, js } = event.data;
+  }
 });
 
-// Subscribe to custom event from another module
-api.events.subscribe("custom:new-endpoint", async (endpoint) => {
-  api.logger.info(`New endpoint discovered: ${endpoint}`);
-  // Trigger scan for this endpoint
+// Subscribe to custom event and filter by module
+api.events.subscribe("custom:new-endpoint", async (event) => {
+  // Only process events from specific modules
+  if (event.origin === "module" && event.moduleId === "crawler-module") {
+    api.logger.info(`New endpoint discovered by crawler: ${event.data}`);
+    // Trigger scan for this endpoint
+  }
 });
 
-// Emit custom event
+// Emit custom event (automatically tagged with module origin)
 api.events.emit("custom:scan-complete", {
   targetId: 123,
   findings: [...]
 });
 
+// Example: Filter only server events
+api.events.subscribe("http:traffic", async (event) => {
+  if (event.origin === "server") {
+    // Process only traffic from the server, not from other modules
+    const traffic = event.data;
+  }
+});
+
 // Cleanup
 sub.unsubscribe();
+```
+
+### Event Metadata
+
+All events are automatically wrapped with metadata:
+
+```typescript
+interface EventMetadata<T> {
+  origin: "server" | "module";  // Where the event originated
+  moduleId?: string;            // Module ID (only if origin === "module")
+  data: T;                      // Actual event data
+}
+```
+
+**Usage Pattern**:
+
+```typescript
+api.events.subscribe("some-event", async (event) => {
+  // Filter by origin
+  if (event.origin === "server") {
+    // Event from core system
+  } else if (event.origin === "module") {
+    // Event from another module
+    console.log(`From module: ${event.moduleId}`);
+  }
+  
+  // Access actual data
+  const actualData = event.data;
+});
 ```
 
 ### Event Isolation

@@ -1,4 +1,10 @@
-import { CoreEvents, EventHandler, EventSubscription, IEventBus } from "@deepbounty/sdk";
+import {
+  CoreEvents,
+  EventHandler,
+  EventSubscription,
+  IEventBus,
+  EventMetadata,
+} from "@deepbounty/sdk";
 import pLimit from "p-limit";
 import { EventBus } from "@/events/eventBus.js";
 import Logger from "@/utils/logger.js";
@@ -68,12 +74,22 @@ export class ModuleEventBus implements IEventBus {
 
   /**
    * Emit an event
-   * Passes through to global bus
+   * Wraps data with module origin metadata before passing to global bus
    */
   emit<K extends keyof CoreEvents>(event: K, data: CoreEvents[K]): void;
   emit<T = any>(event: string, data: T): void;
   emit(event: string, data: any): void {
-    this.globalBus.emit(event, data);
+    // Wrap event data with metadata (origin="module")
+    const eventMetadata: EventMetadata<any> = {
+      origin: "module",
+      moduleId: this.moduleId,
+      data,
+    };
+
+    // Emit wrapped event to global bus
+    // Note: We need to emit the raw data, and the global bus will wrap it again
+    // So we need to bypass the global bus wrapping by directly calling listeners
+    (this.globalBus as any).emitRaw(event, eventMetadata);
   }
 
   /**

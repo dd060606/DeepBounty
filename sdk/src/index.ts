@@ -178,11 +178,6 @@ export type ModuleFactory = (
 ) => ModuleLifecycle | Promise<ModuleLifecycle>;
 
 // Re-export EventBus and related types
-export {
-	IEventBus,
-	EventSubscription,
-	CoreEvents,
-	EventHandler,
-} from "./events";
+export * from "./events";
 
 export default {} as any; // Type-only module for modules to import types during compile
