@@ -409,6 +409,13 @@ class TaskManager {
     // Immediately create an execution and try to assign it
     this.createExecution(scheduledTask);
 
+    // Mark as executed to prevent the scheduler from creating a duplicate execution
+    // The scheduler will delete this task when it sees it's oneTime=true and already executed
+    this.registry.updateScheduledTask(taskId, {
+      lastExecutedAt: now,
+      nextExecutionAt: new Date(now.getTime() + template.interval * 1000), // Far in the future
+    });
+
     return taskId;
   }
 
