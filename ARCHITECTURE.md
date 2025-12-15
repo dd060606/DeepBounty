@@ -421,11 +421,9 @@ await api.registerTaskTemplate(
 For CUSTOM scheduling mode, task instances are **always one-time** and automatically deleted after execution:
 
 ```typescript
-await api.createTaskInstance(
-	templateId,
-	targetId,
-	{ url: "https://example.com/new-endpoint" }
-);
+await api.createTaskInstance(templateId, targetId, {
+	url: "https://example.com/new-endpoint",
+});
 ```
 
 **Behavior**:
@@ -692,6 +690,7 @@ await api.createAlert(
 **Target Auto-Detection**:
 
 The `subdomain` parameter is used to automatically detect which target the alert belongs to. It checks:
+
 1. Exact match with target's main domain (`targets.domain`)
 2. Exact match with registered subdomains (`targets_subdomains.subdomain`)
 3. Wildcard pattern match (e.g., `*.example.com` matches `api.example.com`, `*.cdn.apple.com` matches `static.cdn.apple.com`)
@@ -866,9 +865,9 @@ All events are automatically wrapped with metadata:
 
 ```typescript
 interface EventMetadata<T> {
-  origin: "server" | "module";  // Where the event originated
-  moduleId?: string;            // Module ID (only if origin === "module")
-  data: T;                      // Actual event data
+	origin: "server" | "module"; // Where the event originated
+	moduleId?: string; // Module ID (only if origin === "module")
+	data: T; // Actual event data
 }
 ```
 
@@ -876,16 +875,16 @@ interface EventMetadata<T> {
 
 ```typescript
 api.events.subscribe("some-event", async (event) => {
-  // Filter by origin
-  if (event.origin === "server") {
-    // Event from core system
-  } else if (event.origin === "module") {
-    // Event from another module
-    console.log(`From module: ${event.moduleId}`);
-  }
-  
-  // Access actual data
-  const actualData = event.data;
+	// Filter by origin
+	if (event.origin === "server") {
+		// Event from core system
+	} else if (event.origin === "module") {
+		// Event from another module
+		console.log(`From module: ${event.moduleId}`);
+	}
+
+	// Access actual data
+	const actualData = event.data;
 });
 ```
 
@@ -1060,7 +1059,7 @@ export default class MyModule implements ModuleLifecycle {
 	}
 
 	private subscribeToEvents() {
-		this.api.events.subscribe("http:js", async ({ context, js }) => {
+		this.api.events.subscribe("http:js", async (event) => {
 			// Analyze JavaScript
 		});
 	}
@@ -1144,16 +1143,10 @@ const templateId = await api.registerTaskTemplate(
 		const grouped = groupByHostname(targets);
 
 		for (const [hostname, targetIds] of grouped) {
-			await api.createTaskInstance(
-				templateId,
-				targetIds[0],
-				{
-					HOSTNAMES: targetIds
-						.map((id) => getTargetDomain(id))
-						.join(","),
-					TARGET_IDS: targetIds.join(","),
-				}
-			);
+			await api.createTaskInstance(templateId, targetIds[0], {
+				HOSTNAMES: targetIds.map((id) => getTargetDomain(id)).join(","),
+				TARGET_IDS: targetIds.join(","),
+			});
 		}
 	}
 );
@@ -1164,7 +1157,8 @@ const templateId = await api.registerTaskTemplate(
 Trigger scans based on events:
 
 ```typescript
-api.events.subscribe("http:traffic", async ({ request, response }) => {
+api.events.subscribe("http:traffic", async (event) => {
+	const { request, response } = event.data;
 	// New endpoint discovered
 	if (response.status === 200 && !isKnownEndpoint(request.url)) {
 		api.logger.info(`New endpoint: ${request.url}`);
@@ -1189,18 +1183,14 @@ api.events.emit("subdomains:discovered", {
 });
 
 // Module B: Port scanner
-api.events.subscribe(
-	"subdomains:discovered",
-	async ({ targetId, subdomains }) => {
-		for (const subdomain of subdomains) {
-			await api.createTaskInstance(
-				portScanTemplateId,
-				targetId,
-				{ HOST: subdomain }
-			);
-		}
+api.events.subscribe("subdomains:discovered", async (event) => {
+	const { targetId, subdomains } = event.data;
+	for (const subdomain of subdomains) {
+		await api.createTaskInstance(portScanTemplateId, targetId, {
+			HOST: subdomain,
+		});
 	}
-);
+});
 ```
 
 ---
