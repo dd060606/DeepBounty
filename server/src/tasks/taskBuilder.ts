@@ -62,32 +62,55 @@ export async function replaceTargetPlaceholders(
 }
 
 // Replace custom data placeholders with actual custom data
-export function replaceCustomDataPlaceholders(
+// Also replaces USER_AGENT and CUSTOM_HEADER if targetId is provided
+export async function replaceCustomDataPlaceholders(
   commands: string[],
-  customData: Record<string, any> | undefined
-): string[] {
-  if (!customData) return commands;
+  customData: Record<string, any> | undefined,
+  targetId?: number
+): Promise<string[]> {
+  if (!customData && !targetId) return commands;
+
+  // Fetch target settings if targetId is provided
+  let userAgent = "";
+  let customHeader = "";
+  if (targetId) {
+    const targetSettings = await queryOne<{ settings: Record<string, any> } | undefined>(
+      sql`SELECT settings FROM targets_settings WHERE "targetId" = ${targetId}`
+    );
+    const settings = targetSettings?.settings || {};
+    userAgent = settings.userAgent || "";
+    customHeader = settings.customHeader || "";
+  }
 
   return commands.map((cmd) => {
     let replaced = cmd;
 
-    // Replace {{CUSTOM_DATA.key}} placeholders
-    Object.keys(customData).forEach((key) => {
-      const placeholder = new RegExp(`\\{\\{${key}\\}\\}`, "g");
-      const value = customData[key];
+    // Replace custom data placeholders
+    if (customData) {
+      Object.keys(customData).forEach((key) => {
+        const placeholder = new RegExp(`\\{\\{${key}\\}\\}`, "g");
+        const value = customData[key];
 
-      // Handle different value types
-      if (Array.isArray(value)) {
-        // Join arrays with spaces for shell commands
-        replaced = replaced.replace(placeholder, value.join(" "));
-      } else if (typeof value === "object") {
-        // Stringify objects
-        replaced = replaced.replace(placeholder, JSON.stringify(value));
-      } else {
-        // Convert to string for primitives
-        replaced = replaced.replace(placeholder, String(value));
-      }
-    });
+        // Handle different value types
+        if (Array.isArray(value)) {
+          // Join arrays with spaces for shell commands
+          replaced = replaced.replace(placeholder, value.join(" "));
+        } else if (typeof value === "object") {
+          // Stringify objects
+          replaced = replaced.replace(placeholder, JSON.stringify(value));
+        } else {
+          // Convert to string for primitives
+          replaced = replaced.replace(placeholder, String(value));
+        }
+      });
+    }
+
+    // Replace target-specific placeholders if targetId was provided
+    if (targetId) {
+      replaced = replaced
+        .replace(/\{\{USER_AGENT\}\}/g, userAgent)
+        .replace(/\{\{CUSTOM_HEADER\}\}/g, customHeader);
+    }
 
     return replaced;
   });

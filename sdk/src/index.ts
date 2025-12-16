@@ -104,10 +104,10 @@ export interface ServerAPI {
 	 * @param name Friendly name for the task
 	 * @param description Task description
 	 * @param taskContent The task content including commands and tools
-	 * @param interval Interval in seconds between task executions
+	 * @param interval Interval in seconds between task executions. For CUSTOM mode: if <= 0, no automatic scheduling (manual mode only)
 	 * @param schedulingType How to schedule tasks: "TARGET_BASED" (one per target), "GLOBAL" (single instance), or "CUSTOM" (callback-based)
 	 * @param onComplete Optional callback executed when a task instance completes
-	 * @param onSchedule Optional callback for CUSTOM mode, invoked at interval to create instances
+	 * @param onSchedule Optional callback for CUSTOM mode, invoked at interval to create instances (not called if interval <= 0)
 	 * @returns The ID of the registered task template
 	 */
 	registerTaskTemplate(

@@ -1,3 +1,6 @@
+import { query, queryOne } from "@/db/database.js";
+import { sql } from "drizzle-orm";
+
 export function normalizeDomain(input: string): string {
   const trimmed = input.trim();
   if (!trimmed) return "";
@@ -43,4 +46,119 @@ export function isValidSubdomainEntry(input: string): boolean {
     return isValidDomain(rest);
   }
   return isValidDomain(trimmed);
+}
+
+/**
+ * Extract potential domains/URLs from command strings
+ * Returns a list of normalized domains found in the commands
+ */
+export function extractDomainsFromCommands(commands: string[]): string[] {
+  const domains = new Set<string>();
+
+  // Regex patterns to match URLs and domains
+  const urlPattern = /https?:\/\/([a-zA-Z0-9.-]+(?:\.[a-zA-Z]{2,}))/g;
+  const domainPattern =
+    /(?:^|[\s"'])((?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,})(?:[\s\/"']|$)/g;
+
+  for (const cmd of commands) {
+    // Extract from URLs (https://example.com)
+    let match;
+    while ((match = urlPattern.exec(cmd)) !== null) {
+      const normalized = normalizeDomain(match[1]);
+      if (normalized && isValidDomain(normalized)) {
+        domains.add(normalized);
+      }
+    }
+
+    // Extract standalone domains (example.com)
+    while ((match = domainPattern.exec(cmd)) !== null) {
+      const normalized = normalizeDomain(match[1]);
+      if (normalized && isValidDomain(normalized)) {
+        domains.add(normalized);
+      }
+    }
+  }
+
+  return Array.from(domains);
+}
+
+/**
+ * Detect target ID from subdomain by checking:
+ * 1. Exact match with target's main domain
+ * 2. Exact match with registered subdomains
+ * 3. Wildcard match with registered subdomain patterns (*.example.com)
+ * 4. Parent domain match (check if subdomain ends with any target domain)
+ */
+export async function detectTargetId(subdomain: string): Promise<number | null> {
+  // 1. Check if subdomain matches a target's main domain exactly
+  const targetByDomain = await queryOne<{ id: number }>(
+    sql`SELECT id FROM targets WHERE domain = ${subdomain}`
+  );
+  if (targetByDomain) {
+    return targetByDomain.id;
+  }
+
+  // 2. Check if subdomain matches an exact subdomain in targets_subdomains
+  const targetByExactSubdomain = await queryOne<{ targetId: number }>(
+    sql`SELECT "targetId" FROM targets_subdomains WHERE subdomain = ${subdomain}`
+  );
+  if (targetByExactSubdomain) {
+    return targetByExactSubdomain.targetId;
+  }
+
+  // 3. Check wildcard patterns (e.g., *.cdn.other.com pointing to a different target)
+  // This handles "exotic" wildcards where the wildcard base domain differs from the target's main domain
+  // Note: Simple wildcards like *.example.com (where example.com is the target) are handled by step 4
+  const allWildcards = await query<{ targetId: number; subdomain: string; targetDomain: string }>(
+    sql`SELECT ts."targetId", ts.subdomain, t.domain as "targetDomain" 
+        FROM targets_subdomains ts 
+        JOIN targets t ON t.id = ts."targetId"
+        WHERE ts.subdomain LIKE '*%'`
+  );
+
+  for (const wildcardEntry of allWildcards) {
+    const wildcardPattern = wildcardEntry.subdomain;
+
+    if (wildcardPattern.startsWith("*.")) {
+      const baseDomain = wildcardPattern.substring(2); // Remove "*."
+
+      // Skip if wildcard matches target's main domain (step 4 will handle this)
+      if (baseDomain === wildcardEntry.targetDomain) {
+        continue;
+      }
+
+      // Only process "exotic" wildcards (e.g., *.cdn.other.com for target example.com)
+      if (subdomain.endsWith(`.${baseDomain}`)) {
+        const prefix = subdomain.substring(0, subdomain.length - baseDomain.length - 1);
+        if (prefix.length > 0 && !prefix.includes("*")) {
+          return wildcardEntry.targetId;
+        }
+      }
+
+      if (subdomain === baseDomain) {
+        return wildcardEntry.targetId;
+      }
+    }
+  }
+
+  // 4. Fallback: Check if the subdomain belongs to ANY target's main domain
+  // This handles cases like "cdn.domain.com" where "domain.com" is a target
+  // but "cdn.domain.com" is not explicitly in targets_subdomains.
+  const allTargets = await query<{ id: number; domain: string }>(
+    sql`SELECT id, domain FROM targets`
+  );
+
+  // Sort by length descending to match the most specific domain first
+  // e.g. match "api.staging.example.com" to "staging.example.com" before "example.com"
+  allTargets.sort((a, b) => b.domain.length - a.domain.length);
+
+  for (const target of allTargets) {
+    // Check if subdomain IS the domain OR ends with .domain
+    // This prevents "myteamviewer.com" from matching "teamviewer.com"
+    if (subdomain === target.domain || subdomain.endsWith(`.${target.domain}`)) {
+      return target.id;
+    }
+  }
+
+  return null;
 }
