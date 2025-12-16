@@ -260,21 +260,27 @@ await api.registerTaskTemplate(
 
 #### 3. **CUSTOM**
 
-- **Behavior**: No automatic task instances. A scheduler task triggers an `onSchedule` callback at regular intervals.
-- **Use Case**: Dynamic scheduling, batching, conditional execution based on runtime data
-- **Example**: Module is called every hour, analyzes targets, and creates optimized batched instances
+- **Behavior**: No automatic task instances. Either a scheduler triggers an `onSchedule` callback at intervals, or purely manual triggering.
+- **Use Case**: Dynamic scheduling, batching, conditional execution, event-driven scans
+- **Example**: Module analyzes targets periodically or responds to events, creating optimized task instances
 - **Immediate Execution**: Task instances created via `createTaskInstance` start immediately, without waiting for the next interval
 - **How It Works**:
+  **With Automatic Scheduling (interval > 0)**:
     1. One scheduler task is created with the template's interval
     2. When the interval expires, the `onSchedule` callback is invoked with the template ID
     3. Inside `onSchedule`, module calls `api.createTaskInstance()` to create actual task instances
     4. Task instances start executing immediately (no waiting for next scheduler cycle)
     5. Task instances execute and return results
     6. The `onComplete` callback receives results from each instance (if provided)
+       **With Manual-Only Mode (interval <= 0)**:
+    7. No scheduler task is created
+    8. The `onSchedule` callback is **never** called automatically
+    9. Module must manually call `api.createTaskInstance()` when needed (e.g., in response to events)
+    10. Task instances execute immediately upon creation
 
 ````typescript
-// Register template with CUSTOM scheduling
-const templateId = await api.registerTaskTemplate(
+// Example 1: CUSTOM with automatic scheduling (interval > 0)
+const scheduledTemplateId = await api.registerTaskTemplate(
 	"custom-scan",
 	"Custom Scan",
 	"Dynamically scheduled scan",
@@ -308,6 +314,32 @@ const templateId = await api.registerTaskTemplate(
 		}
 	}
 );
+
+// Example 2: CUSTOM with manual-only mode (interval <= 0)
+const manualTemplateId = await api.registerTaskTemplate(
+	"event-driven-scan",
+	"Event-Driven Scan",
+	"Scan triggered by events only",
+	{
+		commands: ["tool:{scanner} {{URL}}"],
+	},
+	0, // No automatic scheduling (manual mode)
+	"CUSTOM",
+	(result) => {
+		// Called for each manually triggered task result
+		if (result.success) {
+			console.log(`Scan completed for ${result.customData?.URL}`);
+		}
+	}
+);
+
+// Later, trigger scans manually based on events:
+api.events.subscribe("http:new-endpoint", async (event) => {
+	// Create task instance on-demand
+	await api.createTaskInstance(manualTemplateId, event.data.targetId, {
+		URL: event.data.url,
+	});
+});
 ```### Task Template Structure
 
 ```typescript
@@ -558,10 +590,10 @@ async registerTaskTemplate(
   name: string,                   // Display name
   description: string,            // Description
   taskContent: TaskContent,       // Commands and tools
-  interval: number,               // Seconds between executions
+  interval: number,               // Seconds between executions. For CUSTOM: if <= 0, no automatic scheduling
   schedulingType?: SchedulingType, // TARGET_BASED | GLOBAL | CUSTOM (default: TARGET_BASED)
   onComplete?: (result: TaskResult) => void, // Called when task instances complete
-  onSchedule?: (templateId: number) => void | Promise<void> // For CUSTOM: called at interval
+  onSchedule?: (templateId: number) => void | Promise<void> // For CUSTOM: called at interval (not if interval <= 0)
 ): Promise<number>; // Returns template ID
 
 // Example: TARGET_BASED with result callback
@@ -1152,20 +1184,42 @@ const templateId = await api.registerTaskTemplate(
 );
 ```
 
-### Event-Driven Scans
+### Event-Driven Scans (Manual-Only CUSTOM Mode)
 
-Trigger scans based on events:
+For purely event-driven scans, use CUSTOM mode with `interval <= 0` to disable automatic scheduling:
 
 ```typescript
+// Register template in manual-only mode (no automatic scheduling)
+const scanTemplateId = await api.registerTaskTemplate(
+	"event-scan",
+	"Event-Driven Scan",
+	"Scan triggered by discovered endpoints",
+	{
+		commands: ["tool:{scanner} {{ENDPOINT}}"],
+		requiredTools: [SCANNER_TOOL],
+		extractResult: true,
+	},
+	0, // interval <= 0: manual mode only, no automatic scheduling
+	"CUSTOM",
+	(result) => {
+		if (result.success && result.output) {
+			// Process scan results
+			const findings = JSON.parse(result.output);
+			findings.forEach((f) => api.createAlert(/* ... */));
+		}
+	}
+);
+
+// Trigger scans manually based on events
 api.events.subscribe("http:traffic", async (event) => {
 	const { request, response } = event.data;
 	// New endpoint discovered
 	if (response.status === 200 && !isKnownEndpoint(request.url)) {
 		api.logger.info(`New endpoint: ${request.url}`);
 
-		// Create targeted scan
+		// Create targeted scan instance (executes immediately)
 		await api.createTaskInstance(
-			targetedScanTemplateId,
+			scanTemplateId,
 			getTargetIdFromUrl(request.url),
 			{ ENDPOINT: request.url }
 		);

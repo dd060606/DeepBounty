@@ -9,6 +9,7 @@ import getRegistry from "../utils/registry.js";
 import { getMissingTools } from "@/utils/taskUtils.js";
 import { getTaskTemplateService } from "./taskTemplateService.js";
 import Logger from "@/utils/logger.js";
+import { normalizeDomain, detectTargetId, extractDomainsFromCommands } from "@/utils/domains.js";
 
 const logger = new Logger("Tasks-Manager");
 
@@ -293,9 +294,16 @@ class TaskManager {
       case "CUSTOM": {
         // For CUSTOM tasks, create ONE scheduler task that triggers the onSchedule callback
         // The callback then creates task instances via createTaskInstance
+        // If interval <= 0, no scheduler task is created (manual mode only)
         const schedulerTasks = existingTasks.filter((t) => t.targetId === undefined);
 
-        if (schedulerTasks.length === 0) {
+        if (template.interval <= 0) {
+          // Manual mode: no automatic scheduling, module uses createTaskInstance only
+          // Remove any existing scheduler tasks
+          schedulerTasks.forEach((task) => {
+            this.registry.deleteScheduledTask(task.id);
+          });
+        } else if (schedulerTasks.length === 0) {
           // Create the scheduler task
           const taskId = this.registry.generateTaskId();
           const now = new Date();
@@ -366,6 +374,7 @@ class TaskManager {
   /**
    * Create a task instance manually (for CUSTOM scheduling type)
    * Task instances always start immediately upon creation and are automatically deleted after execution.
+   * If targetId is not provided, attempts to auto-detect it from domains found in the processed commands.
    * @param templateId - ID of the template to create an instance for
    * @param targetId - Optional target ID for this instance
    * @param customData - Optional custom data to attach to this instance
@@ -379,6 +388,28 @@ class TaskManager {
     const template = await this.templateService.getTemplate(templateId);
     if (!template) {
       throw new Error(`Template ${templateId} not found`);
+    }
+
+    // Auto-detect targetId from processed commands if not provided
+    if (!targetId) {
+      // Process commands with customData placeholders first
+      const processedCommands = await replaceCustomDataPlaceholders(
+        template.content.commands,
+        customData,
+        undefined // No targetId yet
+      );
+
+      // Extract domains from the processed commands
+      const domains = extractDomainsFromCommands(processedCommands);
+
+      // Try to detect targetId from each extracted domain
+      for (const domain of domains) {
+        const detectedId = await detectTargetId(domain);
+        if (detectedId) {
+          targetId = detectedId;
+          break;
+        }
+      }
     }
 
     // Verify this is a CUSTOM template
@@ -705,9 +736,10 @@ class TaskManager {
         );
 
         // Replace custom data placeholders if applicable
-        executionToSend.content.commands = replaceCustomDataPlaceholders(
+        executionToSend.content.commands = await replaceCustomDataPlaceholders(
           executionToSend.content.commands,
-          executionToSend.customData
+          executionToSend.customData,
+          executionToSend.targetId
         );
 
         // Assign execution to chosen worker
