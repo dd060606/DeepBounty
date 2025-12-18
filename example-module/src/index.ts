@@ -3,6 +3,7 @@ import { sendTestRequest } from "./utils";
 import { FIND_SUBDOMAINS_TASK, subdomainsCallback } from "./tasks/subfinder";
 import { SUBFINDER } from "./tools";
 import { initializeStorage } from "./storage";
+import { filesApiExample } from "./filesExample";
 
 export default class ExampleModule implements ModuleLifecycle {
 	constructor(private api: ServerAPI) {}
@@ -32,6 +33,9 @@ export default class ExampleModule implements ModuleLifecycle {
 		this.registerTasks();
 
 		this.api.logger.info("Example module: run");
+
+		// Demonstrate the Files API
+		filesApiExample(this.api);
 
 		// Send a web request using a external library (axios)
 		const response = await sendTestRequest();

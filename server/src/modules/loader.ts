@@ -5,6 +5,7 @@ import { createRequire } from "module";
 import Logger from "@/utils/logger.js";
 import { ModuleConfig } from "./moduleConfig.js";
 import { closeAllDatabases, ModuleStorage } from "./moduleStorage.js";
+import { ModuleFiles } from "./moduleFiles.js";
 import { ServerAPI } from "@deepbounty/sdk";
 import { getTaskAPI } from "@/tasks/taskAPI.js";
 import getRegistry from "@/utils/registry.js";
@@ -27,6 +28,7 @@ function readFirstExistingFile(files: string[]): string | null {
 function buildModuleSDK(moduleId: string, moduleName: string): ServerAPI {
   const taskAPI = getTaskAPI(moduleId);
   const storage = new ModuleStorage(moduleId);
+  const files = new ModuleFiles(moduleId);
 
   // Create a secure, isolated event bus for this module
   const moduleBus = new ModuleEventBus(getEventBus(), moduleId);
@@ -43,6 +45,7 @@ function buildModuleSDK(moduleId: string, moduleName: string): ServerAPI {
       createTable: storage.createTable.bind(storage),
       dropTable: storage.dropTable.bind(storage),
     },
+    files: files,
     events: moduleBus,
     registerTaskTemplate: async (
       uniqueKey,

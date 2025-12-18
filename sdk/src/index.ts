@@ -92,11 +92,96 @@ export interface StorageAPI {
 	dropTable(tableName: string): void;
 }
 
+/**
+ * ScopedDirectory provides isolated file system access within a specific directory.
+ * All file operations are restricted to the base directory and its subdirectories.
+ */
+export interface ScopedDirectory {
+	/**
+	 * Write binary data to a file (creates parent directories if needed)
+	 * @param relativePath Path relative to this directory (supports nested paths like "subfolder/file.bin")
+	 * @param data Binary data to write
+	 */
+	writeFile(relativePath: string, data: Buffer | Uint8Array): void;
+
+	/**
+	 * Write text to a file (creates parent directories if needed)
+	 * @param relativePath Path relative to this directory (supports nested paths like "logs/output.txt")
+	 * @param text Text content to write
+	 * @param encoding Text encoding (default: "utf8")
+	 */
+	writeFileText(
+		relativePath: string,
+		text: string,
+		encoding?: BufferEncoding
+	): void;
+
+	/**
+	 * Read binary data from a file
+	 * @param relativePath Path relative to this directory
+	 * @returns Binary data as Buffer
+	 */
+	readFile(relativePath: string): Buffer;
+
+	/**
+	 * Read text from a file
+	 * @param relativePath Path relative to this directory
+	 * @param encoding Text encoding (default: "utf8")
+	 * @returns Text content
+	 */
+	readFileText(relativePath: string, encoding?: BufferEncoding): string;
+
+	/**
+	 * Delete a file
+	 * @param relativePath Path relative to this directory
+	 */
+	deleteFile(relativePath: string): void;
+
+	/**
+	 * Get a scoped subdirectory (creates it if it doesn't exist)
+	 * Returns a new ScopedDirectory object for the subdirectory
+	 * @param relativePath Path relative to this directory
+	 * @returns New ScopedDirectory for the subdirectory
+	 */
+	getSubdirectory(relativePath: string): ScopedDirectory;
+
+	/**
+	 * List all files in a directory (optionally in a subdirectory)
+	 * @param subdirPath Optional subdirectory path to list files from
+	 * @returns Array of relative file paths
+	 */
+	listFiles(subdirPath?: string): string[];
+
+	/**
+	 * Check if a file exists
+	 * @param relativePath Path relative to this directory
+	 * @returns true if the file exists, false otherwise
+	 */
+	fileExists(relativePath: string): boolean;
+}
+
+/**
+ * FilesAPI provides file system access for modules.
+ * Each module can create isolated directories within their module folder.
+ */
+export interface FilesAPI {
+	/**
+	 * Get or create a directory by path (supports nested paths like "cache/images")
+	 * Returns a ScopedDirectory object for isolated file operations.
+	 * The directory is automatically created if it doesn't exist.
+	 *
+	 * @param directoryPath Directory path relative to module's files folder (e.g., "cache", "exports/json")
+	 * @returns ScopedDirectory object for file operations within this directory
+	 */
+	getDirectory(directoryPath: string): ScopedDirectory;
+}
+
 export interface ServerAPI {
 	version: string; // SDK version
 	logger: Logger;
 	config: ConfigAPI;
 	storage: StorageAPI;
+	files: FilesAPI;
 	events: IEventBus;
 	/**
 	 * Register a task template that can be scheduled for all targets
