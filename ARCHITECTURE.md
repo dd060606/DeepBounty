@@ -484,6 +484,7 @@ interface ServerAPI {
   logger: Logger;               // Logging interface
   config: ConfigAPI;            // Module configuration
   storage: StorageAPI;          // Module-specific SQLite database
+  files: FilesAPI;              // Module-specific file system
   events: IEventBus;            // Event pub/sub system
 
   // Task management
@@ -729,6 +730,91 @@ The `subdomain` parameter is used to automatically detect which target the alert
 
 If no target is found, an error is thrown.
 
+### File Management
+
+Modules can manage files and directories within their isolated module space using the Files API.
+
+```typescript
+interface FilesAPI {
+	/**
+	 * Get or create a directory (supports nested paths like "cache/images")
+	 * Returns a ScopedDirectory object
+	 */
+	getDirectory(directoryPath: string): ScopedDirectory;
+}
+
+interface ScopedDirectory {
+	// Write operations
+	writeFile(relativePath: string, data: Buffer | Uint8Array): void;
+	writeFileText(
+		relativePath: string,
+		text: string,
+		encoding?: BufferEncoding
+	): void;
+
+	// Read operations
+	readFile(relativePath: string): Buffer;
+	readFileText(relativePath: string, encoding?: BufferEncoding): string;
+
+	// File management
+	deleteFile(relativePath: string): void;
+	fileExists(relativePath: string): boolean;
+	listFiles(subdirPath?: string): string[];
+
+	// Directory management
+	getSubdirectory(relativePath: string): ScopedDirectory;
+}
+```
+
+**Usage Examples**:
+
+```typescript
+// Get a cache directory (auto-created if doesn't exist)
+const cache = api.files.getDirectory("cache");
+
+// Write and read text files
+cache.writeFileText("config.json", JSON.stringify({ version: 1 }));
+const config = JSON.parse(cache.readFileText("config.json"));
+
+// Write and read binary files
+const imageBuffer = Buffer.from(imageData);
+cache.writeFile("thumbnail.png", imageBuffer);
+const loadedImage = cache.readFile("thumbnail.png");
+
+// Nested directory structure
+const exports = api.files.getDirectory("exports");
+exports.writeFileText("data/results.csv", csvData); // Auto-creates data/ subdirectory
+
+// Work with subdirectories
+const images = exports.getSubdirectory("images");
+images.writeFile("screenshot.png", screenshotBuffer);
+
+// List files
+const files = cache.listFiles(); // ["config.json", "thumbnail.png"]
+const dataFiles = exports.listFiles("data"); // ["results.csv"]
+
+// Check existence
+if (cache.fileExists("old-cache.json")) {
+	cache.deleteFile("old-cache.json");
+}
+```
+
+**Storage Location**:
+
+```
+server/modules/{moduleId}/
+├── data.db          # SQLite database (storage API)
+└── files/           # File system storage (files API)
+    ├── cache/
+    │   ├── config.json
+    │   └── thumbnail.png
+    └── exports/
+        ├── data/
+        │   └── results.csv
+        └── images/
+            └── screenshot.png
+```
+
 ---
 
 ## Data Flow
@@ -935,10 +1021,11 @@ api.events.subscribe("some-event", async (event) => {
 
 1. **Core PostgreSQL** (server): Shared data (targets, alerts, tasks, users)
 2. **Module SQLite** (per-module): Isolated storage for each module
+3. **Module File System** (per-module): Isolated file storage for each module
 
 ### Module Storage
 
-Each module gets a dedicated SQLite database file: `server/storage/modules/{moduleId}.db`
+Each module gets a dedicated SQLite database file: `server/modules/{moduleId}/data.db`
 
 **Characteristics**:
 
@@ -946,6 +1033,35 @@ Each module gets a dedicated SQLite database file: `server/storage/modules/{modu
 - Persistent: Data survives server restarts
 - SQLite: Lightweight, file-based, no external dependencies
 - Full SQL: Supports CREATE TABLE, INSERT, UPDATE, DELETE, joins, indexes, etc.
+
+### Module File System
+
+Each module gets a dedicated file system directory: `server/modules/{moduleId}/files/`
+
+**Characteristics**:
+
+- Isolated: Modules can only access files in their own directory
+- Persistent: Files survive server restarts
+- Nested Structure: Supports organizing files in subdirectories
+- Auto-Creation: Directories are created automatically when accessed
+
+**File Organization Example**:
+
+```
+server/modules/{moduleId}/
+├── module.yml       # Module manifest
+├── index.js         # Entry point
+├── data.db          # SQLite database (storage API)
+└── files/           # File system storage (files API)
+    ├── cache/       # Temporary cached data
+    │   ├── config.json
+    │   └── thumbnails/
+    │       └── image1.png
+    ├── exports/     # Exported results
+    │   └── report.html
+    └── logs/        # Module-specific logs
+        └── scan-history.txt
+```
 
 **Best Practices**:
 
@@ -1268,9 +1384,16 @@ api.events.subscribe("subdomains:discovered", async (event) => {
 
 ### Storage Issues
 
-1. Check SQLite file exists: `server/storage/modules/{moduleId}.db`
+1. Check SQLite file exists: `server/modules/{moduleId}/data.db`
 2. Verify SQL syntax (SQLite dialect)
 3. Use `api.logger` to debug queries
+
+### File System Issues
+
+1. Check files directory exists: `server/modules/{moduleId}/files/`
+2. Verify path validation (no `..` or absolute paths)
+3. Check file permissions and disk space
+4. Use `api.logger` to debug file operations
 
 ### Event Not Received
 
@@ -1296,6 +1419,7 @@ api.events.subscribe("subdomains:discovered", async (event) => {
 - **Efficient scheduling**: Use CUSTOM mode for optimization
 - **Avoid blocking**: Use async/await, don't block event loop
 - **Resource cleanup**: Unsubscribe from events in `stop()`
+- **Organize files**: Use subdirectories to structure data logically
 
 ### Reliability
 
