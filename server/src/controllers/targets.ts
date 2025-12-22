@@ -154,7 +154,6 @@ export function setTargetSubdomains(req: Request, res: Response) {
       return Promise.all(promises);
     })
     .then(() => {
-      logger.info(`Updated subdomains for target ID ${id}`);
       incrementScopeVersion();
       res.sendStatus(200);
     })
@@ -195,7 +194,6 @@ export function setTargetSettings(req: Request, res: Response) {
       );
     })
     .then(() => {
-      logger.info(`Updated settings for target ID ${id}`);
       res.sendStatus(200);
     })
     .catch((error) => {
