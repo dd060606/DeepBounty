@@ -147,7 +147,10 @@ export default function ModuleDialog({
           </DialogHeader>
           <Tabs defaultValue="general" className="w-full">
             <TabsList>
-              <TabsTrigger value="general">{t("tabs.general")}</TabsTrigger>
+              {/* If no settings, hide the general tab */}
+              {settings.length > 0 && (
+                <TabsTrigger value="general">{t("tabs.general")}</TabsTrigger>
+              )}
               <TabsTrigger value="tasks">{t("tabs.tasks")}</TabsTrigger>
             </TabsList>
             {/* Module settings */}
