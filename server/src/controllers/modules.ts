@@ -43,7 +43,6 @@ export const updateModuleSettings = async (req: Request, res: Response) => {
        DO UPDATE SET "value" = EXCLUDED."value"`
     );
 
-    logger.info(`Updated settings for module ID '${moduleId}'`);
     res.status(204).send();
   } catch (error) {
     logger.error("Error updating module settings", error);
