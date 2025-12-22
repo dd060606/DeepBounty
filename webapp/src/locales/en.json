@@ -237,7 +237,7 @@
       "cleanup": "Clean Up",
       "cleanupSuccess": "Tasks cleaned up successfully. The server will restart.",
       "cleanupError": "Failed to cleanup tasks",
-      "resetModules": "Reset Modules Database",
+      "resetModules": "Reset Modules",
       "resetModulesDesc": "Reset all module data to default",
       "reset": "Reset",
       "resetSuccess": "Modules reset successfully. The server will restart.",

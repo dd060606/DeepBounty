@@ -2,7 +2,7 @@ import {
   getSettings,
   regenerateBurpsuiteKey,
   regenerateWorkerKey,
-  resetModulesDatabases,
+  resetModulesData,
   cleanupTasks,
   updateSettings,
   restartServer,
@@ -26,7 +26,7 @@ router.post("/regenerate/worker-key", regenerateWorkerKey);
 router.post("/regenerate/burpsuite-key", regenerateBurpsuiteKey);
 
 // POST /settings/reset-modules
-router.post("/reset-modules", resetModulesDatabases);
+router.post("/reset-modules", resetModulesData);
 
 // POST /settings/cleanup-tasks
 router.post("/cleanup-tasks", cleanupTasks);

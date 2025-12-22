@@ -905,6 +905,10 @@ interface CoreEvents {
 		context: TrafficContext;
 		js: string;
 	};
+
+	"target:created": Target; // New target created
+	"target:updated": Target; // Target updated
+	"target:deleted": Target; // Target deleted
 }
 ```
 
