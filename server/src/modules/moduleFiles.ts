@@ -227,3 +227,24 @@ export class ModuleFiles {
     }
   }
 }
+
+/*
+ * Clear all module data by deleting their custom directories and files
+ */
+export function clearAllModuleFiles(): void {
+  try {
+    if (!fs.existsSync(MODULES_DIR)) {
+      return;
+    }
+    const moduleDirs = fs.readdirSync(MODULES_DIR, { withFileTypes: true });
+    for (const dirent of moduleDirs) {
+      if (dirent.isDirectory()) {
+        const modulePath = path.join(MODULES_DIR, dirent.name);
+        fs.rmSync(modulePath, { recursive: true, force: true });
+      }
+    }
+  } catch (err) {
+    logger.error("Failed to clear all module files:", err);
+    throw err;
+  }
+}

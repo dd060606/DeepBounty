@@ -236,7 +236,7 @@
       "cleanup": "Nettoyer",
       "cleanupSuccess": "Tâches nettoyée avec succès. Le serveur va redémarrer.",
       "cleanupError": "Impossible de nettoyer les tâches enregistrées",
-      "resetModules": "Réinitialiser la base de données des modules",
+      "resetModules": "Réinitialiser les modules",
       "resetModulesDesc": "Réinitialiser toutes les données des modules",
       "reset": "Réinitialiser",
       "resetSuccess": "Modules réinitialisés avec succès. Le serveur va redémarrer.",

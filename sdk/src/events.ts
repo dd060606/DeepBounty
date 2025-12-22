@@ -1,4 +1,5 @@
 import { TrafficContext, HttpTraffic } from "./types/burpsuite";
+import { Target } from "./types/targets";
 
 /**
  * Event origin metadata
@@ -28,6 +29,11 @@ export interface CoreEvents {
 	"http:js": { context: TrafficContext; js: string };
 	// HTML content detected in HTTP responses
 	"http:html": { context: TrafficContext; html: string };
+
+	// Target events
+	"target:created": Target;
+	"target:updated": Target;
+	"target:deleted": Target;
 }
 
 /**

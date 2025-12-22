@@ -152,7 +152,7 @@ export function closeAllDatabases(): void {
  * Clear all databases
  * Used to reset module storage (reinitialization)
  */
-export function clearAllDatabases(): void {
+export function clearAllModuleDatabases(): void {
   logger.info("Clearing all module databases...");
   for (const [moduleId, db] of dbConnections.entries()) {
     try {

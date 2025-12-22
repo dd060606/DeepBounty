@@ -5,6 +5,7 @@ import { Target } from "@deepbounty/sdk/types";
 import { sql } from "drizzle-orm";
 import { Request, Response } from "express";
 import { incrementScopeVersion } from "@/controllers/scope.js";
+import { getEventBus } from "@/events/eventBus.js";
 
 const logger = new Logger("Targets");
 
@@ -68,6 +69,7 @@ export function addTarget(req: Request, res: Response) {
       logger.info(`Added new target: ${name} (${domain})`);
       //Sync tasks for the new target
       getTaskManager().syncAllTasks();
+      getEventBus().emit("target:created", result);
       res.status(201).json(result);
     })
     .catch((error) => {
@@ -94,6 +96,7 @@ export function editTarget(req: Request, res: Response) {
         getTaskManager().syncAllTasks();
       }
 
+      getEventBus().emit("target:updated", result);
       res.json(result);
     })
     .catch((error) => {
@@ -113,6 +116,8 @@ export function deleteTarget(req: Request, res: Response) {
       }
       logger.info(`Deleted target: ${result.name} (${result.domain})`);
       incrementScopeVersion();
+      getTaskManager().syncAllTasks();
+      getEventBus().emit("target:deleted", result);
       res.sendStatus(200);
     })
     .catch((error) => {
