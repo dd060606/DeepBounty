@@ -152,18 +152,23 @@ export function closeAllDatabases(): void {
  * Clear all databases
  * Used to reset module storage (reinitialization)
  */
-export function clearAllModuleDatabases(): void {
+export async function clearAllModuleDatabases(): Promise<void> {
   logger.info("Clearing all module databases...");
-  for (const [moduleId, db] of dbConnections.entries()) {
-    try {
-      if (db.isOpen) {
-        db.close();
+
+  if (!fs.existsSync(MODULES_DIR)) return;
+
+  const modules = fs.readdirSync(MODULES_DIR);
+
+  // Delete each module's database file
+  for (const moduleId of modules) {
+    const dbPath = path.join(MODULES_DIR, moduleId, "data.db");
+    if (fs.existsSync(dbPath)) {
+      try {
+        fs.unlinkSync(dbPath);
+        logger.info(`Deleted database for module "${moduleId}"`);
+      } catch (err) {
+        logger.error(`Failed to delete database for module "${moduleId}"`, err);
       }
-      const dbPath = path.join(MODULES_DIR, moduleId, "data.db");
-      fs.unlinkSync(dbPath);
-    } catch (err) {
-      logger.error(`Error closing database for module "${moduleId}"`, err);
     }
   }
-  dbConnections.clear();
 }
