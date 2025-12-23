@@ -35,41 +35,49 @@ export async function replaceTargetPlaceholders(
   commands: string[],
   targetId: number | undefined
 ): Promise<string[]> {
-  // For GLOBAL or CUSTOM tasks without target, return commands as-is
-  if (!targetId) return Promise.resolve(commands);
+  let userAgent = "DeepBounty-Agent/1.0";
+  let customHeader = "X-Bug-Bounty: DeepBounty";
+  let target: Target | undefined;
 
-  // Fetch target from database
-  const target = await queryOne<Target>(sql`SELECT * FROM targets WHERE id = ${targetId}`);
-  if (!target) return Promise.resolve(commands);
+  if (targetId) {
+    // Fetch target from database
+    target = await queryOne<Target>(sql`SELECT * FROM targets WHERE id = ${targetId}`);
 
-  // Fetch target settings
-  const targetSettings = await queryOne<{ settings: Record<string, any> } | undefined>(
-    sql`SELECT settings FROM targets_settings WHERE "targetId" = ${targetId}`
-  );
+    if (target) {
+      // Fetch target settings
+      const targetSettings = await queryOne<{ settings: Record<string, any> } | undefined>(
+        sql`SELECT settings FROM targets_settings WHERE "targetId" = ${targetId}`
+      );
 
-  const settings = targetSettings?.settings || {};
-  const userAgent = settings.userAgent || "";
-  const customHeader = settings.customHeader || "";
+      const settings = targetSettings?.settings || {};
+      if (settings.userAgent) userAgent = settings.userAgent;
+      if (settings.customHeader) customHeader = settings.customHeader;
+    }
+  }
 
-  return commands.map((cmd) =>
-    cmd
-      .replace(/\{\{TARGET_DOMAIN\}\}/g, target.domain)
-      .replace(/\{\{TARGET_ID\}\}/g, String(target.id))
-      .replace(/\{\{TARGET_NAME\}\}/g, target.name)
+  return commands.map((cmd) => {
+    let replaced = cmd
       .replace(/\{\{USER_AGENT\}\}/g, userAgent)
-      .replace(/\{\{CUSTOM_HEADER\}\}/g, customHeader)
-  );
+      .replace(/\{\{CUSTOM_HEADER\}\}/g, customHeader);
+
+    if (target) {
+      replaced = replaced
+        .replace(/\{\{TARGET_DOMAIN\}\}/g, target.domain)
+        .replace(/\{\{TARGET_ID\}\}/g, String(target.id))
+        .replace(/\{\{TARGET_NAME\}\}/g, target.name);
+    }
+
+    return replaced;
+  });
 }
 
 // Replace custom data placeholders with actual custom data
-// Also replaces USER_AGENT and CUSTOM_HEADER if targetId is provided
+// Also replaces USER_AGENT and CUSTOM_HEADER (using defaults if targetId not provided)
 export async function replaceCustomDataPlaceholders(
   commands: string[],
   customData: Record<string, any> | undefined,
   targetId?: number
 ): Promise<string[]> {
-  if (!customData && !targetId) return commands;
-
   // Fetch target settings if targetId is provided
   let userAgent = "DeepBounty-Agent/1.0";
   let customHeader = "X-Bug-Bounty: DeepBounty";
@@ -110,12 +118,10 @@ export async function replaceCustomDataPlaceholders(
       });
     }
 
-    // Replace target-specific placeholders if targetId was provided
-    if (targetId) {
-      replaced = replaced
-        .replace(/\{\{USER_AGENT\}\}/g, userAgent)
-        .replace(/\{\{CUSTOM_HEADER\}\}/g, customHeader);
-    }
+    // Always replace USER_AGENT and CUSTOM_HEADER
+    replaced = replaced
+      .replace(/\{\{USER_AGENT\}\}/g, userAgent)
+      .replace(/\{\{CUSTOM_HEADER\}\}/g, customHeader);
 
     return replaced;
   });
