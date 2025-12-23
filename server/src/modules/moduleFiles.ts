@@ -239,8 +239,11 @@ export function clearAllModuleFiles(): void {
     const moduleDirs = fs.readdirSync(MODULES_DIR, { withFileTypes: true });
     for (const dirent of moduleDirs) {
       if (dirent.isDirectory()) {
-        const modulePath = path.join(MODULES_DIR, dirent.name);
-        fs.rmSync(modulePath, { recursive: true, force: true });
+        // Only remove the "files" subdirectory
+        const filesPath = path.join(MODULES_DIR, dirent.name, "files");
+        if (fs.existsSync(filesPath)) {
+          fs.rmSync(filesPath, { recursive: true, force: true });
+        }
       }
     }
   } catch (err) {

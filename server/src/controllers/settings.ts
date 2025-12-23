@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import Logger from "@/utils/logger.js";
 import config, { generateRandomKey } from "@/utils/config.js";
-import { clearAllModuleDatabases } from "@/modules/moduleStorage.js";
+import { clearAllModuleDatabases, closeAllDatabases } from "@/modules/moduleStorage.js";
 import { gracefulShutdown } from "@/server.js";
 import { getTaskTemplateService } from "@/tasks/taskTemplateService.js";
 import { clearAllModuleFiles } from "@/modules/moduleFiles.js";
@@ -53,7 +53,8 @@ export const regenerateBurpsuiteKey = async (req: Request, res: Response) => {
 
 // POST /settings/reset-modules - reset all module databases
 export const resetModulesData = async (req: Request, res: Response) => {
-  clearAllModuleDatabases();
+  closeAllDatabases();
+  await clearAllModuleDatabases();
   clearAllModuleFiles();
   logger.info("All modules have been reset. Restarting server...");
   res.sendStatus(200);
