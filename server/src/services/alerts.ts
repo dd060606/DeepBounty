@@ -7,14 +7,17 @@ import { detectTargetId } from "@/utils/domains.js";
 
 const logger = new Logger("Alerts");
 
-interface CreateAlertParams {
+interface CreateAlertBaseParams {
   name: string;
-  subdomain: string;
   score: number;
   description: string;
   endpoint: string;
   confirmed?: boolean;
 }
+
+type CreateAlertParams =
+  | (CreateAlertBaseParams & { subdomain: string; targetId?: never })
+  | (CreateAlertBaseParams & { targetId: number; subdomain?: string });
 
 /**
  * Send a new alert
@@ -22,7 +25,8 @@ interface CreateAlertParams {
  * Returns null if no target is found or if an error occurs (instead of throwing)
  */
 export async function createAlert(alertToCreate: CreateAlertParams): Promise<Alert | null> {
-  const { name, subdomain, score, description, endpoint, confirmed = false } = alertToCreate;
+  const { name, score, description, endpoint, confirmed = false } = alertToCreate;
+  let subdomainForLog = alertToCreate.subdomain;
 
   try {
     // Validate score range
@@ -33,29 +37,67 @@ export async function createAlert(alertToCreate: CreateAlertParams): Promise<Ale
       return null;
     }
 
-    // Auto-detect target ID from subdomain
-    const targetId = await detectTargetId(subdomain);
-    if (!targetId) {
-      logger.warn(
-        `Skipped alert "${name}": Could not find a matching target for subdomain "${subdomain}".`
+    const useTargetId = typeof (alertToCreate as any).targetId === "number";
+
+    // Resolve target ID and a concrete subdomain value
+    let targetId: number | null = null;
+    let subdomain: string | undefined = alertToCreate.subdomain;
+    let targetDetails: { name: string; domain: string } | null = null;
+
+    if (useTargetId) {
+      const target = await queryOne<{ id: number; name: string; domain: string }>(
+        sql`SELECT id, name, domain FROM targets WHERE id = ${(alertToCreate as any).targetId}`
       );
-      return null;
+
+      if (!target) {
+        logger.warn(
+          `Skipped alert "${name}": Could not find a target with ID ${(alertToCreate as any).targetId}.`
+        );
+        return null;
+      }
+
+      targetId = target.id;
+      subdomain = subdomain ?? target.domain;
+      targetDetails = { name: target.name, domain: target.domain };
+    } else {
+      // Auto-detect target ID from subdomain
+      targetId = await detectTargetId((alertToCreate as any).subdomain);
+      subdomain = subdomain ?? (alertToCreate as any).subdomain;
+      if (!targetId) {
+        logger.warn(
+          `Skipped alert "${name}": Could not find a matching target for subdomain "${subdomain}".`
+        );
+        return null;
+      }
+    }
+
+    // Ensure we have a non-empty subdomain value for the DB row
+    const subdomainValue = subdomain ?? "";
+    subdomainForLog = subdomainValue;
+
+    // Fetch target details if not already available (for response enrichment)
+    if (!targetDetails && targetId !== null) {
+      targetDetails = await queryOne<{ name: string; domain: string }>(
+        sql`SELECT name, domain FROM targets WHERE id = ${targetId}`
+      );
     }
 
     // Insert the alert
     const alert = await queryOne<Alert & { targetId: number }>(
       sql`INSERT INTO alerts ("targetId", name, subdomain, score, confirmed, description, endpoint)
-       VALUES (${targetId}, ${name}, ${subdomain}, ${score}, ${confirmed}, ${description}, ${endpoint})
+       VALUES (${targetId}, ${name}, ${subdomainValue}, ${score}, ${confirmed}, ${description}, ${endpoint})
        RETURNING id, "targetId", name, subdomain, score, confirmed, description, endpoint, "createdAt"`
     );
 
     // Enrich with target details for response
-    const target = await queryOne<{ name: string; domain: string }>(
-      sql`SELECT name, domain FROM targets WHERE id = ${alert.targetId}`
-    );
+    const target =
+      targetDetails ??
+      (await queryOne<{ name: string; domain: string }>(
+        sql`SELECT name, domain FROM targets WHERE id = ${alert.targetId}`
+      ));
 
     logger.info(
-      `New alert ${alert.id} (${alert.name}) for target ID ${alert.targetId} (subdomain: ${subdomain})`
+      `New alert ${alert.id} (${alert.name}) for target ID ${alert.targetId} (subdomain: ${subdomainValue})`
     );
 
     // Enrich full alert response
@@ -78,7 +120,7 @@ export async function createAlert(alertToCreate: CreateAlertParams): Promise<Ale
     return fullAlert;
   } catch (error) {
     // Catch all errors to prevent server crash
-    logger.error(`Error creating alert "${name}" for "${subdomain}":`, error);
+    logger.error(`Error creating alert "${name}" for "${subdomainForLog ?? "<unknown>"}":`, error);
     return null;
   }
 }
