@@ -251,6 +251,25 @@ export interface ServerAPI {
 		endpoint: string,
 		confirmed?: boolean
 	): Promise<Alert>;
+
+	/**
+	 * Create a new alert for a target using its ID
+	 * @param name The title of the alert
+	 * @param targetId The ID of the target
+	 * @param score The severity score (0=Informational, 1=Low, 2=Medium, 3=High, 4=Critical)
+	 * @param description Detailed description of the alert
+	 * @param endpoint Specific endpoint/path where the vulnerability was found
+	 * @param confirmed Whether the vulnerability has been confirmed (default: false)
+	 * @returns The created alert
+	 */
+	createAlert(
+		name: string,
+		targetId: number,
+		score: number,
+		description: string,
+		endpoint: string,
+		confirmed?: boolean
+	): Promise<Alert>;
 }
 
 export interface ModuleLifecycle {

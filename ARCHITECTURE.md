@@ -702,7 +702,7 @@ api.registerTool(SUBFINDER_TOOL);
 ```typescript
 async createAlert(
   name: string,                   // Alert title
-  subdomain: string,              // Subdomain/hostname (auto-detects target)
+  subdomainOrTargetId: string | number, // Subdomain/hostname or target ID
   score: number,                  // 0=Info, 1=Low, 2=Medium, 3=High, 4=Critical
   description: string,            // Detailed description
   endpoint: string,               // Specific path/endpoint

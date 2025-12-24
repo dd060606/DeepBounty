@@ -79,15 +79,26 @@ function buildModuleSDK(moduleId: string, moduleName: string): ServerAPI {
     },
     createAlert: async (
       name: string,
-      subdomain: string,
+      subdomainOrTargetId: string | number,
       score: number,
       description: string,
       endpoint: string,
       confirmed: boolean = false
     ) => {
+      if (typeof subdomainOrTargetId === "number") {
+        return await createAlert({
+          name,
+          targetId: subdomainOrTargetId,
+          score,
+          description,
+          endpoint,
+          confirmed,
+        });
+      }
+
       return await createAlert({
         name,
-        subdomain,
+        subdomain: subdomainOrTargetId,
         score,
         description,
         endpoint,
