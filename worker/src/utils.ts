@@ -23,9 +23,11 @@ export function extractResult(output: string, extractResult: boolean): string {
   return extracted;
 }
 
-// Replace task:tempfile placeholders with actual temp file paths
+// Replace task:{tempfile-name} placeholders with actual temp file paths
 export function replaceTempFilePlaceholders(taskId: number, commands: string[]): string[] {
-  return commands.map((cmd) => cmd.replace(/task:tempfile/g, `/tmp/task-${taskId}`));
+  return commands.map((cmd) =>
+    cmd.replace(/task:{tempfile-([^}]+)}/g, (_, name) => `/tmp/task-${taskId}-${name}`)
+  );
 }
 
 export function createTaskResult(

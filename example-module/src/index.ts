@@ -1,17 +1,12 @@
 import type { ServerAPI, ModuleLifecycle, CoreEvents } from "@deepbounty/sdk";
 import { sendTestRequest } from "./utils";
 import { FIND_SUBDOMAINS_TASK, subdomainsCallback } from "./tasks/subfinder";
-import { SUBFINDER } from "./tools";
+import { registerTools, SUBFINDER } from "./tools";
 import { initializeStorage } from "./storage";
 import { filesApiExample } from "./filesExample";
 
 export default class ExampleModule implements ModuleLifecycle {
 	constructor(private api: ServerAPI) {}
-
-	private registerTools() {
-		// Register tools
-		this.api.registerTool(SUBFINDER);
-	}
 
 	private registerTasks() {
 		// Register tasks
@@ -29,7 +24,7 @@ export default class ExampleModule implements ModuleLifecycle {
 	async run() {
 		// Initialize module storage
 		initializeStorage(this.api);
-		this.registerTools();
+		registerTools(this.api);
 		this.registerTasks();
 
 		this.api.logger.info("Example module: run");

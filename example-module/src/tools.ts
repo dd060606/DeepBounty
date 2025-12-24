@@ -1,4 +1,11 @@
+import { ServerAPI } from "@deepbounty/sdk";
 import { Tool } from "@deepbounty/sdk/types";
+
+// Function to register tools
+export function registerTools(api: ServerAPI) {
+	// Register tools
+	api.registerTool(SUBFINDER);
+}
 
 export const SUBFINDER: Tool = {
 	name: "subfinder",
