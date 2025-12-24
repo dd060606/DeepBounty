@@ -21,7 +21,7 @@ export const executeTask = async (task: TaskExecution): Promise<TaskResult> => {
 
     // Combine all commands into a single bash script to maintain context
     // This allows cd commands to affect subsequent commands
-    const combinedScript = processedCommands.join(" && ");
+    const combinedScript = processedCommands.join("\n");
 
     console.log(`Running combined commands: ${combinedScript}`);
 
