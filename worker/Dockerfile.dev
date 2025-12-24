@@ -9,6 +9,7 @@ RUN apk add --no-cache \
     wget \
     unzip \
     git \
+    gcompat \
     ca-certificates
 
 # Create tools directory
