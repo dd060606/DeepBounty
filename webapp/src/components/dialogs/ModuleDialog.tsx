@@ -267,7 +267,7 @@ export default function ModuleDialog({
                             <div className="flex items-center gap-2">
                               <Input
                                 type="number"
-                                min="1"
+                                min="0"
                                 value={task.interval}
                                 onChange={(e) => {
                                   const value = parseInt(e.target.value);
