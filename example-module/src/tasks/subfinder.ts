@@ -20,16 +20,16 @@ export const FIND_SUBDOMAINS_TASK: TaskContent = {
 // Register a task with a temporary file
 export const FIND_SUBDOMAINS_TASK_WITH_TEMPFILE: TaskContent = {
 	commands: [
-		// Store subdomains to file (task:tempfile will be replaced by a dedicated temp task file)
-		"tool:{subfinder} -d {{TARGET_DOMAIN}} > task:tempfile",
+		// Store subdomains to file (task:{tempfile-name} will be replaced by a dedicated temp task file)
+		"tool:{subfinder} -d {{TARGET_DOMAIN}} > task:{tempfile-subfinder}",
 
 		// Extract only the result we want
 		'echo "<<<RESULT_START>>>"',
-		"cat task:tempfile | head -n 5",
+		"cat task:{tempfile-subfinder} | head -n 5",
 		'echo "<<<RESULT_END>>>"',
 
 		// Cleanup
-		"rm task:tempfile",
+		"rm task:{tempfile-subfinder}",
 	],
 	requiredTools: [SUBFINDER],
 	extractResult: true,
