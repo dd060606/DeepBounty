@@ -1,8 +1,10 @@
 import {
+  deleteTemplate,
   getAllTemplates,
   getTemplatesByModuleId,
   getTargetOverrides,
   removeOverrides,
+  runTemplate,
   setOverrides,
   updateTemplate,
 } from "@/controllers/tasks.js";
@@ -29,6 +31,12 @@ router.patch(
   validateBody(taskTemplateSchema),
   updateTemplate
 );
+
+// DELETE /tasks/templates/:id
+router.delete("/templates/:id", validateParams(idParamSchema), deleteTemplate);
+
+// POST /tasks/templates/:id/run
+router.post("/templates/:id/run", validateParams(idParamSchema), runTemplate);
 // GET /tasks/targets/:targetId/task-overrides
 router.get(
   "/targets/:targetId/task-overrides",

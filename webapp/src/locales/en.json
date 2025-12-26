@@ -167,7 +167,7 @@
   },
   "modules": {
     "searchPlaceholder": "Search a module by name, id or description...",
-    "name": "Name",
+    "name": "Module Name",
     "identifier": "Identifier",
     "version": "Version",
     "description": "Description",
@@ -183,6 +183,34 @@
     "errors": {
       "loadModules": "Failed to load modules",
       "saveSettings": "Failed to save module settings"
+    },
+    "taskTemplates": {
+      "title": "Task templates",
+      "subtitle": "{{enabled}} enabled • {{total}} total",
+      "filter": "Filter",
+      "filterByModule": "Filter by module",
+      "scheduling": "Scheduling",
+      "active": "Active",
+      "run": "Run",
+      "empty": {
+        "title": "No task templates",
+        "hint": "Registered task templates will appear here."
+      },
+      "deleteConfirm": {
+        "title": "Delete task template",
+        "description": "Are you sure you want to delete this task template? This action cannot be undone."
+      },
+      "errors": {
+        "update": "Failed to update task template",
+        "delete": "Failed to delete task template",
+        "run": "Failed to run task template",
+        "interval": "Interval must be an integer ≥ 1"
+      },
+      "success": {
+        "updated": "Task template updated",
+        "deleted": "Task template deleted",
+        "run": "Task enqueued"
+      }
     }
   },
   "tasks": {

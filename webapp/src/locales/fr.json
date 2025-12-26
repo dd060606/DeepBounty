@@ -166,7 +166,7 @@
   },
   "modules": {
     "searchPlaceholder": "Rechercher un module par nom, identifiant ou description...",
-    "name": "Nom",
+    "name": "Nom du module",
     "identifier": "Identifiant",
     "version": "Version",
     "description": "Description",
@@ -182,6 +182,34 @@
     "errors": {
       "loadModules": "Impossible de charger les modules",
       "saveSettings": "Impossible d'enregistrer les paramètres du module"
+    },
+    "taskTemplates": {
+      "title": "Modèles de tâches",
+      "subtitle": "{{enabled}} actifs • {{total}} au total",
+      "filter": "Filtrer",
+      "filterByModule": "Filtrer par module",
+      "scheduling": "Planification",
+      "active": "Actif",
+      "run": "Lancer",
+      "empty": {
+        "title": "Aucun modèle de tâche",
+        "hint": "Les modèles de tâches enregistrés apparaîtront ici."
+      },
+      "deleteConfirm": {
+        "title": "Supprimer le modèle de tâche",
+        "description": "Êtes-vous sûr de vouloir supprimer ce modèle de tâche ? Cette action est irréversible."
+      },
+      "errors": {
+        "update": "Impossible de mettre à jour le modèle de tâche",
+        "delete": "Impossible de supprimer le modèle de tâche",
+        "run": "Impossible de lancer le modèle de tâche",
+        "interval": "L'intervalle doit être un entier ≥ 1"
+      },
+      "success": {
+        "updated": "Modèle de tâche mis à jour",
+        "deleted": "Modèle de tâche supprimé",
+        "run": "Tâche mise en file d'attente"
+      }
     }
   },
   "tasks": {

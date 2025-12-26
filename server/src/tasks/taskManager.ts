@@ -142,6 +142,42 @@ class TaskManager {
   }
 
   /**
+   * Run a task template immediately.
+   *
+   * - TARGET_BASED / GLOBAL: enqueues one execution per existing scheduled task (even if inactive)
+   * - CUSTOM: triggers the onSchedule callback if registered
+   *
+   * Note: This does not change the template's activation status.
+   */
+  async runTemplateNow(templateId: number): Promise<boolean> {
+    const template = await this.templateService.getTemplate(templateId);
+    if (!template) return false;
+
+    // CUSTOM scheduling: prefer calling onSchedule directly to create instances.
+    if (template.schedulingType === "CUSTOM") {
+      const callback = this.scheduleCallbacks.get(templateId);
+      if (callback) {
+        await callback(templateId);
+        return true;
+      }
+      // If no callback, fall back to enqueuing any non-scheduler scheduled tasks (if any).
+    }
+
+    const scheduledTasks = this.registry.getScheduledTasksByTemplate(templateId);
+    logger.info(
+      `Running template ${templateId} now: found ${scheduledTasks.length} scheduled tasks`
+    );
+
+    for (const scheduledTask of scheduledTasks) {
+      // Skip CUSTOM scheduler tasks in fallback mode.
+      if (scheduledTask.customData?.__isScheduler) continue;
+      this.createExecution(scheduledTask);
+    }
+
+    return true;
+  }
+
+  /**
    * Synchronize scheduled tasks for a template across all applicable targets
    * Creates tasks for new targets, removes tasks for inactive targets,
    * and updates interval for existing tasks if template interval changed
