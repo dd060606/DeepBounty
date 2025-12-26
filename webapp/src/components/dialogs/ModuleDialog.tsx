@@ -267,8 +267,10 @@ export default function ModuleDialog({
                             <div className="flex items-center gap-2">
                               <Input
                                 type="number"
-                                min="0"
+                                min="1"
                                 value={task.interval}
+                                // Disable if CUSTOM scheduling with interval 0
+                                disabled={task.schedulingType === "CUSTOM" && task.interval === 0}
                                 onChange={(e) => {
                                   const value = parseInt(e.target.value);
                                   if (!isNaN(value) && value > 0) {

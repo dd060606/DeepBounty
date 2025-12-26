@@ -7,6 +7,7 @@ import type { Module, TaskTemplate } from "@deepbounty/sdk/types";
 import { Input } from "@/components/ui/input";
 import { useMemo, useState as useReactState } from "react";
 import ModuleCard from "@/components/modules/ModuleCard";
+import TaskTemplatesSection from "@/components/modules/TaskTemplatesSection";
 
 export default function Modules() {
   const { t } = useTranslation();
@@ -115,6 +116,19 @@ export default function Modules() {
           ))}
         </div>
       )}
+
+      {!loading && modules !== null ? (
+        <TaskTemplatesSection
+          templates={allTasks}
+          modules={modules}
+          onTemplateUpdated={(tpl) => {
+            setAllTasks((prev) => prev.map((t) => (t.id === tpl.id ? tpl : t)));
+          }}
+          onTemplateDeleted={(templateId) => {
+            setAllTasks((prev) => prev.filter((t) => t.id !== templateId));
+          }}
+        />
+      ) : null}
     </div>
   );
 }

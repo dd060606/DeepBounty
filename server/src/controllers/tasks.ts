@@ -82,6 +82,40 @@ export async function updateTemplate(req: Request, res: Response) {
   }
 }
 
+// DELETE /tasks/templates/:id - Delete a task template (and associated scheduled tasks)
+export async function deleteTemplate(req: Request, res: Response) {
+  try {
+    const { id } = req.params;
+    const success = await getTaskManager().unregisterTaskTemplate(parseInt(id));
+
+    if (!success) {
+      return res.status(404).json({ error: "Template not found" });
+    }
+
+    res.sendStatus(200);
+  } catch (error) {
+    logger.error("Error deleting template:", error);
+    res.status(500).json({ error: "Failed to delete template" });
+  }
+}
+
+// POST /tasks/templates/:id/run - Run a task template immediately
+export async function runTemplate(req: Request, res: Response) {
+  try {
+    const { id } = req.params;
+    const success = await getTaskManager().runTemplateNow(parseInt(id));
+
+    if (!success) {
+      return res.status(404).json({ error: "Template not found" });
+    }
+
+    res.sendStatus(200);
+  } catch (error) {
+    logger.error("Error running template:", error);
+    res.status(500).json({ error: "Failed to run template" });
+  }
+}
+
 // GET /tasks/targets/:targetId/task-overrides - Get target overrides
 export async function getTargetOverrides(req: Request, res: Response) {
   try {

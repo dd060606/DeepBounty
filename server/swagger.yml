@@ -735,6 +735,44 @@ paths:
           description: Invalid request (at least one of 'active' or 'interval' must be provided)
         "401":
           description: Unauthorized
+
+    delete:
+      summary: Delete task template
+      description: Deletes a task template and unregisters all associated scheduled tasks.
+      tags:
+        - Tasks
+      security:
+        - sessionCookie: []
+      responses:
+        "200":
+          description: Template deleted successfully
+        "404":
+          description: Template not found
+        "401":
+          description: Unauthorized
+
+  /tasks/templates/{id}/run:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+        description: Task Template ID
+    post:
+      summary: Run task template immediately
+      description: Enqueues executions for the template immediately (CUSTOM templates trigger their onSchedule callback).
+      tags:
+        - Tasks
+      security:
+        - sessionCookie: []
+      responses:
+        "200":
+          description: Template enqueued successfully
+        "404":
+          description: Template not found
+        "401":
+          description: Unauthorized
   /tasks/targets/{targetId}/task-overrides:
     parameters:
       - name: targetId
