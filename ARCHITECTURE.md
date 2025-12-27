@@ -278,7 +278,7 @@ await api.registerTaskTemplate(
     9. Module must manually call `api.createTaskInstance()` when needed (e.g., in response to events)
     10. Task instances execute immediately upon creation
 
-````typescript
+```typescript
 // Example 1: CUSTOM with automatic scheduling (interval > 0)
 const scheduledTemplateId = await api.registerTaskTemplate(
 	"custom-scan",
@@ -303,14 +303,10 @@ const scheduledTemplateId = await api.registerTaskTemplate(
 
 		for (const [hostname, ports] of targets) {
 			// Create one task instance per hostname (batching by hostname)
-			await api.createTaskInstance(
-				templateId,
-				undefined,
-				{
-					HOSTNAME: hostname,
-					PORT: ports.join(","),
-				}
-			);
+			await api.createTaskInstance(templateId, undefined, {
+				HOSTNAME: hostname,
+				PORT: ports.join(","),
+			});
 		}
 	}
 );
@@ -340,27 +336,7 @@ api.events.subscribe("http:new-endpoint", async (event) => {
 		URL: event.data.url,
 	});
 });
-```### Task Template Structure
-
-```typescript
-interface TaskContent {
-	commands: string[]; // Shell commands to execute
-	requiredTools?: Tool[]; // Tools to install (see Tool Registration)
-	extractResult?: boolean; // Extract output between markers
-}
-
-interface TaskTemplate {
-	id: number; // Auto-generated ID
-	moduleId: string; // Module that owns this template
-	uniqueKey: string; // Module-unique identifier
-	name: string; // Display name
-	description?: string; // Description
-	content: TaskContent; // Commands and tools
-	interval: number; // Seconds between executions
-	schedulingType: SchedulingType; // TARGET_BASED | GLOBAL | CUSTOM
-	active: boolean; // Global enable/disable
-}
-````
+```
 
 ### Placeholders
 
@@ -420,16 +396,6 @@ commands: ["tool:{nmap} -p {{PORTS}} {{IP}}", "echo 'Scanning {{HOSTNAME}}'"];
 ### Task Result Handling
 
 ```typescript
-interface TaskResult {
-	executionId: number;
-	scheduledTaskId: number;
-	success: boolean;
-	output?: any; // Extracted result (if enabled)
-	error?: string; // Error message (from stderr)
-	customData?: Record<string, any>; // Custom data from task instance
-	targetId?: number; // If this execution was for a specific target
-}
-
 // Handle results in callback
 await api.registerTaskTemplate(
 	"scan",
@@ -441,7 +407,7 @@ await api.registerTaskTemplate(
 	(result: TaskResult) => {
 		if (result.success && result.output) {
 			// Parse and process result
-			const findings = JSON.parse(result.output);
+			const findings = result.output.split("\n");
 			findings.forEach((f) => api.createAlert(/* ... */));
 		}
 	}
@@ -478,40 +444,13 @@ await api.createTaskInstance(templateId, targetId, {
 
 Main interface passed to modules via constructor.
 
-```typescript
-interface ServerAPI {
-  version: string;              // SDK version
-  logger: Logger;               // Logging interface
-  config: ConfigAPI;            // Module configuration
-  storage: StorageAPI;          // Module-specific SQLite database
-  files: FilesAPI;              // Module-specific file system
-  events: IEventBus;            // Event pub/sub system
-
-  // Task management
-  registerTaskTemplate(...): Promise<number>;
-  unregisterTaskTemplate(templateId: number): Promise<boolean>;
-  createTaskInstance(...): Promise<number>;
-
-  // Tool registration
-  registerTool(tool: Tool): void;
-
-  // Alert creation
-  createAlert(...): Promise<Alert>;
-}
-```
-
 ### Logger
 
 ```typescript
-interface Logger {
-	info(...args: any[]): void;
-	warn(...args: any[]): void;
-	error(...args: any[]): void;
-}
-
 // Usage
 this.api.logger.info("Module initialized");
 this.api.logger.error("Failed to process:", error);
+this.api.logger.warn("Deprecated API used");
 ```
 
 ### ConfigAPI
@@ -519,19 +458,6 @@ this.api.logger.error("Failed to process:", error);
 Persistent key-value storage for module configuration.
 
 ```typescript
-interface ConfigAPI {
-	// Generic config (any data)
-	get<T>(key: string, defaultValue?: T): Promise<T>;
-	set<T>(key: string, value: T): Promise<void>;
-	remove(key: string): Promise<void>;
-	getAll(): Promise<Record<string, any>>;
-
-	// Module settings (defined in module.yml)
-	getSetting(name: string): Promise<ModuleSetting>;
-	setSetting(name: string, value: any): Promise<void>;
-	getAllSettings(): Promise<ModuleSetting[]>;
-}
-
 // Example
 await api.config.set("lastRun", new Date().toISOString());
 const apiKey = await api.config.getSetting("apiKey");
@@ -542,25 +468,6 @@ const apiKey = await api.config.getSetting("apiKey");
 Module-specific SQLite database (isolated from other modules).
 
 ```typescript
-interface StorageAPI {
-	// Query data
-	query<T>(sql: string, params?: any[]): T[];
-	queryOne<T>(sql: string, params?: any[]): T | undefined;
-
-	// Modify data
-	execute(
-		sql: string,
-		params?: any[]
-	): {
-		changes: number | bigint;
-		lastInsertRowid: number | bigint;
-	};
-
-	// Schema management
-	createTable(tableName: string, schema: string): void;
-	dropTable(tableName: string): void;
-}
-
 // Example
 api.storage.createTable(
 	"findings",
@@ -581,6 +488,19 @@ const findings = api.storage.query<Finding>(
 	"SELECT * FROM findings WHERE severity = ?",
 	["high"]
 );
+```
+
+### Scope Checking
+
+Check if a hostname is within the allowed scope (targets or their subdomains).
+
+```typescript
+// Check if a domain is in scope
+const inScope = await api.isHostnameInScope("api.example.com");
+
+if (inScope) {
+	// Proceed with scanning
+}
 ```
 
 ### Task Registration
@@ -614,8 +534,8 @@ const templateId = await api.registerTaskTemplate(
   3600, // 1 hour
   "TARGET_BASED",
   (result) => {
-    if (result.success && result.extractedResult) {
-      const subdomains = JSON.parse(result.extractedResult);
+    if (result.success && result.output) {
+      const subdomains = result.output.split("\n");
       // Process subdomains...
     }
   }
@@ -672,15 +592,6 @@ const taskId = await api.createTaskInstance(
 ### Tool Registration
 
 ```typescript
-interface Tool {
-	name: string; // Unique tool name
-	version: string; // Tool version
-	downloadUrl: string; // Download URL (zip/tar.gz)
-	description: string; // Description
-	preInstallCommands?: string[]; // Commands before download
-	postInstallCommands?: string[]; // Commands after extraction
-}
-
 // Example
 const SUBFINDER_TOOL: Tool = {
 	name: "subfinder",
@@ -700,23 +611,14 @@ api.registerTool(SUBFINDER_TOOL);
 ### Alert Creation
 
 ```typescript
-async createAlert(
-  name: string,                   // Alert title
-  subdomainOrTargetId: string | number, // Subdomain/hostname or target ID
-  score: number,                  // 0=Info, 1=Low, 2=Medium, 3=High, 4=Critical
-  description: string,            // Detailed description
-  endpoint: string,               // Specific path/endpoint
-  confirmed?: boolean             // Manually confirmed (default: false)
-): Promise<Alert>;
-
 // Example
 await api.createAlert(
-  "Exposed Admin Panel",
-  "admin.example.com",
-  3, // High severity
-  "Admin panel accessible without authentication",
-  "/admin/login",
-  true
+	"Exposed Admin Panel",
+	"admin.example.com",
+	3, // High severity
+	"Admin panel accessible without authentication",
+	"/admin/login",
+	true
 );
 ```
 
@@ -733,38 +635,6 @@ If no target is found, an error is thrown.
 ### File Management
 
 Modules can manage files and directories within their isolated module space using the Files API.
-
-```typescript
-interface FilesAPI {
-	/**
-	 * Get or create a directory (supports nested paths like "cache/images")
-	 * Returns a ScopedDirectory object
-	 */
-	getDirectory(directoryPath: string): ScopedDirectory;
-}
-
-interface ScopedDirectory {
-	// Write operations
-	writeFile(relativePath: string, data: Buffer | Uint8Array): void;
-	writeFileText(
-		relativePath: string,
-		text: string,
-		encoding?: BufferEncoding
-	): void;
-
-	// Read operations
-	readFile(relativePath: string): Buffer;
-	readFileText(relativePath: string, encoding?: BufferEncoding): string;
-
-	// File management
-	deleteFile(relativePath: string): void;
-	fileExists(relativePath: string): boolean;
-	listFiles(subdirPath?: string): string[];
-
-	// Directory management
-	getSubdirectory(relativePath: string): ScopedDirectory;
-}
-```
 
 **Usage Examples**:
 
@@ -914,32 +784,7 @@ interface CoreEvents {
 
 ### Event Bus API
 
-```typescript
-interface IEventBus {
-	// Subscribe to events
-	subscribe<K extends keyof CoreEvents>(
-		event: K,
-		handler: (data: CoreEvents[K]) => void | Promise<void>
-	): EventSubscription;
-
-	// Subscribe to custom events
-	subscribe<T = any>(
-		event: string,
-		handler: (data: T) => void | Promise<void>
-	): EventSubscription;
-
-	// Emit events
-	emit<K extends keyof CoreEvents>(event: K, data: CoreEvents[K]): void;
-	emit<T = any>(event: string, data: T): void;
-
-	// Clear listeners
-	clear(event?: string): void;
-}
-
-interface EventSubscription {
-	unsubscribe(): void;
-}
-```
+API for subscribing and emitting events.
 
 ### Usage Examples
 
@@ -1220,7 +1065,9 @@ export default class MyModule implements ModuleLifecycle {
 		if (!result.success) return;
 
 		// Parse result
-		const findings = JSON.parse(result.extractedResult || "[]");
+		const findings = result.output
+			? result.output.split("\n").map((line) => JSON.parse(line))
+			: [];
 
 		// Store in module storage
 		findings.forEach((f) => {
@@ -1324,7 +1171,7 @@ const scanTemplateId = await api.registerTaskTemplate(
 	(result) => {
 		if (result.success && result.output) {
 			// Process scan results
-			const findings = JSON.parse(result.output);
+			const findings = result.output.split("\n");
 			findings.forEach((f) => api.createAlert(/* ... */));
 		}
 	}
@@ -1466,5 +1313,5 @@ See `/example-module` for a working reference implementation demonstrating:
 ---
 
 **Last Updated**: December 2025  
-**SDK Version**: 1.1.8
+**SDK Version**: 1.2.0
 **Minimum Server Version**: 1.0.0

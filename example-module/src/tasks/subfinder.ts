@@ -38,7 +38,7 @@ export const FIND_SUBDOMAINS_TASK_WITH_TEMPFILE: TaskContent = {
 export function subdomainsCallback(api: ServerAPI, result: TaskResult) {
 	if (result.success && result.output) {
 		// Extract the list of subdomains
-		const subdomains = result.output[0]
+		const subdomains = result.output
 			.split("\n")
 			.filter((line: string) => line.trim().length > 0);
 

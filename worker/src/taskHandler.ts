@@ -13,53 +13,34 @@ const execAsync = promisify(exec);
 export const executeTask = async (task: TaskExecution): Promise<TaskResult> => {
   console.log(`Executing task ${task.executionId}...`);
 
+  // Replace temp file placeholders in commands
+  const processedCommands = replaceTempFilePlaceholders(task.executionId, task.content.commands);
+  // Combine commands into a single script to maintain context
+  const combinedScript = processedCommands.join("\n");
+  console.log(`Running combined commands: ${combinedScript}`);
+
   try {
-    const results: string[] = [];
+    const { stdout, stderr } = await execAsync(combinedScript, {
+      cwd: "/tools",
+      shell: "/bin/bash",
+      maxBuffer: 100 * 1024 * 1024,
+    });
 
-    // Replace temp file placeholders
-    const processedCommands = replaceTempFilePlaceholders(task.executionId, task.content.commands);
+    if (stderr) console.warn(`Command stderr: ${stderr}`);
 
-    // Combine all commands into a single bash script to maintain context
-    // This allows cd commands to affect subsequent commands
-    const combinedScript = processedCommands.join("\n");
-
-    console.log(`Running combined commands: ${combinedScript}`);
-
-    try {
-      const { stdout, stderr } = await execAsync(combinedScript, {
-        // Execute commands in the tools directory as base
-        cwd: "/tools",
-        // Use bash to support all shell features
-        shell: "/bin/bash",
-        // Increase maxBuffer to handle large outputs (100MB instead of default 1MB)
-        maxBuffer: 100 * 1024 * 1024,
-      });
-
-      if (stderr) {
-        console.warn(`Command stderr: ${stderr}`);
-      }
-
-      // Extract result if markers are used
-      const finalOutput = extractResult(stdout, task.content.extractResult || false);
-      results.push(finalOutput);
-    } catch (error: any) {
-      console.error(`Commands failed`, error);
-
-      return createTaskResult(
-        task,
-        false,
-        results.length > 0 ? results : undefined,
-        error.message || "Command execution failed"
-      );
-    }
-
+    // Extract result if needed
+    const output = extractResult(stdout, task.content.extractResult || false);
     console.log(`Task ${task.executionId} completed successfully`);
-
-    return createTaskResult(task, true, results);
+    return createTaskResult(task, true, output);
   } catch (error: any) {
-    console.error(`Task ${task.executionId} execution error:`, error);
-
-    return createTaskResult(task, false, undefined, error.message || "Unknown error occurred");
+    console.error(`Commands failed`, error);
+    const combinedOutput = `${error?.stdout ?? ""}${error?.stderr ?? ""}`.trim() || undefined;
+    return createTaskResult(
+      task,
+      false,
+      combinedOutput,
+      error?.message || "Command execution failed"
+    );
   }
 };
 
@@ -99,7 +80,6 @@ export const handleMessage = async (
       case "system:shutdown": {
         console.log("Received shutdown command from server. Exiting...");
         process.exit(0);
-        break;
       }
       default: {
         console.warn(`Unknown message type: ${type}`);

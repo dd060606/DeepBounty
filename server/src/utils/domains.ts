@@ -162,3 +162,41 @@ export async function detectTargetId(subdomain: string): Promise<number | null> 
 
   return null;
 }
+
+/**
+ * Check if a hostname is in scope
+ */
+export async function isHostnameInScope(hostname: string): Promise<boolean> {
+  const normalized = normalizeDomain(hostname);
+  if (!isValidDomain(normalized)) return false;
+
+  // 1. Check if hostname is a main target (exact match only)
+  const targetMatch = await queryOne(
+    sql`SELECT 1 FROM targets WHERE domain = ${normalized} LIMIT 1`
+  );
+  if (targetMatch) return true;
+
+  const parts = normalized.split(".");
+  const checks: string[] = [];
+
+  // Exact match of the hostname itself
+  checks.push(normalized);
+
+  // Wildcards for hostname and all parents
+  // e.g. for api.example.com:
+  // - *.api.example.com (covers self)
+  // - *.example.com (covers child)
+  for (let i = 0; i < parts.length; i++) {
+    const domain = parts.slice(i).join(".");
+    if (!isValidDomain(domain)) continue;
+    checks.push(`*.${domain}`);
+  }
+
+  if (checks.length === 0) return false;
+
+  // Check targets_subdomains for any matches
+  const subdomainsQuery = sql`SELECT 1 FROM targets_subdomains WHERE subdomain = ANY(${checks}) LIMIT 1`;
+  const subdomainMatch = await queryOne(subdomainsQuery);
+
+  return !!subdomainMatch;
+}

@@ -33,7 +33,7 @@ export function replaceTempFilePlaceholders(taskId: number, commands: string[]):
 export function createTaskResult(
   taskExecution: TaskExecution,
   success: boolean,
-  output?: string[],
+  output?: string,
   error?: string
 ) {
   return {
