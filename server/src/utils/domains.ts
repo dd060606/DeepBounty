@@ -195,7 +195,7 @@ export async function isHostnameInScope(hostname: string): Promise<boolean> {
   if (checks.length === 0) return false;
 
   // Check targets_subdomains for any matches
-  const subdomainsQuery = sql`SELECT 1 FROM targets_subdomains WHERE subdomain = ANY(${checks}) LIMIT 1`;
+  const subdomainsQuery = sql`SELECT 1 FROM targets_subdomains WHERE subdomain IN ${checks} LIMIT 1`;
   const subdomainMatch = await queryOne(subdomainsQuery);
 
   return !!subdomainMatch;
