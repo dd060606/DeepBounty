@@ -6,7 +6,7 @@ function classesForSeverity(s: number): { label: string; className: string } {
     case 0:
       return {
         label: "alerts.informational",
-        className: "border-transparent bg-foreground/20 dark:bg-foreground/60 text-foreground",
+        className: "border-transparent bg-foreground/10 dark:bg-foreground/30 text-foreground",
       };
     case 1:
       return {
