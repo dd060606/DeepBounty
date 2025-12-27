@@ -89,7 +89,7 @@ export interface TaskResult {
 	scheduledTaskId: number;
 	success: boolean;
 	// Result data or error message
-	output?: any;
+	output?: string;
 	error?: string;
 	// Target ID (if this execution was for a specific target)
 	targetId?: number;

@@ -14,6 +14,7 @@ import { validateModule } from "./validateModule.js";
 import { createAlert } from "@/services/alerts.js";
 import { getEventBus } from "@/events/eventBus.js";
 import { ModuleEventBus } from "@/events/moduleEventBus.js";
+import { isHostnameInScope } from "@/utils/domains.js";
 
 const logger = new Logger("Modules-Loader");
 const registry = getRegistry();
@@ -47,6 +48,9 @@ function buildModuleSDK(moduleId: string, moduleName: string): ServerAPI {
     },
     files: files,
     events: moduleBus,
+    isHostnameInScope: async (hostname) => {
+      return await isHostnameInScope(hostname);
+    },
     registerTaskTemplate: async (
       uniqueKey,
       name,

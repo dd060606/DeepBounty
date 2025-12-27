@@ -183,6 +183,8 @@ export interface ServerAPI {
 	storage: StorageAPI;
 	files: FilesAPI;
 	events: IEventBus;
+	/** Check if a hostname is in scope based on targets_subdomains */
+	isHostnameInScope(hostname: string): Promise<boolean>;
 	/**
 	 * Register a task template that can be scheduled for all targets
 	 * @param uniqueKey Unique identifier for this task within the module (e.g., "subdomain-scan")
