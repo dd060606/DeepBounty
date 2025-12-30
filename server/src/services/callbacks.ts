@@ -244,7 +244,6 @@ export async function triggerCallback(
   setImmediate(async () => {
     try {
       await handler(updatedCallback, triggerData);
-      logger.info(`Callback triggered successfully: ${callback.name} (${uuid})`);
     } catch (error) {
       logger.error(
         `Error in callback handler for ${callback.moduleId}: ${(error as Error).message}`

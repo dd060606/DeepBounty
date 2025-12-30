@@ -66,7 +66,7 @@ export const alerts = pgTable(
   "alerts",
   {
     id: serial().primaryKey().notNull(),
-    targetId: integer().notNull(),
+    targetId: integer(),
     name: text().notNull(),
     subdomain: text().notNull(),
     score: smallint().notNull(),
@@ -82,7 +82,7 @@ export const alerts = pgTable(
       columns: [table.targetId],
       foreignColumns: [targets.id],
       name: "alerts_targetId_fkey",
-    }).onDelete("cascade"),
+    }).onDelete("set null"),
   ]
 );
 

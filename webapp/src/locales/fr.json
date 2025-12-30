@@ -43,6 +43,7 @@
     "description": "Description",
     "filter": "Filtrer",
     "deleteSelected": "Supprimer la sélection",
+    "noTarget": "Aucune cible",
     "deleteConfirm": {
       "title": "Supprimer l'alerte",
       "description": "Êtes-vous sûr de vouloir supprimer cette alerte ?",
