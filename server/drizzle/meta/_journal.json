@@ -43,6 +43,13 @@
       "when": 1767092323944,
       "tag": "0005_high_hercules",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1767116004590,
+      "tag": "0006_solid_marvel_apes",
+      "breakpoints": true
     }
   ]
 }

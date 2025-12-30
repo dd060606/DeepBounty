@@ -14,8 +14,8 @@ export async function getAlerts(req: Request, res: Response) {
       sql`SELECT 
         a.id,
         a.name,
-        t.name AS "targetName",
-        t.domain AS domain,
+        COALESCE(t.name, '') AS "targetName",
+        COALESCE(t.domain, '') AS domain,
         a.subdomain,
         a.score,
         a.confirmed,
@@ -23,7 +23,7 @@ export async function getAlerts(req: Request, res: Response) {
         a.endpoint,
         to_char(a."createdAt", 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') as "createdAt"
       FROM alerts a
-      JOIN targets t ON t.id = a."targetId"
+      LEFT JOIN targets t ON t.id = a."targetId"
       ORDER BY a."createdAt" DESC, a.id DESC`
     );
 

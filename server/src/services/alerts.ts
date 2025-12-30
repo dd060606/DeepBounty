@@ -65,9 +65,8 @@ export async function createAlert(alertToCreate: CreateAlertParams): Promise<Ale
       subdomain = subdomain ?? (alertToCreate as any).subdomain;
       if (!targetId) {
         logger.warn(
-          `Skipped alert "${name}": Could not find a matching target for subdomain "${subdomain}".`
+          `Creating alert "${name}" without target association: Could not find a matching target for subdomain "${subdomain}".`
         );
-        return null;
       }
     }
 
@@ -83,7 +82,7 @@ export async function createAlert(alertToCreate: CreateAlertParams): Promise<Ale
     }
 
     // Insert the alert
-    const alert = await queryOne<Alert & { targetId: number }>(
+    const alert = await queryOne<Alert & { targetId: number | null }>(
       sql`INSERT INTO alerts ("targetId", name, subdomain, score, confirmed, description, endpoint)
        VALUES (${targetId}, ${name}, ${subdomainValue}, ${score}, ${confirmed}, ${description}, ${endpoint})
        RETURNING id, "targetId", name, subdomain, score, confirmed, description, endpoint, "createdAt"`
@@ -92,12 +91,14 @@ export async function createAlert(alertToCreate: CreateAlertParams): Promise<Ale
     // Enrich with target details for response
     const target =
       targetDetails ??
-      (await queryOne<{ name: string; domain: string }>(
-        sql`SELECT name, domain FROM targets WHERE id = ${alert.targetId}`
-      ));
+      (alert.targetId
+        ? await queryOne<{ name: string; domain: string }>(
+            sql`SELECT name, domain FROM targets WHERE id = ${alert.targetId}`
+          )
+        : null);
 
     logger.info(
-      `New alert ${alert.id} (${alert.name}) for target ID ${alert.targetId} (subdomain: ${subdomainValue})`
+      `New alert ${alert.id} (${alert.name}) for target ID ${alert.targetId ?? "none"} (subdomain: ${subdomainValue})`
     );
 
     // Enrich full alert response

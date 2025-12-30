@@ -105,15 +105,20 @@ export default function AlertsTable({ alerts, onRowClick, onDelete, onDeleteMult
         return <TableHeader column={column} title={t("common.company")} />;
       },
       cell: ({ row }) => {
+        const hasTarget = row.original.targetName && row.original.domain;
         return (
           <div className="flex items-center gap-3">
-            <img
-              src={faviconUrl(row.original.domain)!}
-              alt={`${row.original.targetName} favicon`}
-              className="h-6 w-6 rounded-sm"
-            />
-            <div className="flex flex-col">
-              <div className="font-medium">{row.original.targetName}</div>
+            {hasTarget && (
+              <img
+                src={faviconUrl(row.original.domain)!}
+                alt={`${row.original.targetName} favicon`}
+                className="h-6 w-6 rounded-sm"
+              />
+            )}
+            {/* empty placeholder to keep alignment */}
+            {!hasTarget && <div className="h-6 w-6 rounded-sm" />}
+            <div className="ml-sm flex flex-col">
+              <div className="font-medium">{row.original.targetName || t("alerts.noTarget")}</div>
               <div className="text-muted-foreground text-xs">{row.original.subdomain}</div>
             </div>
           </div>
