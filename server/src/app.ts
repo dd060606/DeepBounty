@@ -19,6 +19,7 @@ import Workers from "./routes/workers.js";
 import Notifications from "./routes/notifications.js";
 import Scope from "./routes/scope.js";
 import Ingest from "./routes/ingest.js";
+import Callbacks from "./routes/callbacks.js";
 
 // Initialize the app
 function initApp() {
@@ -99,5 +100,6 @@ app.use("/workers", requireAuth, Workers);
 app.use("/notifications", requireAuth, Notifications);
 app.use("/scope", Scope);
 app.use("/ingest", Ingest);
+app.use("/cb", Callbacks); // Public callback endpoint (no auth required)
 
 export default app;

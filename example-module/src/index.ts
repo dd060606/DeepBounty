@@ -4,6 +4,7 @@ import { FIND_SUBDOMAINS_TASK, subdomainsCallback } from "./tasks/subfinder";
 import { registerTools, SUBFINDER } from "./tools";
 import { initializeStorage } from "./storage";
 import { filesApiExample } from "./filesExample";
+import { createCallback, setupCallbacksExample } from "./callbacksExample";
 
 export default class ExampleModule implements ModuleLifecycle {
 	constructor(private api: ServerAPI) {}
@@ -26,6 +27,10 @@ export default class ExampleModule implements ModuleLifecycle {
 		initializeStorage(this.api);
 		registerTools(this.api);
 		this.registerTasks();
+
+		// Set up callback handler for out-of-band exfiltration detection
+		setupCallbacksExample(this.api);
+		createCallback(this.api, 1234); // Example target ID
 
 		this.api.logger.info("Example module: run");
 

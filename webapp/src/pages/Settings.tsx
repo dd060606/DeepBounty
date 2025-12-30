@@ -15,6 +15,7 @@ export default function Settings() {
   const [burpsuiteKey, setBurpsuiteKey] = useState("");
   const [swaggerEnabled, setSwaggerEnabled] = useState(true);
   const [workerKey, setWorkerKey] = useState("");
+  const [externalUrl, setExternalUrl] = useState("");
 
   useEffect(() => {
     loadSettings();
@@ -28,6 +29,7 @@ export default function Settings() {
         setBurpsuiteKey(settingsRes.data.burpsuiteKey);
         setWorkerKey(settingsRes.data.workerKey);
         setSwaggerEnabled(settingsRes.data.enableSwaggerUi);
+        setExternalUrl(settingsRes.data.externalUrl || "");
       }
     } catch {
       toast.error(t("settings.general.errorLoadingSettings"));
@@ -56,6 +58,8 @@ export default function Settings() {
             setBurpsuiteKey={setBurpsuiteKey}
             swaggerEnabled={swaggerEnabled}
             setSwaggerEnabled={setSwaggerEnabled}
+            externalUrl={externalUrl}
+            setExternalUrl={setExternalUrl}
             loadingSettings={loadingSettings}
           />
         </TabsContent>

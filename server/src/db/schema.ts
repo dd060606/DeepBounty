@@ -144,3 +144,28 @@ export const targetTaskOverrides = pgTable(
     unique("target_task_overrides_unique").on(table.targetId, table.taskTemplateId),
   ]
 );
+
+// Module callbacks for external exfiltration detection
+export const moduleCallbacks = pgTable("module_callbacks", {
+  id: serial().primaryKey().notNull(),
+  // Unique identifier (UUID) for the callback URL
+  uuid: text().notNull().unique(),
+  // Module that registered this callback
+  moduleId: text().notNull(),
+  // Human-readable name for the callback
+  name: text().notNull(),
+  // Arbitrary metadata (target info, etc.)
+  metadata: jsonb().default({}).notNull(),
+  // Whether multiple triggers are allowed
+  allowMultipleTriggers: boolean().default(true).notNull(),
+  // Number of times this callback has been triggered
+  triggerCount: integer().default(0).notNull(),
+  // When the callback was last triggered
+  lastTriggeredAt: timestamp({ mode: "string" }),
+  // When the callback was created
+  createdAt: timestamp({ mode: "string" })
+    .default(sql`CURRENT_TIMESTAMP`)
+    .notNull(),
+  // When the callback expires (null = never)
+  expiresAt: timestamp({ mode: "string" }),
+});
