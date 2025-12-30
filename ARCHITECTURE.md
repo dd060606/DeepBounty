@@ -11,8 +11,9 @@
 5. [Module API Reference](#module-api-reference)
 6. [Data Flow](#data-flow)
 7. [Event System](#event-system)
-8. [Storage Architecture](#storage-architecture)
-9. [Creating a Module](#creating-a-module)
+8. [Callback System](#callback-system)
+9. [Storage Architecture](#storage-architecture)
+10. [Creating a Module](#creating-a-module)
 
 ---
 
@@ -684,6 +685,84 @@ server/modules/{moduleId}/
         └── images/
             └── screenshot.png
 ```
+
+### Callback System
+
+The callback system enables out-of-band exfiltration detection. Modules can register callbacks that external systems can trigger via HTTP.
+
+**Usage Examples**:
+
+```typescript
+// Register a callback handler in run() method
+async run() {
+  // This handler is called whenever any callback for this module is triggered
+  this.api.callbacks.onTrigger(async (callback, triggerData) => {
+    this.api.logger.info(`Callback triggered: ${callback.name}`);
+    this.api.logger.info(`Remote IP: ${triggerData.remoteIp}`);
+    this.api.logger.info(`Body: ${JSON.stringify(triggerData.body)}`);
+
+    // Access metadata stored when callback was created
+    const { targetId } = callback.metadata;
+
+    // Create an alert proving the attack succeeded
+    await this.api.createAlert(
+      `Callback - ${targetId}`,
+      targetId,
+      4, // Critical
+      `Callback was called by ${triggerData.body.hostname} (${triggerData.remoteIp})`,
+      `/cb/${callback.uuid}`,
+      true // Confirmed
+    );
+
+    // Optionally delete the callback after use
+    await this.api.callbacks.delete(callback.uuid);
+  });
+}
+
+
+// Create callback with metadata
+const { uuid, url } = await this.api.callbacks.create(
+    `callback-test`,
+    { info: "Info", targetId: 10 }, // Metadata available when triggered
+    { expiresIn: 86400 * 30 }  // Expire after 30 days
+);
+
+
+// List all active callbacks
+const callbacks = await this.api.callbacks.list();
+
+// Get a specific callback
+const callback = await this.api.callbacks.get(uuid);
+
+// Delete a callback
+await this.api.callbacks.delete(uuid);
+
+// Delete all callbacks for this module
+await this.api.callbacks.deleteAll();
+```
+
+**Callback Data Received**:
+
+```typescript
+interface CallbackTriggerData {
+	body: Record<string, any>; // Request body from external caller
+	headers: Record<string, string>; // Request headers
+	remoteIp: string; // Caller's IP address
+	userAgent: string; // Caller's user agent
+	triggeredAt: string; // Timestamp
+}
+```
+
+**Callback Options**:
+
+```typescript
+await api.callbacks.create(name, metadata, {
+	expiresIn: 86400, // Expire after 24 hours (optional)
+	allowMultipleTriggers: true, // Allow multiple triggers (default: true)
+});
+```
+
+**Persistence**: Callbacks are stored in PostgreSQL and survive server restarts. Modules must re-register their `onTrigger` handler during initialization, but existing callbacks remain active.
 
 ---
 

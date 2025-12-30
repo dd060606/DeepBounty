@@ -902,9 +902,12 @@ paths:
                   burpsuiteKey:
                     type: string
                     example: "xyz789uvw012"
-                  scanAllSubdomains:
+                  enableSwaggerUi:
                     type: boolean
                     example: true
+                  externalUrl:
+                    type: string
+                    example: "https://deepbounty.mydomain.com"
         "401":
           description: Unauthorized
     patch:
@@ -920,9 +923,12 @@ paths:
             schema:
               type: object
               properties:
-                scanAllSubdomains:
+                swaggerUi:
                   type: boolean
                   example: true
+                externalUrl:
+                  type: string
+                  example: "https://deepbounty.mydomain.com"
       responses:
         "200":
           description: Settings updated successfully
@@ -1420,3 +1426,36 @@ paths:
           description: Worker not found
         "401":
           description: Unauthorized
+  # Callbacks
+  /cb/{uuid}:
+    parameters:
+      - name: uuid
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Callback UUID
+    post:
+      summary: Trigger a module callback (public endpoint)
+      description: |
+        Public endpoint for external systems to trigger registered callbacks.
+        Used for out-of-band exfiltration detection.
+        This endpoint does not require authentication.
+      tags:
+        - Callbacks
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Arbitrary JSON payload from the external caller
+              additionalProperties: true
+              example:
+                hostname: "target-server.example.com"
+                ip: "192.168.1.100"
+                user: "root"
+      responses:
+        "200":
+          description: Callback processed

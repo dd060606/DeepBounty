@@ -3,6 +3,7 @@
   "enableSwaggerUi": false,
   "workerKey": "RANDOMLY_GENERATED_32_CHARACTER_HEX_STRING",
   "burpsuiteKey": "RANDOMLY_GENERATED_32_CHARACTER_HEX_STRING",
+  "externalUrl": "https://deepbounty.mydomain.com",
   "notificationServices": [
     {
       "provider": "ntfysh",

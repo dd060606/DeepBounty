@@ -12,6 +12,7 @@ export type Config = {
   enableSwaggerUi: boolean;
   workerKey: string;
   burpsuiteKey: string;
+  externalUrl: string;
   notificationServices: NotificationService[];
   [key: string]: any;
 };
@@ -21,6 +22,7 @@ const DEFAULT_CONFIG: Config = {
   enableSwaggerUi: false,
   workerKey: generateRandomKey(),
   burpsuiteKey: generateRandomKey(),
+  externalUrl: process.env.EXTERNAL_URL || "",
   notificationServices: [],
 };
 

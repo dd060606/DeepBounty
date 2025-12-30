@@ -15,6 +15,15 @@ import { createAlert } from "@/services/alerts.js";
 import { getEventBus } from "@/events/eventBus.js";
 import { ModuleEventBus } from "@/events/moduleEventBus.js";
 import { isHostnameInScope } from "@/utils/domains.js";
+import {
+  createCallback,
+  getCallback,
+  listCallbacks,
+  deleteCallback,
+  deleteAllCallbacks,
+  registerCallbackHandler,
+  unregisterCallbackHandler,
+} from "@/services/callbacks.js";
 
 const logger = new Logger("Modules-Loader");
 const registry = getRegistry();
@@ -108,6 +117,26 @@ function buildModuleSDK(moduleId: string, moduleName: string): ServerAPI {
         endpoint,
         confirmed,
       });
+    },
+    callbacks: {
+      create: async (name, metadata, options) => {
+        return await createCallback(moduleId, name, metadata, options);
+      },
+      onTrigger: (handler) => {
+        registerCallbackHandler(moduleId, handler);
+      },
+      get: async (uuid) => {
+        return await getCallback(moduleId, uuid);
+      },
+      list: async (includeExpired) => {
+        return await listCallbacks(moduleId, includeExpired);
+      },
+      delete: async (uuid) => {
+        return await deleteCallback(moduleId, uuid);
+      },
+      deleteAll: async () => {
+        return await deleteAllCallbacks(moduleId);
+      },
     },
   } as ServerAPI);
 }
@@ -222,6 +251,9 @@ export function shutdownModules(): void {
         moduleBus.cleanup();
         moduleEventBuses.delete(m.id);
       }
+
+      // Cleanup callback handlers for this module
+      unregisterCallbackHandler(m.id);
     });
   } catch (e) {
     logger.error("Error while shutting down modules", e);

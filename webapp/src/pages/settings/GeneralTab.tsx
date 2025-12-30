@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -25,6 +26,8 @@ interface GeneralTabProps {
   setBurpsuiteKey: (key: string) => void;
   swaggerEnabled: boolean;
   setSwaggerEnabled: (enabled: boolean) => void;
+  externalUrl: string;
+  setExternalUrl: (url: string) => void;
   loadingSettings: boolean;
 }
 
@@ -33,6 +36,8 @@ export default function GeneralTab({
   setBurpsuiteKey,
   swaggerEnabled,
   setSwaggerEnabled,
+  externalUrl,
+  setExternalUrl,
   loadingSettings,
 }: GeneralTabProps) {
   const { t, i18n } = useTranslation();
@@ -136,6 +141,16 @@ export default function GeneralTab({
     }
   }
 
+  // Save external URL
+  async function saveExternalUrl() {
+    try {
+      await ApiClient.patch("/settings", { externalUrl });
+      toast.success(t("settings.general.externalUrlSaved"));
+    } catch {
+      toast.error(t("settings.general.errorSavingSettings"));
+    }
+  }
+
   return (
     <>
       <div className="space-y-6">
@@ -157,6 +172,25 @@ export default function GeneralTab({
                 <SelectItem value="fr">Français</SelectItem>
               </SelectContent>
             </Select>
+          </SettingItem>
+
+          {/* External URL */}
+          <SettingItem
+            label={t("settings.general.externalUrl")}
+            description={t("settings.general.externalUrlDesc")}
+          >
+            {loadingSettings ? (
+              <Skeleton className="h-8 w-xs sm:w-sm" />
+            ) : (
+              <Input
+                type="url"
+                value={externalUrl}
+                onChange={(e) => setExternalUrl(e.target.value)}
+                onBlur={saveExternalUrl}
+                placeholder="https://deepbounty.mydomain.com"
+                className="w-xs sm:w-sm"
+              />
+            )}
           </SettingItem>
 
           {/* Burp Suite Token */}

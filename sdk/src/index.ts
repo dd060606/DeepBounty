@@ -1,4 +1,14 @@
-import { Alert, ModuleSetting, TaskContent, TaskResult, Tool } from "./types";
+import {
+	Alert,
+	ModuleSetting,
+	TaskContent,
+	TaskResult,
+	Tool,
+	ModuleCallback,
+	CallbackTriggerData,
+	CallbackHandler,
+	CreateCallbackOptions,
+} from "./types";
 import { IEventBus } from "./events";
 
 export interface Logger {
@@ -176,6 +186,59 @@ export interface FilesAPI {
 	getDirectory(directoryPath: string): ScopedDirectory;
 }
 
+/**
+ * CallbackAPI provides external callback functionality for modules.
+ * Used for out-of-band exfiltration detection.
+ */
+export interface CallbackAPI {
+	/**
+	 * Create a new callback with auto-generated UUID
+	 * @param name Human-readable name for the callback
+	 * @param metadata Arbitrary data to associate with this callback (e.g., target info)
+	 * @param options Optional configuration (expiration, multiple triggers)
+	 * @returns Object containing the UUID and full callback URL
+	 */
+	create(
+		name: string,
+		metadata?: Record<string, any>,
+		options?: CreateCallbackOptions
+	): Promise<{ uuid: string; url: string }>;
+
+	/**
+	 * Register a handler for when callbacks are triggered
+	 * Only one handler per module - calling again replaces the previous handler
+	 * @param handler Function called when any callback for this module is triggered
+	 */
+	onTrigger(handler: CallbackHandler): void;
+
+	/**
+	 * Get a callback by UUID
+	 * @param uuid The callback UUID
+	 * @returns The callback data or null if not found
+	 */
+	get(uuid: string): Promise<ModuleCallback | null>;
+
+	/**
+	 * List all callbacks registered by this module
+	 * @param includeExpired Include expired callbacks (default: false)
+	 * @returns Array of callbacks
+	 */
+	list(includeExpired?: boolean): Promise<ModuleCallback[]>;
+
+	/**
+	 * Delete a callback by UUID
+	 * @param uuid The callback UUID
+	 * @returns true if deleted, false if not found
+	 */
+	delete(uuid: string): Promise<boolean>;
+
+	/**
+	 * Delete all callbacks for this module
+	 * @returns Number of callbacks deleted
+	 */
+	deleteAll(): Promise<number>;
+}
+
 export interface ServerAPI {
 	version: string; // SDK version
 	logger: Logger;
@@ -183,6 +246,7 @@ export interface ServerAPI {
 	storage: StorageAPI;
 	files: FilesAPI;
 	events: IEventBus;
+	callbacks: CallbackAPI;
 	/** Check if a hostname is in scope based on targets_subdomains */
 	isHostnameInScope(hostname: string): Promise<boolean>;
 	/**
