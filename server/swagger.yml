@@ -1242,10 +1242,10 @@ paths:
         "401":
           description: Unauthorized
   # Ingest
-  /ingest/burp:
+  /ingest:
     post:
-      summary: Ingest traffic data from Burp Suite
-      description: Receives HTTP traffic data from Burp Suite extension and logs it for processing
+      summary: Ingest traffic data from Burp Suite / Caido
+      description: Receives HTTP traffic data from Burp Suite / Caido extension and logs it for processing
       tags:
         - Ingest
       security:

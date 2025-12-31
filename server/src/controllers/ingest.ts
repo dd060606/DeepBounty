@@ -5,7 +5,7 @@ import { HttpTraffic, TrafficContext } from "@deepbounty/sdk/types/burpsuite";
 
 const logger = new Logger("Ingest");
 
-export async function ingestBurpTraffic(req: Request, res: Response) {
+export async function ingestTraffic(req: Request, res: Response) {
   try {
     const traffic: HttpTraffic = req.body;
     const context: TrafficContext = {
@@ -35,7 +35,7 @@ export async function ingestBurpTraffic(req: Request, res: Response) {
       }
     });
   } catch (error) {
-    logger.error("Error processing Burp Suite traffic:", error);
+    logger.error("Error processing traffic:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 }
