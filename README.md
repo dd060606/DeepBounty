@@ -6,12 +6,12 @@ DeepBounty helps security researchers automate common bug bounty hunting tasks u
 
 🚧 This project is currently in development.
 
-## Key ideas
+## Features
 
 - Modular by design: extend the core with TypeScript modules via an SDK.
 - Scalable workers: execute scans in sandboxed Docker environments, horizontally scalable.
 - Web UI: modern interface to manage targets and view alerts.
-- Planned: a Burp Suite extension to feed captured requests/JS and build a complete sitemap, enhancing module analyses.
+- Burp Suite and Caido extensions to feed captured requests/JS enhancing module analyses.
 
 ## Architecture
 
@@ -46,12 +46,12 @@ DeepBounty helps security researchers automate common bug bounty hunting tasks u
                    +-------------------------------+
 
                         +-----------------------+
-                        |  Burp Suite Extension |
-                        |  (planned)            |
+                        |  Burp Suite / Caido   |
+                        |      Extensions       |
                         +-----------+-----------+
                                     |
                                     v
-                        Feeds requests/JS/sitemap
+                            Feeds requests/JS
                                 into Server
 ```
 
@@ -67,8 +67,8 @@ DeepBounty helps security researchers automate common bug bounty hunting tasks u
     - Modern UI to manage targets and review alerts/findings.
 - Modules (Plugins)
     - Extend functionality using the TypeScript SDK to add scanners, analyzers, and automations.
-- Burp Suite Extension (Planned)
-    - Sends captured request data and page JS to the server to enrich analysis and build a full sitemap.
+- Burp Suite / Caido Extensions
+    - Sends captured request data and page JS to the server to enrich analysis.
 
 ## Tech stack
 
