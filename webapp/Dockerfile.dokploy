@@ -1,7 +1,6 @@
-FROM node:22-bookworm-slim
+FROM node:22-bookworm-slim AS builder
 WORKDIR /app
 
-# Install workspace dependencies
 COPY package.json package-lock.json ./
 COPY webapp/package.json ./webapp/package.json
 COPY sdk/package.json ./sdk/package.json
@@ -10,7 +9,6 @@ COPY worker/package.json ./worker/package.json
 
 RUN npm ci
 
-# Copy source
 COPY sdk ./sdk
 COPY webapp ./webapp
 
@@ -22,6 +20,13 @@ ARG VITE_API_URL=/api
 ENV VITE_API_URL=$VITE_API_URL
 RUN npm run -w webapp build
 
-# Serve the built webapp using Vite preview (no nginx)
-EXPOSE 4173
-CMD ["npm", "run", "-w", "webapp", "preview", "--", "--host", "0.0.0.0", "--port", "4173", "--strictPort"]
+
+FROM nginx:1.27-alpine AS runner
+
+# Nginx config serves SPA
+COPY webapp/nginx.conf.dokploy /etc/nginx/conf.d/default.conf
+
+COPY --from=builder /app/webapp/dist /usr/share/nginx/html
+
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]
