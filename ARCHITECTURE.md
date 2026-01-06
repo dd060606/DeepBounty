@@ -461,7 +461,7 @@ Persistent key-value storage for module configuration.
 ```typescript
 // Example
 await api.config.set("lastRun", new Date().toISOString());
-const apiKey = await api.config.getSetting("apiKey");
+const apiKey = await api.config.getSetting("apiKey").value;
 ```
 
 ### StorageAPI

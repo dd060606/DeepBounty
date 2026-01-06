@@ -15,16 +15,9 @@ services:
       # Source code (for hot reload)
       - ./src:/app/src
       - /app/node_modules
-      # Tools directory (persistent)
-      - worker-tools:/tools
     # Environment variables
     environment:
       - NODE_ENV=development
     env_file:
       - .env
     network_mode: host
-
-volumes:
-  # Persistent volume for tools
-  worker-tools:
-    name: deepbounty-worker-tools
