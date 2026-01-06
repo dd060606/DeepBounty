@@ -270,7 +270,7 @@ export default function ModuleDialog({
                                 min="1"
                                 value={task.interval}
                                 // Disable if CUSTOM scheduling with interval 0
-                                disabled={task.schedulingType === "CUSTOM" && task.interval === 0}
+                                disabled={task.schedulingType === "CUSTOM" && task.interval <= 0}
                                 onChange={(e) => {
                                   const value = parseInt(e.target.value);
                                   if (!isNaN(value) && value > 0) {
