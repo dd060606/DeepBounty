@@ -879,6 +879,19 @@ class TaskManager {
     const updatedExecution = this.registry.getTaskExecution(execution.executionId);
     if (!updatedExecution) return;
 
+    const targetId = execution.targetId ?? result.targetId;
+    const templateId = execution.templateId ?? updatedExecution.templateId;
+
+    if (result.success) {
+      logger.info(
+        `Task execution ${execution.executionId} completed: templateId=${templateId ?? "n/a"} scheduledTaskId=${result.scheduledTaskId} targetId=${targetId ?? "n/a"} workerId=${workerId}`
+      );
+    } else {
+      logger.warn(
+        `Task execution ${execution.executionId} failed: templateId=${templateId ?? "n/a"} scheduledTaskId=${result.scheduledTaskId} targetId=${targetId ?? "n/a"} workerId=${workerId}`
+      );
+    }
+
     // If a new tool was installed, update associated worker tool list
     const taskRequiredTools = execution.content.requiredTools || [];
     if (taskRequiredTools.length > 0) {

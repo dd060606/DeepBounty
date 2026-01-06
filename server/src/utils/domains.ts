@@ -172,7 +172,7 @@ export async function isHostnameInScope(hostname: string): Promise<boolean> {
 
   // 1. Check if hostname is a main target (exact match only)
   const targetMatch = await queryOne(
-    sql`SELECT 1 FROM targets WHERE domain = ${normalized} LIMIT 1`
+    sql`SELECT 1 FROM targets WHERE domain = ${normalized} AND "activeScan" = true LIMIT 1`
   );
   if (targetMatch) return true;
 
@@ -195,7 +195,14 @@ export async function isHostnameInScope(hostname: string): Promise<boolean> {
   if (checks.length === 0) return false;
 
   // Check targets_subdomains for any matches
-  const subdomainsQuery = sql`SELECT 1 FROM targets_subdomains WHERE subdomain IN ${checks} LIMIT 1`;
+  const subdomainsQuery = sql`
+    SELECT 1
+    FROM targets_subdomains ts
+    JOIN targets t ON t.id = ts."targetId"
+    WHERE ts.subdomain IN ${checks}
+      AND t."activeScan" = true
+    LIMIT 1
+  `;
   const subdomainMatch = await queryOne(subdomainsQuery);
 
   return !!subdomainMatch;
