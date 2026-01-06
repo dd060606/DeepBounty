@@ -1,0 +1,27 @@
+FROM node:22-bookworm-slim
+WORKDIR /app
+
+# Install workspace dependencies
+COPY package.json package-lock.json ./
+COPY webapp/package.json ./webapp/package.json
+COPY sdk/package.json ./sdk/package.json
+COPY server/package.json ./server/package.json
+COPY worker/package.json ./worker/package.json
+
+RUN npm ci
+
+# Copy source
+COPY sdk ./sdk
+COPY webapp ./webapp
+
+# Build SDK (webapp depends on it)
+RUN npm run -w sdk build
+
+# Build webapp with a configurable API base URL
+ARG VITE_API_URL=/api
+ENV VITE_API_URL=$VITE_API_URL
+RUN npm run -w webapp build
+
+# Serve the built webapp using Vite preview (no nginx)
+EXPOSE 4173
+CMD ["npm", "run", "-w", "webapp", "preview", "--", "--host", "0.0.0.0", "--port", "4173", "--strictPort"]
