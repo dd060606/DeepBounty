@@ -1,6 +1,5 @@
 import { Alert, DiscordConfig } from "@deepbounty/sdk/types";
 import { INotifier } from "./notifier.js";
-import axios from "axios";
 
 export class DiscordNotifier implements INotifier {
   private webhookUrl?: string;
@@ -24,15 +23,24 @@ export class DiscordNotifier implements INotifier {
     const roleMention = this.notificationRoleID ? `<@&${this.notificationRoleID}>` : null;
     // Send the notification to Discord webhook
     try {
-      await axios.post(this.webhookUrl, {
-        content: roleMention,
-        embeds: [{ title, description, color: 1424001 }],
-        attachments: [],
+      const response = await fetch(this.webhookUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          content: roleMention,
+          embeds: [{ title, description, color: 1424001 }],
+          attachments: [],
+        }),
       });
+
+      if (!response.ok) {
+        throw new Error(`Discord notification failed: ${response.status} ${response.statusText}`);
+      }
     } catch (error: any) {
-      throw new Error(
-        `Discord notification failed: ${error.response?.status} ${error.response?.statusText}`
-      );
+      if (error instanceof Error) throw error;
+      throw new Error("Discord notification failed: Unknown error");
     }
   }
 

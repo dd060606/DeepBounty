@@ -1,6 +1,5 @@
 import { Alert, ntfyshConfig } from "@deepbounty/sdk/types";
 import { INotifier } from "./notifier.js";
-import axios from "axios";
 
 export class ntfyshNotifier implements INotifier {
   private serverRootUrl?: string;
@@ -34,12 +33,13 @@ export class ntfyshNotifier implements INotifier {
       ? this.serverRootUrl.slice(0, -1)
       : this.serverRootUrl;
     // Add leading slash to topic if missing
-    this.topic = this.topic?.startsWith("/") ? this.topic : `/${this.topic}`;
-    const url = `${serverUrl}${this.topic}`;
+    const topicPath = this.topic.startsWith("/") ? this.topic : `/${this.topic}`;
+    const url = `${serverUrl}${topicPath}`;
     // Set up headers for authentication if provided
     const headers: Record<string, string> = {
       Title: title,
       Priority: "high",
+      "Content-Type": "text/plain; charset=utf-8",
       // Basic auth if username and password are provided
       ...(this.username && this.password
         ? {
@@ -53,11 +53,18 @@ export class ntfyshNotifier implements INotifier {
     };
     // Send the notification to ntfy.sh
     try {
-      await axios.post(url, description, { headers });
+      const response = await fetch(url, {
+        method: "POST",
+        headers,
+        body: description,
+      });
+
+      if (!response.ok) {
+        throw new Error(`ntfy.sh notification failed: ${response.status} ${response.statusText}`);
+      }
     } catch (error: any) {
-      throw new Error(
-        `ntfy.sh notification failed: ${error.response?.status} ${error.response?.statusText}`
-      );
+      if (error instanceof Error) throw error;
+      throw new Error("ntfy.sh notification failed: Unknown error");
     }
   }
 
