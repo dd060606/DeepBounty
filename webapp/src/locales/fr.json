@@ -187,6 +187,7 @@
     "taskTemplates": {
       "title": "Modèles de tâches",
       "subtitle": "{{enabled}} actifs • {{total}} au total",
+      "showNonRunnable": "Afficher les tâches non exécutables",
       "filter": "Filtrer",
       "filterByModule": "Filtrer par module",
       "scheduling": "Planification",

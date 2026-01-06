@@ -108,6 +108,8 @@ export default function TaskTemplatesSection({
 }: Props) {
   const { t } = useTranslation();
 
+  const [showNonRunnable, setShowNonRunnable] = useState(false);
+
   const moduleNames = useMemo(() => moduleNameById(modules), [modules]);
 
   const moduleOptions = useMemo(() => {
@@ -144,14 +146,22 @@ export default function TaskTemplatesSection({
 
   const filteredTemplates = useMemo(() => {
     if (!templates?.length) return [];
-    return templates
-      .filter((tpl) => moduleFilter[tpl.moduleId] ?? true)
-      .sort((a, b) => {
-        const an = a.name.localeCompare(b.name);
-        if (an !== 0) return an;
-        return a.id - b.id;
-      });
-  }, [templates, moduleFilter]);
+    return (
+      templates
+        // Filter by module
+        .filter((tpl) => moduleFilter[tpl.moduleId] ?? true)
+        // Filter non-runnable if needed
+        .filter((tpl) => {
+          if (showNonRunnable) return true;
+          return !(tpl.schedulingType === "CUSTOM" && tpl.interval <= 0);
+        })
+        .sort((a, b) => {
+          const an = a.name.localeCompare(b.name);
+          if (an !== 0) return an;
+          return a.id - b.id;
+        })
+    );
+  }, [templates, moduleFilter, showNonRunnable]);
 
   const patchTemplate = useCallback(
     async (id: number, patch: { active?: boolean; interval?: number }) => {
@@ -251,7 +261,7 @@ export default function TaskTemplatesSection({
         const tpl = row.original;
         const isBusy = busy.has(tpl.id);
         // If CUSTOM scheduling with interval 0, disable editing.
-        const fixedInterval = tpl.schedulingType === "CUSTOM" && tpl.interval === 0;
+        const fixedInterval = tpl.schedulingType === "CUSTOM" && tpl.interval <= 0;
 
         return (
           <IntervalEditor
@@ -332,30 +342,39 @@ export default function TaskTemplatesSection({
           </p>
         </div>
 
-        {/* Filter */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="flex items-center gap-2">
-              <ListFilter className="size-4" />
-              {t("modules.taskTemplates.filter")}
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>{t("modules.taskTemplates.filterByModule")}</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            {moduleOptions.map((opt) => (
-              <DropdownMenuCheckboxItem
-                key={opt.moduleId}
-                checked={moduleFilter[opt.moduleId] ?? true}
-                onCheckedChange={(v) =>
-                  setModuleFilter((s) => ({ ...s, [opt.moduleId]: Boolean(v) }))
-                }
-              >
-                {opt.name}
-              </DropdownMenuCheckboxItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <Switch checked={showNonRunnable} onCheckedChange={(v) => setShowNonRunnable(v)} />
+            <span className="text-muted-foreground text-xs">
+              {t("modules.taskTemplates.showNonRunnable")}
+            </span>
+          </div>
+
+          {/* Filter */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="flex items-center gap-2">
+                <ListFilter className="size-4" />
+                {t("modules.taskTemplates.filter")}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>{t("modules.taskTemplates.filterByModule")}</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {moduleOptions.map((opt) => (
+                <DropdownMenuCheckboxItem
+                  key={opt.moduleId}
+                  checked={moduleFilter[opt.moduleId] ?? true}
+                  onCheckedChange={(v) =>
+                    setModuleFilter((s) => ({ ...s, [opt.moduleId]: Boolean(v) }))
+                  }
+                >
+                  {opt.name}
+                </DropdownMenuCheckboxItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
 
       {/* Task templates */}

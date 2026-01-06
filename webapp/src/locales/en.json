@@ -188,6 +188,7 @@
     "taskTemplates": {
       "title": "Task templates",
       "subtitle": "{{enabled}} enabled • {{total}} total",
+      "showNonRunnable": "Show non-runnable tasks",
       "filter": "Filter",
       "filterByModule": "Filter by module",
       "scheduling": "Scheduling",
