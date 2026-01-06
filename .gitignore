@@ -143,3 +143,4 @@ vite.config.ts.timestamp-*
 
 # Module directories
 server/modules/**
+!server/modules/package.json
