@@ -81,4 +81,43 @@ DeepBounty helps security researchers automate common bug bounty hunting tasks u
 
 - **[ARCHITECTURE.md](./ARCHITECTURE.md)** - How the project is structured, perfect for AI-assisted development and deep understanding of the codebase structure, module system, and integration patterns.
 
----
+## Deployment (Docker / Production)
+
+This repo includes production Dockerfiles for the full stack:
+
+- Server (Express + WebSocket)
+- Webapp (Vite build served by nginx)
+- Worker (runs tasks/tools)
+- PostgreSQL
+
+The webapp container also acts as a reverse proxy:
+
+- Browser UI is served on `/`
+- API is reachable on `/api/*` (proxied to the server)
+- Callbacks remain on `/cb/*` (proxied to the server)
+
+### 1) Prerequisites
+
+- Docker + Docker Compose
+
+### 2) Configure environment
+
+Create a repo-root [.env](.env) from the example:
+
+- Copy [.env.example](.env.example) to [.env](.env)
+- Set `DB_PASSWORD` and `EXTERNAL_URL` to your public URL (must match where `/cb/*` is reachable)
+- Generate a 64-hex worker key and set `WORKER_KEY`
+
+Example worker key generation:
+
+- `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`
+
+### 4) Start the stack
+
+From the repository root:
+
+- `docker compose up -d --build`
+
+Open the UI:
+
+- `http://localhost:8080` (or your `WEBAPP_PORT`)

@@ -20,7 +20,7 @@ export type Config = {
 const DEFAULT_CONFIG: Config = {
   password: "",
   enableSwaggerUi: false,
-  workerKey: generateRandomKey(),
+  workerKey: process.env.WORKER_KEY || generateRandomKey(),
   burpsuiteKey: generateRandomKey(),
   externalUrl: process.env.EXTERNAL_URL || "",
   notificationServices: [],
