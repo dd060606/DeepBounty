@@ -4,7 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "docker-compose -f docker-compose.dev.yml up --build"
+    "dev": "docker-compose -f docker-compose.dev.yml up --build",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/src/worker.js"
   },
   "keywords": [],
   "author": "",

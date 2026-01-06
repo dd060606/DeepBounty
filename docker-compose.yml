@@ -1,0 +1,62 @@
+services:
+    db:
+        image: postgres:15
+        environment:
+            POSTGRES_USER: ${DB_USER:-deepbounty}
+            POSTGRES_PASSWORD: ${DB_PASSWORD:-deepbounty}
+            POSTGRES_DB: ${DB_NAME:-deepbounty}
+        volumes:
+            - db-data:/var/lib/postgresql/data
+        healthcheck:
+            test:
+                [
+                    "CMD-SHELL",
+                    "pg_isready -U ${DB_USER:-deepbounty} -d ${DB_NAME:-deepbounty}",
+                ]
+            interval: 5s
+            timeout: 3s
+            retries: 10
+
+    server:
+        build:
+            context: .
+            dockerfile: server/Dockerfile
+        environment:
+            NODE_ENV: production
+            DB_HOST: db
+            DB_PORT: 5432
+            DB_USER: ${DB_USER:-deepbounty}
+            DB_PASSWORD: ${DB_PASSWORD:-deepbounty}
+            DB_NAME: ${DB_NAME:-deepbounty}
+            EXTERNAL_URL: ${EXTERNAL_URL:-http://localhost}
+        depends_on:
+            db:
+                condition: service_healthy
+        volumes:
+            - ./server/config:/app/server/config
+            - ./server/modules:/app/server/modules
+            - ./server/logs:/app/server/logs
+
+    worker:
+        build:
+            context: .
+            dockerfile: worker/Dockerfile
+        environment:
+            SERVER_WS_URL: ws://server:3000
+            SERVER_SECRET_KEY: ${WORKER_KEY}
+        depends_on:
+            - server
+
+    webapp:
+        build:
+            context: .
+            dockerfile: webapp/Dockerfile
+            args:
+                VITE_API_URL: /api
+        ports:
+            - "${WEBAPP_PORT:-8080}:80"
+        depends_on:
+            - server
+
+volumes:
+    db-data:
