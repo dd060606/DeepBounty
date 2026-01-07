@@ -14,13 +14,21 @@ if [ "$DEEPBOUNTY_BEHIND_PROXY" = "true" ]; then
 		exit 1
 	fi
 
+	# docker compose/.env values may include quotes or CRLF; strip those to avoid invalid nginx directives.
+	DEEPBOUNTY_TRUSTED_PROXY_CIDRS=$(printf %s "$DEEPBOUNTY_TRUSTED_PROXY_CIDRS" | tr -d '\r' | tr -d '"' | tr -d "'" | tr -d ' ')
+
 	# Generate one set_real_ip_from per CIDR to satisfy nginx syntax.
 	# Comma-separated list, no spaces.
-	for cidr in $(echo "$DEEPBOUNTY_TRUSTED_PROXY_CIDRS" | tr ',' ' '); do
-		DEEPBOUNTY_REAL_IP_CONFIG="$DEEPBOUNTY_REAL_IP_CONFIG\n  set_real_ip_from $cidr;"
+	for cidr in $(printf %s "$DEEPBOUNTY_TRUSTED_PROXY_CIDRS" | tr ',' ' '); do
+		[ -n "$cidr" ] || continue
+		DEEPBOUNTY_REAL_IP_CONFIG="$DEEPBOUNTY_REAL_IP_CONFIG
+  set_real_ip_from $cidr;"
 	done
 
-	DEEPBOUNTY_REAL_IP_CONFIG="$DEEPBOUNTY_REAL_IP_CONFIG\n  real_ip_header X-Forwarded-For;\n  real_ip_recursive on;\n"
+	DEEPBOUNTY_REAL_IP_CONFIG="$DEEPBOUNTY_REAL_IP_CONFIG
+  real_ip_header X-Forwarded-For;
+  real_ip_recursive on;
+"
 fi
 
 export DEEPBOUNTY_REAL_IP_CONFIG
