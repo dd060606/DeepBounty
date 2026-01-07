@@ -57,8 +57,6 @@ export const handleMessage = async (
     const parsed = JSON.parse(message.toString());
     const { type, data } = parsed;
 
-    console.log(`Received message type: ${type}`);
-
     switch (type) {
       // Execute assigned task
       case "task:start": {
