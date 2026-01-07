@@ -33,9 +33,9 @@ services:
             db:
                 condition: service_healthy
         volumes:
-            - ./server/config:/app/server/config
-            - ./server/modules:/app/server/modules
-            - ./server/logs:/app/server/logs
+            - deepbounty-server-config:/app/server/config
+            - deepbounty-server-modules:/app/server/modules
+            - deepbounty-server-logs:/app/server/logs
 
     webapp:
         build:
@@ -54,3 +54,6 @@ services:
 
 volumes:
     db-data:
+    deepbounty-server-config:
+    deepbounty-server-modules:
+    deepbounty-server-logs:
