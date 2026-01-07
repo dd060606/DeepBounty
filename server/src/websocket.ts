@@ -48,6 +48,23 @@ class WebSocketHandler {
   public initialize() {
     logger.info("WebSocket server initialized");
     this.websocketServer.on("connection", this.handleConnection);
+    this.startHeartbeat();
+  }
+
+  private startHeartbeat() {
+    // Send ping every 30 seconds to keep connections alive through proxies
+    // This is required because load balancers (like Traefik/Nginx) often close idle connections
+    setInterval(() => {
+      this.workers.forEach((worker) => {
+        if (worker.socket.readyState === WebSocket.OPEN) {
+          try {
+            worker.socket.send(JSON.stringify({ type: "ping", data: {} }));
+          } catch (e) {
+            logger.error(`Failed to send ping to worker ${worker.id}: ${(e as Error).message}`);
+          }
+        }
+      });
+    }, 30000);
   }
 
   public static getInstance(): WebSocketHandler | null {
@@ -90,8 +107,24 @@ class WebSocketHandler {
       return;
     }
     // Add the new worker
-    this.addWorker(worker, req.socket.remoteAddress);
+    this.addWorker(worker, this.getRemoteIp(req));
   };
+
+  private getRemoteIp(req: IncomingMessage): string {
+    // Check X-Real-IP header
+    const realIp = req.headers["x-real-ip"];
+    if (realIp) {
+      return Array.isArray(realIp) ? realIp[0] : realIp;
+    }
+
+    // Check X-Forwarded-For
+    const forwarded = req.headers["x-forwarded-for"];
+    if (forwarded) {
+      return Array.isArray(forwarded) ? forwarded[0] : forwarded.split(",")[0].trim();
+    }
+
+    return req.socket.remoteAddress || "unknown";
+  }
 
   // Add a new worker
   public addWorker(ws: WebSocket, ip?: string): void {
