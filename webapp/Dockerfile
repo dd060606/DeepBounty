@@ -23,10 +23,17 @@ RUN npm run -w webapp build
 
 FROM nginx:1.27-alpine AS runner
 
-# Nginx config serves SPA + proxies API to server
-COPY webapp/nginx.conf /etc/nginx/conf.d/default.conf
+# For envsubst
+RUN apk add --no-cache gettext
+
+# Nginx config template (env-substituted on container start)
+RUN mkdir -p /etc/nginx/templates
+COPY webapp/nginx.conf.template /etc/nginx/templates/default.conf.template
+
+COPY webapp/docker-entrypoint.sh /docker-entrypoint.sh
+RUN chmod +x /docker-entrypoint.sh
 
 COPY --from=builder /app/webapp/dist /usr/share/nginx/html
 
 EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
+CMD ["/docker-entrypoint.sh"]
