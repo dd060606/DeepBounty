@@ -9,9 +9,10 @@ import getRegistry from "../utils/registry.js";
 import { getMissingTools } from "@/utils/taskUtils.js";
 import { getTaskTemplateService } from "./taskTemplateService.js";
 import Logger from "@/utils/logger.js";
-import { normalizeDomain, detectTargetId, extractDomainsFromCommands } from "@/utils/domains.js";
+import { detectTargetId, extractDomainsFromCommands } from "@/utils/domains.js";
 
 const logger = new Logger("Tasks-Manager");
+const toolKey = (tool: Tool) => `${tool.name}@${tool.version}`;
 
 // Transport interface for TaskManager to interact with workers
 interface TaskTransport {
@@ -41,6 +42,8 @@ class TaskManager {
   private completionListeners: TaskCompletionListener[] = [];
   // Map of template ID to onSchedule callback (for CUSTOM mode)
   private scheduleCallbacks: Map<number, ScheduleCallback> = new Map();
+  // Tools currently being installed per worker (to avoid duplicate installs)
+  private pendingInstallations: Map<number, Set<string>> = new Map();
   // Scheduler interval handle
   private schedulerInterval?: NodeJS.Timeout;
 
@@ -728,20 +731,42 @@ class TaskManager {
         const workers = this.transport.listWorkers();
         if (!workers.length) break;
 
-        // Select the worker with the lowest effective load
+        // Sort by current load
         workers.sort((a, b) => a.currentTasks.length - b.currentTasks.length);
-        const chosen = workers[0];
+
+        // Pick the least busy worker,
+        // but skip workers currently installing the same missing tools to avoid duplicate installs.
+        let chosen: (typeof workers)[number] | undefined;
+        let missingTools: Tool[] = [];
+
+        for (const worker of workers) {
+          const missing = getMissingTools(worker.availableTools, execution.content.requiredTools);
+          const pendingSet = this.pendingInstallations.get(worker.id);
+          const hasPendingOverlap = pendingSet
+            ? missing.some((tool) => pendingSet.has(toolKey(tool)))
+            : false;
+
+          if (hasPendingOverlap) {
+            continue; // wait for in-flight installs on this worker
+          }
+
+          chosen = worker;
+          missingTools = missing;
+          break;
+        }
+
+        // No suitable worker right now (likely waiting for installations to finish)
         if (!chosen) break;
 
-        // Check if the worker has all required tools
-        const missingTools = getMissingTools(
-          chosen.availableTools,
-          execution.content.requiredTools
-        );
         let executionToSend = execution;
 
-        // If tools are missing, augment the execution with installation commands
+        // If tools are missing and no installs are in-flight, send install commands once and mark them as pending
         if (missingTools.length > 0) {
+          // Track pending installs for this worker to avoid sending duplicate installers
+          const pendingSet = this.pendingInstallations.get(chosen.id) || new Set<string>();
+          missingTools.forEach((tool) => pendingSet.add(toolKey(tool)));
+          this.pendingInstallations.set(chosen.id, pendingSet);
+
           // Clone the execution to avoid modifying the original
           executionToSend = {
             ...execution,
@@ -759,6 +784,7 @@ class TaskManager {
             executionToSend.content
           );
         }
+
         // Replace tool placeholders in commands before sending
         executionToSend.content.commands = replaceToolPlaceholders(
           executionToSend.content.commands,
@@ -829,6 +855,9 @@ class TaskManager {
    * @param workerId - ID of the disconnected worker
    */
   handleWorkerDisconnect(workerId: number) {
+    // Clear any pending install tracking for this worker
+    this.pendingInstallations.delete(workerId);
+
     // Requeue executions that were running on that worker
     const toRequeue: number[] = [];
     const workerExecutions = this.registry.getTaskExecutionsByWorkerId(workerId);
@@ -892,9 +921,17 @@ class TaskManager {
       );
     }
 
-    // If a new tool was installed, update associated worker tool list
+    // If a new tool was installed, update associated worker tool list and clear pending installs
     const taskRequiredTools = execution.content.requiredTools || [];
     if (taskRequiredTools.length > 0) {
+      const pendingSet = this.pendingInstallations.get(workerId);
+      if (pendingSet) {
+        taskRequiredTools.forEach((tool) => pendingSet.delete(toolKey(tool)));
+        if (pendingSet.size === 0) {
+          this.pendingInstallations.delete(workerId);
+        }
+      }
+
       this.transport?.updateWorkerTools(workerId, taskRequiredTools);
     }
 
@@ -918,6 +955,11 @@ class TaskManager {
     if (scheduledTask && scheduledTask.oneTime) {
       this.registry.deleteScheduledTask(scheduledTask.id);
     }
+
+    // Try to dispatch any waiting tasks now that the worker freed up
+    this.assignNextTask().catch((err) => {
+      logger.error(`Error assigning task after completion: ${err.message}`);
+    });
   }
 
   /**
