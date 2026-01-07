@@ -29,6 +29,7 @@ services:
             DB_PASSWORD: ${DB_PASSWORD:-deepbounty}
             DB_NAME: ${DB_NAME:-deepbounty}
             EXTERNAL_URL: ${EXTERNAL_URL:-http://localhost}
+            WORKER_KEY: ${WORKER_KEY}
         depends_on:
             db:
                 condition: service_healthy
