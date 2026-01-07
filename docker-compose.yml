@@ -37,22 +37,16 @@ services:
             - ./server/modules:/app/server/modules
             - ./server/logs:/app/server/logs
 
-    worker:
-        build:
-            context: .
-            dockerfile: worker/Dockerfile
-        environment:
-            SERVER_WS_URL: ws://server:3000
-            SERVER_SECRET_KEY: ${WORKER_KEY}
-        depends_on:
-            - server
-
     webapp:
         build:
             context: .
             dockerfile: webapp/Dockerfile
             args:
                 VITE_API_URL: /api
+        environment:
+            DEEPBOUNTY_ACCESS_MODE: ${DEEPBOUNTY_ACCESS_MODE:-public}
+            DEEPBOUNTY_BEHIND_PROXY: ${DEEPBOUNTY_BEHIND_PROXY:-false}
+            DEEPBOUNTY_TRUSTED_PROXY_CIDRS: ${DEEPBOUNTY_TRUSTED_PROXY_CIDRS:-}
         ports:
             - "${WEBAPP_PORT:-8080}:80"
         depends_on:

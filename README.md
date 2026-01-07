@@ -87,8 +87,12 @@ This repo includes production Dockerfiles for the full stack:
 
 - Server (Express + WebSocket)
 - Webapp (Vite build served by nginx)
-- Worker (runs tasks/tools)
 - PostgreSQL
+
+The worker is usually deployed on a separate host. As a result:
+
+- Main stack (db + server + webapp): `docker-compose.yml`
+- Remote worker: `docker-compose.worker.yml`
 
 The webapp container also acts as a reverse proxy:
 
@@ -108,11 +112,23 @@ Create a repo-root [.env](.env) from the example:
 - Set `DB_PASSWORD` and `EXTERNAL_URL` to your public URL (must match where `/cb/*` is reachable)
 - Generate a 64-hex worker key and set `WORKER_KEY`
 
+Optional hardening (recommended):
+
+- Set `DEEPBOUNTY_ACCESS_MODE=local` to restrict access to `/` and `/api/*` to local/private IPs.
+- `/cb/*` stays publicly reachable so callbacks still work.
+
+If you run DeepBounty behind another reverse proxy (e.g. Traefik), also set:
+
+- `DEEPBOUNTY_BEHIND_PROXY=true`
+- `DEEPBOUNTY_TRUSTED_PROXY_CIDRS` to the IP(s)/CIDR(s) of your proxy (comma-separated)
+
+This makes nginx use the real client IP from `X-Forwarded-For`, but only when the request comes from your trusted proxy. Without this, "local" mode can be effectively bypassed because nginx only sees the proxy IP.
+
 Example worker key generation:
 
 - `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`
 
-### 4) Start the stack
+### 4) Start the main stack (db + server + webapp)
 
 From the repository root:
 
@@ -121,3 +137,21 @@ From the repository root:
 Open the UI:
 
 - `http://localhost:8080` (or your `WEBAPP_PORT`)
+
+### 5) Start a remote worker (separate host)
+
+On the worker machine, copy only what you need (or clone the repo), then set:
+
+- `WORKER_KEY` (same value as the server)
+- `SERVER_WS_URL` to your public DeepBounty URL WebSocket endpoint:
+    - `wss://deepbounty.example.com/api/ws`
+    - or `ws://<ip>:<port>/api/ws` if you don’t use TLS
+
+Then run:
+
+- `docker compose -f docker-compose.worker.yml up -d --build`
+
+Notes:
+
+- If `DEEPBOUNTY_ACCESS_MODE=local`, workers still connect via `/api/ws` (kept public).
+- If DeepBounty is behind another reverse proxy/load balancer, the “local-only” IP check may need proxy real-IP forwarding to be accurate.

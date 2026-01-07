@@ -1,12 +1,40 @@
+map $remote_addr $deepbounty_is_local {
+  default 0;
+
+  # IPv4 localhost
+  127.0.0.1 1;
+
+  # RFC1918 private ranges
+  10.0.0.0/8 1;
+  172.16.0.0/12 1;
+  192.168.0.0/16 1;
+
+  # IPv6 localhost + ULA/link-local
+  ::1 1;
+  fc00::/7 1;
+  fe80::/10 1;
+}
+
+# Substituted at runtime by envsubst. Note: `set` is not allowed at `http` level,
+# so we bake the value into the map key.
+map "${DEEPBOUNTY_ACCESS_MODE}:$deepbounty_is_local" $deepbounty_deny_web {
+  default 0;
+  "local:0" 1;
+}
+
 server {
   listen 80;
   server_name _;
 
+  # Optional: when running behind another reverse proxy (e.g. Traefik), configure
+  # nginx to use the real client IP from X-Forwarded-For, but ONLY when the
+  # request comes from a trusted proxy IP/CIDR.
+  ${DEEPBOUNTY_REAL_IP_CONFIG}
+
   root /usr/share/nginx/html;
   index index.html;
 
-  # Proxy API calls under /api/* to the server
-  # WebSocket endpoint for workers
+  # Workers connect here (WebSocket upgrade). Kept public so remote workers can connect.
   location /api/ws {
     proxy_pass http://server:3000;
 
@@ -20,7 +48,10 @@ server {
     proxy_set_header X-Forwarded-Proto $scheme;
   }
 
+  # Proxy API calls under /api/* to the server
   location /api/ {
+    if ($deepbounty_deny_web) { return 403; }
+
     rewrite ^/api/(.*)$ /$1 break;
     proxy_pass http://server:3000;
 
@@ -44,6 +75,7 @@ server {
 
   # SPA fallback
   location / {
+    if ($deepbounty_deny_web) { return 403; }
     try_files $uri $uri/ /index.html;
   }
 }
