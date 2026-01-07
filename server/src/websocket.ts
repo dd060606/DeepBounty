@@ -229,7 +229,6 @@ class WebSocketHandler {
         break;
       }
       case "pong": {
-        logger.info(`Worker ${workerId} responded to ping`);
         break;
       }
       default:
