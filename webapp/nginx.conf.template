@@ -1,4 +1,4 @@
-map $remote_addr $deepbounty_is_local {
+geo $deepbounty_is_local {
   default 0;
 
   # IPv4 localhost
