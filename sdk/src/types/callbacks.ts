@@ -9,6 +9,8 @@
 export interface CreateCallbackOptions {
 	/** Time-to-live in seconds. If not set, the callback never expires */
 	expiresIn?: number;
+	/** Delay before the callback becomes active, in seconds (default: 0 = active immediately) */
+	effectiveIn?: number;
 	/** Whether the callback can be triggered multiple times (default: true) */
 	allowMultipleTriggers?: boolean;
 }
@@ -27,6 +29,8 @@ export interface ModuleCallback {
 	metadata: Record<string, any>;
 	/** When the callback was created */
 	createdAt: string;
+	/** When the callback becomes active (callbacks before this time are ignored) */
+	effectiveAt: string;
 	/** When the callback expires (null = never) */
 	expiresAt: string | null;
 	/** Whether multiple triggers are allowed */

@@ -166,6 +166,10 @@ export const moduleCallbacks = pgTable("module_callbacks", {
   createdAt: timestamp({ mode: "string" })
     .default(sql`CURRENT_TIMESTAMP`)
     .notNull(),
+  // When the callback becomes active
+  effectiveAt: timestamp({ mode: "string" })
+    .default(sql`CURRENT_TIMESTAMP`)
+    .notNull(),
   // When the callback expires (null = never)
   expiresAt: timestamp({ mode: "string" }),
 });
