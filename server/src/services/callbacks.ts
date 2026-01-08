@@ -26,6 +26,7 @@ interface CallbackRow {
   triggerCount: number;
   lastTriggeredAt: string | null;
   createdAt: string;
+  effectiveAt: string;
   expiresAt: string | null;
 }
 
@@ -58,6 +59,11 @@ export async function createCallback(
   const uuid = randomUUID();
   const now = new Date();
 
+  const effectiveDelay = options.effectiveIn ?? 0;
+  const effectiveAt: Date = effectiveDelay > 0
+    ? new Date(now.getTime() + effectiveDelay * 1000)
+    : now;
+
   let expiresAt: Date | null = null;
   if (options.expiresIn && options.expiresIn > 0) {
     expiresAt = new Date(now.getTime() + options.expiresIn * 1000);
@@ -67,8 +73,8 @@ export async function createCallback(
   const metadataJson = JSON.stringify(metadata);
 
   await queryOne(
-    sql`INSERT INTO module_callbacks (uuid, "moduleId", name, metadata, "allowMultipleTriggers", "createdAt", "expiresAt")
-        VALUES (${uuid}, ${moduleId}, ${name}, ${metadataJson}::jsonb, ${allowMultipleTriggers}, ${now.toISOString()}, ${expiresAt?.toISOString() ?? null})`
+      sql`INSERT INTO module_callbacks (uuid, "moduleId", name, metadata, "allowMultipleTriggers", "createdAt", "effectiveAt", "expiresAt")
+          VALUES (${uuid}, ${moduleId}, ${name}, ${metadataJson}::jsonb, ${allowMultipleTriggers}, ${now.toISOString()}, ${effectiveAt.toISOString()}, ${expiresAt?.toISOString() ?? null})`
   );
 
   const externalUrl = config.get().externalUrl || "";
@@ -88,7 +94,8 @@ export async function getCallback(moduleId: string, uuid: string): Promise<Modul
                 "allowMultipleTriggers", 
                 "triggerCount",
                 "lastTriggeredAt", 
-                "createdAt", 
+                  "createdAt", 
+                  "effectiveAt", 
                 "expiresAt"
         FROM module_callbacks 
         WHERE uuid = ${uuid} AND "moduleId" = ${moduleId}`
@@ -110,7 +117,8 @@ export async function getCallbackByUuid(
                "allowMultipleTriggers", 
                "triggerCount",
                "lastTriggeredAt", 
-               "createdAt", 
+                 "createdAt", 
+                 "effectiveAt", 
                "expiresAt"
         FROM module_callbacks 
         WHERE uuid = ${uuid}`
@@ -138,6 +146,7 @@ export async function listCallbacks(
                  "triggerCount",
                  "lastTriggeredAt", 
                  "createdAt", 
+                 "effectiveAt", 
                  "expiresAt"
           FROM module_callbacks 
           WHERE "moduleId" = ${moduleId}`
@@ -149,6 +158,7 @@ export async function listCallbacks(
                  "triggerCount",
                  "lastTriggeredAt", 
                  "createdAt", 
+                 "effectiveAt", 
                  "expiresAt"
           FROM module_callbacks 
           WHERE "moduleId" = ${moduleId} AND ("expiresAt" IS NULL OR "expiresAt" > ${now})`
@@ -211,6 +221,12 @@ export async function triggerCallback(
     return { success: false, error: "Callback expired" };
   }
 
+  // Check if callback is active yet
+  if (callback.effectiveAt && new Date(callback.effectiveAt) > now) {
+    logger.warn(`Callback not active yet: ${uuid}`);
+    return { success: false, error: "Callback not active yet" };
+  }
+
   // Check if already triggered and multiple triggers not allowed
   if (!callback.allowMultipleTriggers && callback.triggerCount > 0) {
     logger.warn(`Callback already triggered (multiple triggers not allowed): ${uuid}`);
@@ -264,6 +280,7 @@ function mapToModuleCallback(row: CallbackRow): ModuleCallback {
     name: row.name,
     metadata: row.metadata ?? {},
     createdAt: row.createdAt,
+    effectiveAt: row.effectiveAt,
     expiresAt: row.expiresAt,
     allowMultipleTriggers: row.allowMultipleTriggers,
     triggerCount: row.triggerCount,

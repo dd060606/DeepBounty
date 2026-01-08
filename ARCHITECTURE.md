@@ -688,7 +688,7 @@ server/modules/{moduleId}/
 
 ### Callback System
 
-The callback system enables out-of-band exfiltration detection. Modules can register callbacks that external systems can trigger via HTTP.
+The callback system enables out-of-band exfiltration detection. Modules can register callbacks that external systems can trigger via HTTP. Callbacks support delayed activation, making it harder for bots to immediately hit freshly created URLs.
 
 **Usage Examples**:
 
@@ -722,9 +722,12 @@ async run() {
 
 // Create callback with metadata
 const { uuid, url } = await this.api.callbacks.create(
-    `callback-test`,
-    { info: "Info", targetId: 10 }, // Metadata available when triggered
-    { expiresIn: 86400 * 30 }  // Expire after 30 days
+		`callback-test`,
+		{ info: "Info", targetId: 10 }, // Metadata available when triggered
+		{
+			expiresIn: 86400 * 30, // Expire after 30 days
+			effectiveIn: 300, // Become active after 5 minutes
+		}
 );
 
 
@@ -758,6 +761,7 @@ interface CallbackTriggerData {
 ```typescript
 await api.callbacks.create(name, metadata, {
 	expiresIn: 86400, // Expire after 24 hours (optional)
+	effectiveIn: 120, // Delay activation by 2 minutes (optional, default immediate)
 	allowMultipleTriggers: true, // Allow multiple triggers (default: true)
 });
 ```

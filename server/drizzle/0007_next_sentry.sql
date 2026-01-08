@@ -1,0 +1,1 @@
+ALTER TABLE "module_callbacks" ADD COLUMN "effectiveAt" timestamp DEFAULT CURRENT_TIMESTAMP NOT NULL;
