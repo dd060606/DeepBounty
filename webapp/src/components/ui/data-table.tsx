@@ -32,7 +32,6 @@ interface DataTableProps<TData, TValue> {
   pageIndex?: number;
   pageSize?: number;
   pageCount?: number;
-  totalItems?: number;
   onPageChange?: (pageIndex: number) => void;
 }
 
@@ -46,7 +45,6 @@ export function DataTable<TData, TValue>({
   pageIndex,
   pageSize,
   pageCount,
-  totalItems,
   onPageChange,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -85,9 +83,6 @@ export function DataTable<TData, TValue>({
   const paginationEnabled = Boolean(onPageChange);
   const totalPages = pageCount ?? 1;
   const currentPage = paginationState.pageIndex + 1;
-  const hasRows = data.length > 0;
-  const rangeStart = hasRows ? paginationState.pageIndex * paginationState.pageSize + 1 : 0;
-  const rangeEnd = paginationState.pageIndex * paginationState.pageSize + data.length;
 
   return (
     <div className="overflow-hidden rounded-md border">
