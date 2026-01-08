@@ -6,7 +6,15 @@ type Segment = "body" | "query" | "params";
 function makeValidator(segment: Segment) {
   return (schema: z.ZodSchema<any>) => (req: Request, res: Response, next: NextFunction) => {
     try {
-      req[segment] = schema.parse((req as any)[segment]);
+      const parsed = schema.parse((req as any)[segment]);
+
+      if (segment === "query") {
+        const target = req.query as Record<string, unknown>;
+        Object.keys(target).forEach((k) => delete target[k]);
+        Object.assign(target, parsed);
+      } else {
+        (req as any)[segment] = parsed;
+      }
       next();
     } catch (err) {
       if (err instanceof ZodError) {
@@ -27,3 +35,4 @@ function makeValidator(segment: Segment) {
 // Validate request data
 export const validateBody = makeValidator("body");
 export const validateParams = makeValidator("params");
+export const validateQuery = makeValidator("query");

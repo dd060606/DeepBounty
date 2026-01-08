@@ -6,28 +6,42 @@ import { sql } from "drizzle-orm";
 import { Request, Response } from "express";
 
 const logger = new Logger("Alerts");
+const MAX_PAGE_SIZE = 50;
 
 // GET /alerts - list all alerts joined with target name and domain
 export async function getAlerts(req: Request, res: Response) {
   try {
-    const rows = await query<Alert>(
-      sql`SELECT 
-        a.id,
-        a.name,
-        COALESCE(t.name, '') AS "targetName",
-        COALESCE(t.domain, '') AS domain,
-        a.subdomain,
-        a.score,
-        a.confirmed,
-        a.description,
-        a.endpoint,
-        to_char(a."createdAt", 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') as "createdAt"
-      FROM alerts a
-      LEFT JOIN targets t ON t.id = a."targetId"
-      ORDER BY a."createdAt" DESC, a.id DESC`
-    );
+    const { page = 1, pageSize = MAX_PAGE_SIZE } = req.query as {
+      page?: number;
+      pageSize?: number;
+    };
 
-    res.json(rows);
+    const limit = Math.min(Number(pageSize) || MAX_PAGE_SIZE, MAX_PAGE_SIZE);
+    const currentPage = Math.max(1, Number(page) || 1);
+    const offset = (currentPage - 1) * limit;
+
+    const [rows, totalRow] = await Promise.all([
+      query<Alert>(
+        sql`SELECT 
+          a.id,
+          a.name,
+          COALESCE(t.name, '') AS "targetName",
+          COALESCE(t.domain, '') AS domain,
+          a.subdomain,
+          a.score,
+          a.confirmed,
+          a.description,
+          a.endpoint,
+          to_char(a."createdAt", 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') as "createdAt"
+        FROM alerts a
+        LEFT JOIN targets t ON t.id = a."targetId"
+        ORDER BY a."createdAt" DESC, a.id DESC
+        LIMIT ${limit} OFFSET ${offset}`
+      ),
+      queryOne<{ count: number }>(sql`SELECT COUNT(*)::int as count FROM alerts`),
+    ]);
+
+    res.json({ alerts: rows, total: totalRow?.count ?? 0, page: currentPage, pageSize: limit });
   } catch (error) {
     logger.error("Error fetching alerts:", error);
     res.status(500).json({ error: "Internal server error" });

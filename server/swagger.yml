@@ -395,38 +395,66 @@ paths:
         - Alerts
       security:
         - sessionCookie: []
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          description: Page number (1-based)
+        - in: query
+          name: pageSize
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 50
+          description: Number of alerts per page (max 50)
       responses:
         "200":
-          description: A list of alerts
+          description: A paginated list of alerts
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    id:
-                      type: integer
-                    name:
-                      type: string
-                    targetName:
-                      type: string
-                    domain:
-                      type: string
-                    subdomain:
-                      type: string
-                    score:
-                      type: integer
-                      description: Severity score (0 = informational, 1 = low, 2 = medium, 3 = high, 4 = critical)
-                    confirmed:
-                      type: boolean
-                    description:
-                      type: string
-                    endpoint:
-                      type: string
-                    createdAt:
-                      type: string
-                      format: date-time
+                type: object
+                properties:
+                  alerts:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        name:
+                          type: string
+                        targetName:
+                          type: string
+                        domain:
+                          type: string
+                        subdomain:
+                          type: string
+                        score:
+                          type: integer
+                          description: Severity score (0 = informational, 1 = low, 2 = medium, 3 = high, 4 = critical)
+                        confirmed:
+                          type: boolean
+                        description:
+                          type: string
+                        endpoint:
+                          type: string
+                        createdAt:
+                          type: string
+                          format: date-time
+                  total:
+                    type: integer
+                    description: Total number of alerts available
+                  page:
+                    type: integer
+                    description: Current page (1-based)
+                  pageSize:
+                    type: integer
+                    description: Number of alerts per page (max 50)
         "401":
           description: Unauthorized
     post:
