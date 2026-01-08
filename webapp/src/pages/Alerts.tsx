@@ -125,7 +125,6 @@ export default function Alerts() {
           pageIndex={pageIndex}
           pageCount={pageCount}
           pageSize={pageSize}
-          total={total}
           onPageChange={handlePageChange}
         />
       )}

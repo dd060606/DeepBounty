@@ -33,7 +33,6 @@ type Props = {
   pageIndex: number;
   pageCount: number;
   pageSize: number;
-  total: number;
   onPageChange: (pageIndex: number) => void;
 };
 
@@ -55,7 +54,6 @@ export default function AlertsTable({
   pageIndex,
   pageCount,
   pageSize,
-  total,
   onPageChange,
 }: Props) {
   const { t } = useTranslation();
@@ -354,7 +352,6 @@ export default function AlertsTable({
           pageIndex={pageIndex}
           pageSize={pageSize}
           pageCount={pageCount}
-          totalItems={total}
           onPageChange={onPageChange}
         />
       ) : (
