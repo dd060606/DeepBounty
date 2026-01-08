@@ -8,28 +8,54 @@ import ApiClient from "@/utils/api";
 import AlertDetailsDialog from "@/components/dialogs/AlertDetailsDialog";
 import { ConfirmDialog } from "@/components/dialogs/ConfirmDialog";
 
+type AlertsResponse = {
+  alerts: Alert[];
+  total: number;
+  page: number;
+  pageSize: number;
+};
+
+const PAGE_SIZE = 50;
+
 export default function Alerts() {
   const { t } = useTranslation();
   const [alerts, setAlerts] = useState<Alert[] | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [pageIndex, setPageIndex] = useState(0);
+  const [pageSize, setPageSize] = useState(PAGE_SIZE);
+  const [pageCount, setPageCount] = useState(1);
+  const [total, setTotal] = useState(0);
   const [selected, setSelected] = useState<Alert | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{
     open: boolean;
     alertIds: number[];
   }>({ open: false, alertIds: [] });
 
-  async function fetchAlerts() {
-    setLoading(true);
+  async function fetchAlerts(nextPageIndex = 0) {
     try {
-      const res = await ApiClient.get<Alert[]>("/alerts");
-      // Sort alerts by id
-      const alerts = res.data.sort((a, b) => b.id - a.id) || [];
+      const res = await ApiClient.get<AlertsResponse>("/alerts", {
+        params: { page: nextPageIndex + 1, pageSize: PAGE_SIZE },
+      });
+      const data = res.data;
+      const alerts = data.alerts ?? [];
+      const resolvedPageSize = data.pageSize ?? PAGE_SIZE;
+      const totalAlerts = data.total ?? alerts.length;
+      const computedPageCount = Math.max(1, Math.ceil(totalAlerts / resolvedPageSize) || 1);
+      const resolvedPageIndex = Math.min(
+        Math.max(0, (data.page ?? nextPageIndex + 1) - 1),
+        computedPageCount - 1
+      );
+
       setAlerts(alerts);
+      setTotal(totalAlerts);
+      setPageSize(resolvedPageSize);
+      setPageCount(computedPageCount);
+      setPageIndex(resolvedPageIndex);
     } catch {
       toast.error(t("alerts.errors.loadAlerts"));
       setAlerts([]);
-    } finally {
-      setLoading(false);
+      setTotal(0);
+      setPageSize(PAGE_SIZE);
+      setPageCount(1);
     }
   }
 
@@ -38,10 +64,11 @@ export default function Alerts() {
       // Delete all alerts in parallel
       await Promise.all(alertIds.map((id) => ApiClient.delete(`/alerts/${id}`)));
 
-      // Update local state
-      setAlerts((prev) => (prev ? prev.filter((a) => !alertIds.includes(a.id)) : []));
+      const updatedTotal = Math.max(total - alertIds.length, 0);
+      const updatedPageCount = Math.max(1, Math.ceil(updatedTotal / pageSize) || 1);
+      const targetPageIndex = Math.min(pageIndex, updatedPageCount - 1);
+      await fetchAlerts(targetPageIndex);
 
-      // Show success message
       if (alertIds.length === 1) {
         toast.success(t("alerts.success.deleteAlert"));
       } else {
@@ -69,8 +96,13 @@ export default function Alerts() {
     closeDeleteConfirm();
   }
 
+  function handlePageChange(nextPageIndex: number) {
+    setPageIndex(nextPageIndex);
+    fetchAlerts(nextPageIndex);
+  }
+
   useEffect(() => {
-    fetchAlerts();
+    fetchAlerts(0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -80,7 +112,7 @@ export default function Alerts() {
         <h1 className="text-foreground text-xl font-semibold">{t("nav.alerts")}</h1>
       </div>
 
-      {loading || alerts === null ? (
+      {alerts === null ? (
         <AlertsSkeleton />
       ) : (
         <AlertsTable
@@ -90,6 +122,11 @@ export default function Alerts() {
           }}
           onDelete={(alertId) => openDeleteConfirm([alertId])}
           onDeleteMultiple={(alertIds) => openDeleteConfirm(alertIds)}
+          pageIndex={pageIndex}
+          pageCount={pageCount}
+          pageSize={pageSize}
+          total={total}
+          onPageChange={handlePageChange}
         />
       )}
 

@@ -7,6 +7,7 @@ import {
   useReactTable,
   type RowSelectionState,
   type OnChangeFn,
+  type PaginationState,
 } from "@tanstack/react-table";
 
 import {
@@ -17,7 +18,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
 import { useMemo, useState } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
@@ -26,6 +29,11 @@ interface DataTableProps<TData, TValue> {
   rowSelection?: RowSelectionState;
   onRowSelectionChange?: OnChangeFn<RowSelectionState>;
   getRowId?: (originalRow: TData, index: number, parent?: any) => string;
+  pageIndex?: number;
+  pageSize?: number;
+  pageCount?: number;
+  totalItems?: number;
+  onPageChange?: (pageIndex: number) => void;
 }
 
 export function DataTable<TData, TValue>({
@@ -35,9 +43,26 @@ export function DataTable<TData, TValue>({
   rowSelection,
   onRowSelectionChange,
   getRowId,
+  pageIndex,
+  pageSize,
+  pageCount,
+  totalItems,
+  onPageChange,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const emptyRowSelection = useMemo(() => ({}) as RowSelectionState, []);
+  const resolvedPageSize = pageSize ?? (data.length > 0 ? data.length : 10);
+  const paginationState: PaginationState = useMemo(
+    () => ({ pageIndex: pageIndex ?? 0, pageSize: resolvedPageSize }),
+    [pageIndex, resolvedPageSize]
+  );
+
+  const handlePaginationChange: OnChangeFn<PaginationState> | undefined = onPageChange
+    ? (updater) => {
+        const nextState = typeof updater === "function" ? updater(paginationState) : updater;
+        onPageChange(nextState.pageIndex);
+      }
+    : undefined;
 
   const table = useReactTable({
     data,
@@ -47,11 +72,22 @@ export function DataTable<TData, TValue>({
     onSortingChange: setSorting,
     getSortedRowModel: getSortedRowModel(),
     onRowSelectionChange: onRowSelectionChange,
+    manualPagination: Boolean(onPageChange),
+    pageCount: pageCount,
+    onPaginationChange: handlePaginationChange,
     state: {
       sorting,
       rowSelection: rowSelection ?? emptyRowSelection,
+      pagination: paginationState,
     },
   });
+
+  const paginationEnabled = Boolean(onPageChange);
+  const totalPages = pageCount ?? 1;
+  const currentPage = paginationState.pageIndex + 1;
+  const hasRows = data.length > 0;
+  const rangeStart = hasRows ? paginationState.pageIndex * paginationState.pageSize + 1 : 0;
+  const rangeEnd = paginationState.pageIndex * paginationState.pageSize + data.length;
 
   return (
     <div className="overflow-hidden rounded-md border">
@@ -95,6 +131,32 @@ export function DataTable<TData, TValue>({
           )}
         </TableBody>
       </Table>
+
+      {paginationEnabled && (
+        <div className="flex flex-col gap-3 border-t px-4 py-3 sm:flex-row sm:items-center sm:justify-end">
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => table.previousPage()}
+              disabled={!table.getCanPreviousPage()}
+            >
+              <ChevronLeft />
+            </Button>
+            <span className="text-muted-foreground text-xs">
+              {currentPage} / {Math.max(totalPages, 1)}
+            </span>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => table.nextPage()}
+              disabled={!table.getCanNextPage()}
+            >
+              <ChevronRight />
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

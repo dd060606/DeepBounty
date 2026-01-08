@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { faviconUrl } from "@/utils/domains";
 import type { Alert } from "@deepbounty/sdk/types";
@@ -30,6 +30,11 @@ type Props = {
   onRowClick?: (alert: Alert) => void;
   onDelete?: (alertId: number) => void;
   onDeleteMultiple?: (alertIds: number[]) => void;
+  pageIndex: number;
+  pageCount: number;
+  pageSize: number;
+  total: number;
+  onPageChange: (pageIndex: number) => void;
 };
 
 // A header component that allows sorting
@@ -42,7 +47,17 @@ function TableHeader({ column, title }: { column: Column<Alert>; title: string }
   );
 }
 
-export default function AlertsTable({ alerts, onRowClick, onDelete, onDeleteMultiple }: Props) {
+export default function AlertsTable({
+  alerts,
+  onRowClick,
+  onDelete,
+  onDeleteMultiple,
+  pageIndex,
+  pageCount,
+  pageSize,
+  total,
+  onPageChange,
+}: Props) {
   const { t } = useTranslation();
   const [query, setQuery] = useState("");
   const [rowSelection, setRowSelection] = useState({});
@@ -221,6 +236,10 @@ export default function AlertsTable({ alerts, onRowClick, onDelete, onDeleteMult
       .filter((id): id is number => id !== undefined);
   }, [rowSelection, filtered]);
 
+  useEffect(() => {
+    setRowSelection({});
+  }, [alerts]);
+
   const handleDeleteSelected = () => {
     if (selectedAlertIds.length > 0) {
       onDeleteMultiple?.(selectedAlertIds);
@@ -332,6 +351,11 @@ export default function AlertsTable({ alerts, onRowClick, onDelete, onDeleteMult
           onRowClick={onRowClick}
           rowSelection={rowSelection}
           onRowSelectionChange={setRowSelection}
+          pageIndex={pageIndex}
+          pageSize={pageSize}
+          pageCount={pageCount}
+          totalItems={total}
+          onPageChange={onPageChange}
         />
       ) : (
         // Empty message
