@@ -60,9 +60,8 @@ export async function createCallback(
   const now = new Date();
 
   const effectiveDelay = options.effectiveIn ?? 0;
-  const effectiveAt: Date = effectiveDelay > 0
-    ? new Date(now.getTime() + effectiveDelay * 1000)
-    : now;
+  const effectiveAt: Date =
+    effectiveDelay > 0 ? new Date(now.getTime() + effectiveDelay * 1000) : now;
 
   let expiresAt: Date | null = null;
   if (options.expiresIn && options.expiresIn > 0) {
@@ -73,7 +72,7 @@ export async function createCallback(
   const metadataJson = JSON.stringify(metadata);
 
   await queryOne(
-      sql`INSERT INTO module_callbacks (uuid, "moduleId", name, metadata, "allowMultipleTriggers", "createdAt", "effectiveAt", "expiresAt")
+    sql`INSERT INTO module_callbacks (uuid, "moduleId", name, metadata, "allowMultipleTriggers", "createdAt", "effectiveAt", "expiresAt")
           VALUES (${uuid}, ${moduleId}, ${name}, ${metadataJson}::jsonb, ${allowMultipleTriggers}, ${now.toISOString()}, ${effectiveAt.toISOString()}, ${expiresAt?.toISOString() ?? null})`
   );
 
@@ -217,19 +216,16 @@ export async function triggerCallback(
 
   // Check if expired
   if (callback.expiresAt && new Date(callback.expiresAt) < now) {
-    logger.warn(`Callback expired: ${uuid}`);
     return { success: false, error: "Callback expired" };
   }
 
   // Check if callback is active yet
   if (callback.effectiveAt && new Date(callback.effectiveAt) > now) {
-    logger.warn(`Callback not active yet: ${uuid}`);
     return { success: false, error: "Callback not active yet" };
   }
 
   // Check if already triggered and multiple triggers not allowed
   if (!callback.allowMultipleTriggers && callback.triggerCount > 0) {
-    logger.warn(`Callback already triggered (multiple triggers not allowed): ${uuid}`);
     return { success: false, error: "Callback already triggered" };
   }
 
