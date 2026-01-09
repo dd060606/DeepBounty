@@ -6,6 +6,7 @@ import { sql } from "drizzle-orm";
 import { Request, Response } from "express";
 import { incrementScopeVersion } from "@/controllers/scope.js";
 import { getEventBus } from "@/events/eventBus.js";
+import { getTargetsWithDetails } from "@/services/targets.js";
 
 const logger = new Logger("Targets");
 
@@ -24,34 +25,8 @@ export function getTargets(req: Request, res: Response) {
 // GET /targets/full - get all targets with their subdomains and settings
 export async function getTargetsFull(req: Request, res: Response) {
   try {
-    const rows = await query(
-      sql`
-      SELECT
-        t.*,
-        -- Subdomains array
-        COALESCE(sd.subdomains, '{}'::text[]) AS subdomains,
-        -- Settings object
-        ts.settings
-      FROM targets t
-      -- Join with subdomains
-      LEFT JOIN LATERAL (
-        SELECT array_agg(s.subdomain ORDER BY s.subdomain) AS subdomains
-        FROM targets_subdomains s
-        WHERE s."targetId" = t.id
-      ) sd ON true
-      -- Join with settings
-      LEFT JOIN LATERAL (
-        SELECT s.settings
-        FROM targets_settings s
-        WHERE s."targetId" = t.id
-        ORDER BY s."targetId" DESC
-        LIMIT 1
-      ) ts ON true
-      ORDER BY t.id
-      `
-    );
-
-    res.json(rows);
+    const targets = await getTargetsWithDetails();
+    res.json(targets);
   } catch (error) {
     logger.error("Error fetching targets (full):", error);
     res.status(500).json({ error: "Internal server error" });
