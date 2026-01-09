@@ -5,9 +5,9 @@ import {
 	TaskResult,
 	Tool,
 	ModuleCallback,
-	CallbackTriggerData,
 	CallbackHandler,
 	CreateCallbackOptions,
+	Target,
 } from "./types";
 import { IEventBus } from "./events";
 
@@ -239,6 +239,17 @@ export interface CallbackAPI {
 	deleteAll(): Promise<number>;
 }
 
+/**
+ * TargetAPI provides access to target information for modules.
+ */
+export interface TargetAPI {
+	/**
+	 * Get all targets with their information
+	 * @returns Array of all targets with complete information
+	 */
+	getTargets(): Promise<Target[]>;
+}
+
 export interface ServerAPI {
 	version: string; // SDK version
 	logger: Logger;
@@ -247,6 +258,7 @@ export interface ServerAPI {
 	files: FilesAPI;
 	events: IEventBus;
 	callbacks: CallbackAPI;
+	targets: TargetAPI;
 	/** Check if a hostname is in scope based on targets_subdomains */
 	isHostnameInScope(hostname: string): Promise<boolean>;
 	/**

@@ -443,7 +443,19 @@ await api.createTaskInstance(templateId, targetId, {
 
 ### ServerAPI
 
-Main interface passed to modules via constructor.
+Main interface passed to modules via constructor. It provides access to all module capabilities through specialized APIs:
+
+- **Logger**: Logging functionality for debugging and monitoring
+- **ConfigAPI**: Persistent key-value storage for module configuration
+- **StorageAPI**: Module-specific SQLite database for data persistence
+- **FilesAPI**: File system access within module's isolated directory
+- **EventBus**: Inter-module communication and event subscriptions
+- **CallbackAPI**: External callback functionality for out-of-band detection
+- **TargetAPI**: Access to target information and configurations
+- **Task Management**: Register and manage scheduled tasks
+- **Tool Registration**: Register external security tools
+- **Alert Creation**: Create security alerts for discovered vulnerabilities
+- **Scope Checking**: Verify if hostnames are within allowed scope
 
 ### Logger
 
@@ -489,6 +501,43 @@ const findings = api.storage.query<Finding>(
 	"SELECT * FROM findings WHERE severity = ?",
 	["high"]
 );
+```
+
+### TargetAPI
+
+Access target information to retrieve all configured targets with their details.
+
+```typescript
+// Get all targets with subdomains and settings
+const targets = await api.targets.getTargets();
+
+// Iterate through targets
+for (const target of targets) {
+	api.logger.info(`Target: ${target.name} (${target.domain})`);
+	api.logger.info(`Active scan: ${target.activeScan}`);
+	api.logger.info(`Subdomains: ${target.subdomains.join(", ")}`);
+
+	// Access custom settings
+	if (target.settings?.userAgent) {
+		api.logger.info(`Custom user agent: ${target.settings.userAgent}`);
+	}
+	if (target.settings?.customHeader) {
+		api.logger.info(`Custom header: ${target.settings.customHeader}`);
+	}
+}
+
+// Example: Filter active targets only
+const activeTargets = (await api.targets.getTargets()).filter(
+	(t) => t.activeScan
+);
+
+// Example: Find specific target by domain
+const target = (await api.targets.getTargets()).find(
+	(t) => t.domain === "example.com"
+);
+if (target) {
+	api.logger.info(`Found target: ${target.name} (ID: ${target.id})`);
+}
 ```
 
 ### Scope Checking
@@ -1221,8 +1270,9 @@ const templateId = await api.registerTaskTemplate(
 	"CUSTOM",
 	async (templateId) => {
 		// Called every hour - analyze and create optimized instances
-		const targets = await getActiveTargets();
-		const grouped = groupByHostname(targets);
+		const targets = await api.targets.getTargets();
+		const activeTargets = targets.filter((t) => t.activeScan);
+		const grouped = groupByHostname(activeTargets);
 
 		for (const [hostname, targetIds] of grouped) {
 			await api.createTaskInstance(templateId, targetIds[0], {
@@ -1396,5 +1446,5 @@ See `/example-module` for a working reference implementation demonstrating:
 ---
 
 **Last Updated**: December 2025  
-**SDK Version**: 1.2.0
+**SDK Version**: 1.2.3
 **Minimum Server Version**: 1.0.0

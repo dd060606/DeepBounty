@@ -15,6 +15,7 @@ import { createAlert } from "@/services/alerts.js";
 import { getEventBus } from "@/events/eventBus.js";
 import { ModuleEventBus } from "@/events/moduleEventBus.js";
 import { isHostnameInScope } from "@/utils/domains.js";
+import { getTargetsWithDetails } from "@/services/targets.js";
 import {
   createCallback,
   getCallback,
@@ -57,6 +58,11 @@ function buildModuleSDK(moduleId: string, moduleName: string): ServerAPI {
     },
     files: files,
     events: moduleBus,
+    targets: {
+      getTargets: async () => {
+        return await getTargetsWithDetails();
+      },
+    },
     isHostnameInScope: async (hostname) => {
       return await isHostnameInScope(hostname);
     },
