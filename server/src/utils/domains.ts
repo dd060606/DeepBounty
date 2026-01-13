@@ -1,5 +1,6 @@
 import { query, queryOne } from "@/db/database.js";
 import { sql } from "drizzle-orm";
+import config from "./config.js";
 
 export function normalizeDomain(input: string): string {
   const trimmed = input.trim();
@@ -206,4 +207,16 @@ export async function isHostnameInScope(hostname: string): Promise<boolean> {
   const subdomainMatch = await queryOne(subdomainsQuery);
 
   return !!subdomainMatch;
+}
+
+/*
+ * Get external hostname from config URL
+ */
+export function getExternalHostname(): string | null {
+  try {
+    const url = new URL(config.get().externalUrl);
+    return url.hostname;
+  } catch {
+    return null;
+  }
 }

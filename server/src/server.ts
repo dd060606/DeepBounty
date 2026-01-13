@@ -3,6 +3,7 @@ import Logger from "./utils/logger.js";
 import WebSocketHandler from "./websocket.js";
 import app from "./app.js";
 import { shutdownModules } from "./modules/loader.js";
+import { DnsService } from "./services/dns.js";
 
 const logger = new Logger("Server");
 const PORT = 3000;
@@ -13,9 +14,13 @@ const server = createServer(app);
 const websocketHandler = new WebSocketHandler(server);
 websocketHandler.initialize();
 
+const dnsService = new DnsService();
+
 // Start the server
 server.listen(PORT, () => {
   logger.info(`Server running on port ${PORT}`);
+  // Start DNS Service for callbacks
+  dnsService.start();
 });
 
 // Graceful shutdown handler
@@ -24,6 +29,9 @@ export const gracefulShutdown = async (signal: string) => {
 
   // Stop modules
   shutdownModules();
+
+  // Stop DNS Service
+  dnsService.stop();
 
   // Give time for cleanup
   setTimeout(() => {

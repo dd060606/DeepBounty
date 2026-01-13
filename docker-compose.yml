@@ -30,6 +30,9 @@ services:
             DB_NAME: ${DB_NAME:-deepbounty}
             EXTERNAL_URL: ${EXTERNAL_URL:-http://localhost}
             WORKER_KEY: ${WORKER_KEY}
+        ports:
+            # DNS callbacks
+            - "0.0.0.0:53:5300/udp"
         depends_on:
             db:
                 condition: service_healthy
