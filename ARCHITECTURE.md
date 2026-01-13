@@ -511,6 +511,8 @@ Access target information to retrieve all configured targets with their details.
 // Get all targets with subdomains and settings
 const targets = await api.targets.getTargets();
 
+const targetId = await api.targets.getTargetIdByHostname("api.example.com");
+
 // Iterate through targets
 for (const target of targets) {
 	api.logger.info(`Target: ${target.name} (${target.domain})`);
@@ -1446,5 +1448,5 @@ See `/example-module` for a working reference implementation demonstrating:
 ---
 
 **Last Updated**: December 2025  
-**SDK Version**: 1.2.3
+**SDK Version**: 1.2.4
 **Minimum Server Version**: 1.0.0

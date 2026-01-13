@@ -248,6 +248,13 @@ export interface TargetAPI {
 	 * @returns Array of all targets with complete information
 	 */
 	getTargets(): Promise<Target[]>;
+
+	/**
+	 * Get target ID by hostname
+	 * @param hostname The hostname to look up
+	 * @returns The target ID or null if not found
+	 */
+	getTargetIdByHostname(hostname: string): Promise<number | null>;
 }
 
 export interface ServerAPI {
