@@ -6,7 +6,7 @@ import { sql } from "drizzle-orm";
 import { Request, Response } from "express";
 
 const logger = new Logger("Alerts");
-const MAX_PAGE_SIZE = 50;
+const MAX_PAGE_SIZE = 25;
 
 // GET /alerts - list all alerts joined with target name and domain
 export async function getAlerts(req: Request, res: Response) {

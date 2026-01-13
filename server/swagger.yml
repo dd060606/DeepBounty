@@ -408,9 +408,9 @@ paths:
           schema:
             type: integer
             minimum: 1
-            maximum: 50
-            default: 50
-          description: Number of alerts per page (max 50)
+            maximum: 25
+            default: 25
+          description: Number of alerts per page (max 25)
       responses:
         "200":
           description: A paginated list of alerts
@@ -454,7 +454,7 @@ paths:
                     description: Current page (1-based)
                   pageSize:
                     type: integer
-                    description: Number of alerts per page (max 50)
+                    description: Number of alerts per page (max 25)
         "401":
           description: Unauthorized
     post:

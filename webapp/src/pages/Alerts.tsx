@@ -15,7 +15,7 @@ type AlertsResponse = {
   pageSize: number;
 };
 
-const PAGE_SIZE = 50;
+const PAGE_SIZE = 25;
 
 export default function Alerts() {
   const { t } = useTranslation();
