@@ -741,6 +741,9 @@ server/modules/{moduleId}/
 
 The callback system enables out-of-band exfiltration detection. Modules can register callbacks that external systems can trigger via HTTP. Callbacks support delayed activation, making it harder for bots to immediately hit freshly created URLs.
 
+Callbacks can also be delivered via DNS: the server has a DNS listener that reconstructs chunked DNS query payloads, and forwards the assembled JSON body into the callback handler just like an HTTP trigger.
+Examples of DNS-based callbacks can be found in the [`example-module/dns-callback-test.js`](example-module/dns-callback-test.js) file.
+
 **Usage Examples**:
 
 ```typescript
