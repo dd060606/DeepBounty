@@ -247,7 +247,6 @@ export async function initModules(): Promise<void> {
 
 export function shutdownModules(): void {
   try {
-    closeAllDatabases();
     registry.getLoadedModules().forEach((m) => {
       // Call stop() method if defined
       if (typeof m.stop === "function") {
@@ -264,6 +263,7 @@ export function shutdownModules(): void {
       // Cleanup callback handlers for this module
       unregisterCallbackHandler(m.id);
     });
+    closeAllDatabases();
   } catch (e) {
     logger.error("Error while shutting down modules", e);
   }
