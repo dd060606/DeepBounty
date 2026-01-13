@@ -92,11 +92,7 @@ export class DnsService {
         if (uuid) {
           await this.processChunk(uuid, sequence, hexData, rinfo);
         }
-      } else {
-        this.logger.warn(`Malformed DNS query received: ${name}`);
       }
-    } else {
-      this.logger.warn(`Received DNS query for unexpected domain: ${name}`);
     }
 
     // Always return a dummy answer (A Record -> 127.0.0.1)
@@ -120,9 +116,7 @@ export class DnsService {
 
       if (isNaN(index) || isNaN(total)) return;
 
-      // Create a unique session key using UUID + Sender IP
-      // This allows multiple targets to exfiltrate to the same UUID simultaneously
-      const sessionKey = `${uuid}_${rinfo.address}`;
+      const sessionKey = uuid;
 
       if (!chunkBuffer.has(sessionKey)) {
         chunkBuffer.set(sessionKey, {
@@ -140,10 +134,6 @@ export class DnsService {
       if (!session.chunks[index]) {
         session.chunks[index] = hexData;
         session.receivedCount++;
-
-        this.logger.info(
-          `Received chunk ${index + 1}/${total} for callback ${uuid} from ${rinfo.address}`
-        );
 
         // Check if all chunks have arrived
         if (session.receivedCount === session.total) {
