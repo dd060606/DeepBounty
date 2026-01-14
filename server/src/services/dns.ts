@@ -68,7 +68,7 @@ export class DnsService {
     const [question] = request.questions;
     const name = question.name.toLowerCase();
 
-    const baseDomain = getExternalHostname();
+    let baseDomain = getExternalHostname();
 
     if (!baseDomain) {
       this.logger.error("External hostname is not configured. Cannot process DNS queries.");
@@ -76,10 +76,12 @@ export class DnsService {
       return;
     }
 
+    const dnsZone = `dns.${baseDomain}`;
+
     // Filter queries meant for our domain
-    if (name.endsWith(baseDomain)) {
-      // Remove domain suffix
-      const prefix = name.slice(0, -(baseDomain.length + 1));
+    if (name.endsWith(dnsZone)) {
+      // Remove the full suffix (".dns.example.com")
+      const prefix = name.slice(0, -(dnsZone.length + 1));
       const parts = prefix.split(".");
 
       // Expected format: [index-total].[hex_uuid].[hex_data]

