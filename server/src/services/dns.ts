@@ -65,7 +65,13 @@ export class DnsService {
 
   private async handleQuery(request: any, send: any, rinfo: any) {
     const response = dns2.Packet.createResponseFromRequest(request);
-    const [question] = request.questions;
+    const [question] = request.questions || [];
+
+    if (!question) {
+      send(response);
+      return;
+    }
+
     const name = question.name.toLowerCase();
 
     let baseDomain = getExternalHostname();

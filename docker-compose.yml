@@ -16,6 +16,7 @@ services:
             interval: 5s
             timeout: 3s
             retries: 10
+        restart: unless-stopped
 
     server:
         build:
@@ -40,6 +41,7 @@ services:
             - deepbounty-server-config:/app/server/config
             - deepbounty-server-modules:/app/server/modules
             - deepbounty-server-logs:/app/server/logs
+        restart: unless-stopped
 
     webapp:
         build:
@@ -55,6 +57,7 @@ services:
             - "${WEBAPP_PORT:-8080}:80"
         depends_on:
             - server
+        restart: unless-stopped
 
 volumes:
     db-data:
