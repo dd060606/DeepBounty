@@ -12,9 +12,9 @@ import {
 import { IEventBus } from "./events";
 
 export interface Logger {
-	info: (...args: any[]) => void;
-	warn: (...args: any[]) => void;
-	error: (...args: any[]) => void;
+	info: (message: string) => void;
+	warn: (message: string) => void;
+	error: (message: string, error?: any) => void;
 }
 
 export interface ConfigAPI {

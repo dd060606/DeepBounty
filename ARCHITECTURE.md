@@ -1451,5 +1451,5 @@ See `/example-module` for a working reference implementation demonstrating:
 ---
 
 **Last Updated**: December 2025  
-**SDK Version**: 1.2.4
+**SDK Version**: 1.2.5
 **Minimum Server Version**: 1.0.0
