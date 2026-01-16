@@ -39,14 +39,6 @@ export class ModuleEventBus implements IEventBus {
   subscribe(event: string, handler: EventHandler): EventSubscription {
     // Wrap handler to use module-specific rate limit
     const safeHandler = async (data: any) => {
-      // Check pending count to prevent memory overflow (backpressure)
-      if (this.limit.pendingCount > 1000) {
-        this.logger.warn(
-          `Event queue full for module ${this.moduleId}. Dropping event '${event}'.`
-        );
-        return;
-      }
-
       await this.limit(async () => {
         try {
           await handler(data);

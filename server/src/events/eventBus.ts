@@ -68,14 +68,6 @@ export class EventBus implements IEventBus {
     const handlers = this.listeners.get(event);
     if (!handlers || handlers.size === 0) return;
 
-    // Check global backpressure to prevent OOM
-    if (this.limit.pendingCount > 5000) {
-      logger.warn(
-        `Global event queue full (${this.limit.pendingCount}). Dropping event '${event}'.`
-      );
-      return;
-    }
-
     // Wrap event data with metadata (origin="server" for global bus)
     const eventMetadata: EventMetadata<any> = {
       origin: "server",
@@ -103,14 +95,6 @@ export class EventBus implements IEventBus {
   emitRaw(event: string, eventMetadata: EventMetadata<any>): void {
     const handlers = this.listeners.get(event);
     if (!handlers || handlers.size === 0) return;
-
-    // Check global backpressure to prevent OOM
-    if (this.limit.pendingCount > 5000) {
-      logger.warn(
-        `Global event queue full (${this.limit.pendingCount}). Dropping event '${event}'.`
-      );
-      return;
-    }
 
     // Process each handler with rate limiting and error isolation
     handlers.forEach((handler) => {
