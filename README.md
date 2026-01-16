@@ -140,7 +140,9 @@ Open the UI:
 
 ### 5) Start a remote worker (separate host)
 
-On the worker machine, copy only what you need (or clone the repo), then set:
+**Option A: Using Docker Compose**
+
+Set the environment variables:
 
 - `WORKER_KEY` (same value as the server)
 - `SERVER_WS_URL` to your public DeepBounty URL WebSocket endpoint:
@@ -150,6 +152,19 @@ On the worker machine, copy only what you need (or clone the repo), then set:
 Then run:
 
 - `docker compose -f docker-compose.worker.yml up -d --build`
+
+**Option B: Using Standard Docker**
+
+You can build and run the worker in a single command line. Replace the values for `SERVER_WS_URL` and `SERVER_SECRET_KEY` below:
+
+```bash
+docker run -d \
+  --restart unless-stopped \
+  --name deepbounty-worker \
+  -e SERVER_WS_URL="wss://deepbounty.example.com/api/ws" \
+  -e SERVER_SECRET_KEY="YOUR_WORKER_KEY" \
+  dd06/deepbounty-worker:latest
+```
 
 Notes:
 
