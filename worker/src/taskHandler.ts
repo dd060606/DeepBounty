@@ -17,7 +17,11 @@ export const executeTask = async (task: TaskExecution): Promise<TaskResult> => {
   const processedCommands = replaceTempFilePlaceholders(task.executionId, task.content.commands);
   // Combine commands into a single script to maintain context
   const combinedScript = processedCommands.join("\n");
-  console.log(`Running combined commands: ${combinedScript}`);
+
+  if (process.env.NODE_ENV !== "production") {
+    // Log the combined script for debugging
+    console.log(`Running combined commands: ${combinedScript}`);
+  }
 
   try {
     const { stdout, stderr } = await execAsync(combinedScript, {
