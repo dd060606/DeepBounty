@@ -35,11 +35,13 @@ class WebSocketHandler {
     this.taskManager.registerTransport({
       // List connected workers
       listWorkers: () =>
-        [...this.workers.values()].map((w) => ({
-          id: w.id,
-          currentTasks: w.currentTasks,
-          availableTools: w.availableTools,
-        })),
+        [...this.workers.values()]
+          .filter((w) => (this.workerCredits.get(w.id) ?? 0) > 0)
+          .map((w) => ({
+            id: w.id,
+            currentTasks: w.currentTasks,
+            availableTools: w.availableTools,
+          })),
       // Send task execution to worker
       sendTask: (workerId: number, execution: TaskExecution) => this.sendTask(workerId, execution),
       onRequeueNeeded: (executionIds: number[]) => {

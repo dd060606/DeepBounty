@@ -804,7 +804,14 @@ class TaskManager {
           executionToSend.targetId
         );
 
-        // Assign execution to chosen worker
+        const sent = this.transport.sendTask(chosen.id, executionToSend);
+        if (!sent) {
+          // Could not send right now (e.g. no worker credits); keep it pending and stop.
+          // Next worker:ready (or new worker) will trigger another attempt.
+          break;
+        }
+
+        // Mark execution as running only after it was successfully sent.
         this.registry.updateTaskExecution(execution.executionId, {
           workerId: chosen.id,
           status: "running",
@@ -819,18 +826,9 @@ class TaskManager {
         logger.info(
           `Sending task execution ${execution.executionId} (${templateName}) to worker ${chosen.id}`
         );
-        const sent = this.transport.sendTask(chosen.id, executionToSend);
-        if (sent) {
-          this.pendingQueue.shift();
-          continue;
-        } else {
-          // Could not send; mark back to pending & break to avoid tight loop
-          this.registry.updateTaskExecution(execution.executionId, {
-            status: "pending",
-            workerId: undefined,
-          });
-          break;
-        }
+
+        this.pendingQueue.shift();
+        continue;
       }
     } finally {
       (this as any)._assigning = false;
