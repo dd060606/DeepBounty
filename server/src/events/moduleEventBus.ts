@@ -21,7 +21,7 @@ export class ModuleEventBus implements IEventBus {
   constructor(
     private globalBus: EventBus,
     private moduleId: string,
-    concurrency: number = 50 // Limit concurrency per module
+    concurrency: number = 20 // Limit concurrency per module
   ) {
     this.limit = pLimit(concurrency);
     this.logger = new Logger(`EventBus-${moduleId}`);
@@ -39,13 +39,14 @@ export class ModuleEventBus implements IEventBus {
   subscribe(event: string, handler: EventHandler): EventSubscription {
     // Wrap handler to use module-specific rate limit
     const safeHandler = async (data: any) => {
-      await this.limit(async () => {
+      this.limit(async () => {
         try {
           await handler(data);
         } catch (error) {
           this.logger.error(`Error in handler for event '${event}':`, error);
         }
       });
+      return Promise.resolve();
     };
 
     // Subscribe to global bus with the wrapped handler

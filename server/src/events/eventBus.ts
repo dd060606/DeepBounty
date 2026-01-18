@@ -6,7 +6,6 @@ import {
   IEventBus,
   EventMetadata,
 } from "@deepbounty/sdk";
-import pLimit from "p-limit";
 
 const logger = new Logger("EventBus");
 
@@ -18,11 +17,8 @@ let eventBusInstance: EventBus | null = null;
  */
 export class EventBus implements IEventBus {
   private listeners: Map<string, Set<EventHandler>> = new Map();
-  private limit: ReturnType<typeof pLimit>;
 
-  constructor() {
-    this.limit = pLimit(100);
-  }
+  constructor() {}
 
   /**
    * Subscribe to an event
@@ -74,9 +70,9 @@ export class EventBus implements IEventBus {
       data,
     };
 
-    // Process each handler with rate limiting and error isolation
+    // Process each handler with error isolation
     handlers.forEach((handler) => {
-      this.limit(async () => {
+      Promise.resolve().then(async () => {
         try {
           await handler(eventMetadata);
         } catch (error) {
@@ -98,7 +94,7 @@ export class EventBus implements IEventBus {
 
     // Process each handler with rate limiting and error isolation
     handlers.forEach((handler) => {
-      this.limit(async () => {
+      Promise.resolve().then(async () => {
         try {
           await handler(eventMetadata);
         } catch (error) {
