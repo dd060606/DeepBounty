@@ -19,6 +19,11 @@ class WebSocketHandler {
   private websocketServer: WebSocketServer;
   // Map of workerId to WorkerWithSocket
   private workers: Map<number, WorkerWithSocket> = new Map();
+  // Ready credits per worker (how many tasks the worker is willing to receive right now)
+  private workerCredits: Map<number, number> = new Map();
+  private readonly maxConcurrencyPerWorker: number = Number(
+    process.env.WORKER_MAX_CONCURRENCY ?? 5
+  );
   // Task manager instance
   private readonly taskManager = getTaskManager();
   // Server registry instance
@@ -139,15 +144,13 @@ class WebSocketHandler {
       connectedAt: new Date(),
     };
     this.workers.set(workerId, newWorker);
+    this.workerCredits.set(workerId, 0);
     // Sync with registry
     this.registry.registerWorker(newWorker);
 
     logger.info(
       `New worker connected from ${ip || "unknown"} (ID: ${workerId}). Total workers: ${this.workers.size}`
     );
-
-    // Inform task manager
-    this.taskManager.handleWorkerConnect(workerId);
 
     // Setup message handlers
     ws.on("message", (data: Buffer) => this.handleWorkerMessage(workerId, data.toString()));
@@ -161,6 +164,7 @@ class WebSocketHandler {
   public removeWorker(workerId: number): void {
     if (this.workers.has(workerId)) {
       this.workers.delete(workerId);
+      this.workerCredits.delete(workerId);
       // Sync with registry
       this.registry.removeWorker(workerId);
       logger.info(`Worker ${workerId} disconnected. Total workers: ${this.workers.size}`);
@@ -188,6 +192,25 @@ class WebSocketHandler {
     }
 
     switch (msg.type) {
+      case "worker:ready": {
+        const requested = Number(msg?.data?.count ?? 1);
+        const add = Number.isFinite(requested) && requested > 0 ? requested : 1;
+
+        const current = this.workerCredits.get(workerId) ?? 0;
+        const next = Math.min(this.maxConcurrencyPerWorker, current + add);
+        this.workerCredits.set(workerId, next);
+
+        // Try to assign tasks now that a worker has capacity.
+        this.taskManager.assignNextTask().catch((err) => {
+          logger.error(`Error assigning task after worker:ready: ${err.message}`);
+        });
+        break;
+      }
+      case "worker:busy": {
+        // Worker indicates it cannot accept more tasks right now.
+        this.workerCredits.set(workerId, 0);
+        break;
+      }
       case "task:result": {
         const result: TaskResult = msg.data;
         // Validate result structure
@@ -206,10 +229,6 @@ class WebSocketHandler {
           // Sync with registry
           this.registry.updateWorker(workerId, { currentTasks: worker.currentTasks });
         }
-        // Assign another task if available
-        this.taskManager.assignNextTask().catch((err) => {
-          logger.error(`Error assigning next task: ${err.message}`);
-        });
         break;
       }
       case "tools:list": {
@@ -240,9 +259,17 @@ class WebSocketHandler {
   private sendTask(workerId: number, execution: TaskExecution) {
     const worker = this.workers.get(workerId);
     if (!worker) return false;
+
+    const credits = this.workerCredits.get(workerId) ?? 0;
+    if (credits <= 0) {
+      return false;
+    }
+
     try {
       worker.socket.send(JSON.stringify({ type: "task:start", data: execution }));
       worker.currentTasks.push(execution);
+      // Consume one ready credit
+      this.workerCredits.set(workerId, Math.max(0, credits - 1));
       // Sync with registry
       this.registry.updateWorker(workerId, { currentTasks: worker.currentTasks });
       return true;

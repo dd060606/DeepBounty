@@ -838,18 +838,6 @@ class TaskManager {
   }
 
   /**
-   * Handle a new worker connection
-   * Attempts to assign pending tasks to the newly connected worker
-   * @param _workerId - ID of the connected worker (unused but kept for interface compatibility)
-   */
-  handleWorkerConnect(_workerId: number) {
-    // Try to dispatch tasks when a new worker arrives
-    this.assignNextTask().catch((err) => {
-      logger.error(`Error assigning task on worker connect: ${err.message}`);
-    });
-  }
-
-  /**
    * Handle a worker disconnection
    * Requeues all running tasks from the disconnected worker
    * @param workerId - ID of the disconnected worker
@@ -955,11 +943,6 @@ class TaskManager {
     if (scheduledTask && scheduledTask.oneTime) {
       this.registry.deleteScheduledTask(scheduledTask.id);
     }
-
-    // Try to dispatch any waiting tasks now that the worker freed up
-    this.assignNextTask().catch((err) => {
-      logger.error(`Error assigning task after completion: ${err.message}`);
-    });
   }
 
   /**

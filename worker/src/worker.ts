@@ -1,6 +1,8 @@
 import { WebSocket } from "ws";
-import { handleMessage } from "./taskHandler.js";
+import { createMessageHandler } from "./taskHandler.js";
 import { getInstalledTools } from "./tools.js";
+
+const MAX_CONCURRENCY = Number(process.env.MAX_CONCURRENCY ?? 5);
 
 // Check for required environment variables
 const wsUrl = process.env.SERVER_WS_URL;
@@ -39,6 +41,14 @@ const scheduleReconnect = (reason: string) => {
 };
 
 const attachEventHandlers = (socket: WebSocket) => {
+  const sendMessage = (type: string, payload: any) => {
+    if (socket.readyState === WebSocket.OPEN) {
+      socket.send(JSON.stringify({ type, data: payload }));
+    }
+  };
+
+  const handleMessage = createMessageHandler({ sendMessage, maxConcurrency: MAX_CONCURRENCY });
+
   socket.on("open", () => {
     console.log("Connected to server");
     // Send installed tools to server upon connection
@@ -46,16 +56,14 @@ const attachEventHandlers = (socket: WebSocket) => {
     if (installedTools.length !== 0) {
       socket.send(JSON.stringify({ type: "tools:list", data: installedTools }));
     }
+
+    // Pull-based model: announce initial capacity. Server decides what to assign.
+    sendMessage("worker:ready", { count: MAX_CONCURRENCY });
   });
 
   socket.on("message", (data) => {
     // Handle incoming messages
-    handleMessage(data, (type, payload) => {
-      if (socket.readyState === WebSocket.OPEN) {
-        // Send response back to server
-        socket.send(JSON.stringify({ type, data: payload }));
-      }
-    });
+    handleMessage(data);
   });
 
   socket.on("close", (code, reason) => {

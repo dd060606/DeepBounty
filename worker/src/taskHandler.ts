@@ -48,46 +48,98 @@ export const executeTask = async (task: TaskExecution): Promise<TaskResult> => {
   }
 };
 
+export type SendMessage = (type: string, data: any) => void;
+
+export interface MessageHandlerOptions {
+  sendMessage: SendMessage;
+  maxConcurrency: number;
+}
+
 /**
- * Handle incoming WebSocket messages
- * @param message The received message data
- * @param sendMessage Callback to send messages back to the server
+ * Create a WebSocket message handler for the worker.
+ *
+ * The worker does minimal flow-control:
+ * - Executes tasks up to maxConcurrency.
+ * - If tasks arrive beyond capacity (shouldn't happen if server enforces), queues locally.
+ * - Emits `worker:busy` when it has to queue.
+ * - Emits `worker:ready {count: 1}` when a slot frees AND no local backlog exists.
  */
-export const handleMessage = async (
-  message: any,
-  sendMessage: (type: string, data: any) => void
-) => {
-  try {
-    const parsed = JSON.parse(message.toString());
-    const { type, data } = parsed;
+export const createMessageHandler = ({ sendMessage, maxConcurrency }: MessageHandlerOptions) => {
+  let activeCount = 0;
+  const localQueue: TaskExecution[] = [];
 
-    switch (type) {
-      // Execute assigned task
-      case "task:start": {
-        const task: TaskExecution = data;
-
-        // Execute the task
-        const result = await executeTask(task);
-
-        // Send result back to server
-        sendMessage("task:result", result);
-        break;
-      }
-      // Respond to ping with pong
-      case "ping": {
-        sendMessage("pong", {});
-        break;
-      }
-      // Shutdown the worker
-      case "system:shutdown": {
-        console.log("Received shutdown command from server. Exiting...");
-        process.exit(0);
-      }
-      default: {
-        console.warn(`Unknown message type: ${type}`);
-      }
+  const maybeStartNext = () => {
+    while (activeCount < maxConcurrency && localQueue.length > 0) {
+      const next = localQueue.shift();
+      if (!next) break;
+      runTask(next);
     }
-  } catch (error: any) {
-    console.error("Error handling message:", error);
-  }
+  };
+
+  const runTask = (task: TaskExecution) => {
+    activeCount += 1;
+
+    executeTask(task)
+      .then((result) => {
+        sendMessage("task:result", result);
+      })
+      .catch((error: any) => {
+        // executeTask should not throw, but keep worker resilient.
+        console.error("Unexpected task execution failure:", error);
+        sendMessage(
+          "task:result",
+          createTaskResult(task, false, undefined, error?.message || "Task execution failed")
+        );
+      })
+      .finally(() => {
+        activeCount = Math.max(0, activeCount - 1);
+
+        // Prefer draining local backlog first
+        maybeStartNext();
+
+        // If we're not busy and not backlogged, tell server we can accept one more task.
+        if (localQueue.length === 0 && activeCount < maxConcurrency) {
+          sendMessage("worker:ready", { count: 1 });
+        }
+      });
+  };
+
+  return (message: any) => {
+    try {
+      const parsed = JSON.parse(message.toString());
+      const { type, data } = parsed;
+
+      switch (type) {
+        case "task:start": {
+          const task: TaskExecution = data;
+
+          if (activeCount >= maxConcurrency) {
+            console.warn(
+              `Received task ${task.executionId} while at capacity (${activeCount}/${maxConcurrency}). ` +
+                `Queueing locally.`
+            );
+            localQueue.push(task);
+            sendMessage("worker:busy", { queued: localQueue.length });
+            return;
+          }
+
+          runTask(task);
+          return;
+        }
+        case "ping": {
+          sendMessage("pong", {});
+          return;
+        }
+        case "system:shutdown": {
+          console.log("Received shutdown command from server. Exiting...");
+          process.exit(0);
+        }
+        default: {
+          console.warn(`Unknown message type: ${type}`);
+        }
+      }
+    } catch (error: any) {
+      console.error("Error handling message:", error);
+    }
+  };
 };
