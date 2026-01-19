@@ -235,7 +235,7 @@ await api.registerTaskTemplate(
 		requiredTools: [SUBFINDER_TOOL],
 	},
 	3600, // Run every hour
-	"TARGET_BASED" // One task per target
+	"TARGET_BASED", // One task per target
 );
 ```
 
@@ -255,7 +255,7 @@ await api.registerTaskTemplate(
 		commands: ["curl https://cve.api.com/latest"],
 	},
 	7200, // Run every 2 hours
-	"GLOBAL" // Single global task
+	"GLOBAL", // Single global task
 );
 ```
 
@@ -309,7 +309,7 @@ const scheduledTemplateId = await api.registerTaskTemplate(
 				PORT: ports.join(","),
 			});
 		}
-	}
+	},
 );
 
 // Example 2: CUSTOM with manual-only mode (interval <= 0)
@@ -327,7 +327,7 @@ const manualTemplateId = await api.registerTaskTemplate(
 		if (result.success) {
 			console.log(`Scan completed for ${result.customData?.URL}`);
 		}
-	}
+	},
 );
 
 // Later, trigger scans manually based on events:
@@ -411,7 +411,7 @@ await api.registerTaskTemplate(
 			const findings = result.output.split("\n");
 			findings.forEach((f) => api.createAlert(/* ... */));
 		}
-	}
+	},
 );
 ```
 
@@ -489,17 +489,17 @@ api.storage.createTable(
   url TEXT NOT NULL,
   severity TEXT,
   discovered_at TEXT
-`
+`,
 );
 
 api.storage.execute(
 	"INSERT INTO findings (url, severity, discovered_at) VALUES (?, ?, ?)",
-	["https://example.com", "high", new Date().toISOString()]
+	["https://example.com", "high", new Date().toISOString()],
 );
 
 const findings = api.storage.query<Finding>(
 	"SELECT * FROM findings WHERE severity = ?",
-	["high"]
+	["high"],
 );
 ```
 
@@ -510,6 +510,8 @@ Access target information to retrieve all configured targets with their details.
 ```typescript
 // Get all targets with subdomains and settings
 const targets = await api.targets.getTargets();
+
+const targetsForTask = await api.targets.getTargetsForTask(templateId);
 
 const targetId = await api.targets.getTargetIdByHostname("api.example.com");
 
@@ -530,12 +532,12 @@ for (const target of targets) {
 
 // Example: Filter active targets only
 const activeTargets = (await api.targets.getTargets()).filter(
-	(t) => t.activeScan
+	(t) => t.activeScan,
 );
 
 // Example: Find specific target by domain
 const target = (await api.targets.getTargets()).find(
-	(t) => t.domain === "example.com"
+	(t) => t.domain === "example.com",
 );
 if (target) {
 	api.logger.info(`Found target: ${target.name} (ID: ${target.id})`);
@@ -670,7 +672,7 @@ await api.createAlert(
 	3, // High severity
 	"Admin panel accessible without authentication",
 	"/admin/login",
-	true
+	true,
 );
 ```
 
@@ -1155,7 +1157,7 @@ export default class MyModule implements ModuleLifecycle {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       url TEXT NOT NULL,
       checked_at TEXT NOT NULL
-    `
+    `,
 		);
 	}
 
@@ -1188,7 +1190,7 @@ export default class MyModule implements ModuleLifecycle {
 			},
 			3600, // 1 hour
 			"TARGET_BASED",
-			(result) => this.handleResult(result)
+			(result) => this.handleResult(result),
 		);
 	}
 
@@ -1210,7 +1212,7 @@ export default class MyModule implements ModuleLifecycle {
 		findings.forEach((f) => {
 			this.api.storage.execute(
 				"INSERT INTO my_data (url, checked_at) VALUES (?, ?)",
-				[f.url, new Date().toISOString()]
+				[f.url, new Date().toISOString()],
 			);
 		});
 
@@ -1223,7 +1225,7 @@ export default class MyModule implements ModuleLifecycle {
 					f.subdomain,
 					3, // High
 					f.description,
-					f.endpoint
+					f.endpoint,
 				);
 			});
 	}
@@ -1285,7 +1287,7 @@ const templateId = await api.registerTaskTemplate(
 				TARGET_IDS: targetIds.join(","),
 			});
 		}
-	}
+	},
 );
 ```
 
@@ -1312,7 +1314,7 @@ const scanTemplateId = await api.registerTaskTemplate(
 			const findings = result.output.split("\n");
 			findings.forEach((f) => api.createAlert(/* ... */));
 		}
-	}
+	},
 );
 
 // Trigger scans manually based on events
@@ -1326,7 +1328,7 @@ api.events.subscribe("http:traffic", async (event) => {
 		await api.createTaskInstance(
 			scanTemplateId,
 			getTargetIdFromUrl(request.url),
-			{ ENDPOINT: request.url }
+			{ ENDPOINT: request.url },
 		);
 	}
 });
@@ -1451,5 +1453,5 @@ See `/example-module` for a working reference implementation demonstrating:
 ---
 
 **Last Updated**: December 2025  
-**SDK Version**: 1.2.5
+**SDK Version**: 1.2.6
 **Minimum Server Version**: 1.0.0

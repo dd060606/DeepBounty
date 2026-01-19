@@ -85,7 +85,7 @@ export interface StorageAPI {
 	 */
 	execute(
 		sql: string,
-		params?: any[]
+		params?: any[],
 	): { changes: number | bigint; lastInsertRowid: number | bigint };
 
 	/**
@@ -123,7 +123,7 @@ export interface ScopedDirectory {
 	writeFileText(
 		relativePath: string,
 		text: string,
-		encoding?: BufferEncoding
+		encoding?: BufferEncoding,
 	): void;
 
 	/**
@@ -201,7 +201,7 @@ export interface CallbackAPI {
 	create(
 		name: string,
 		metadata?: Record<string, any>,
-		options?: CreateCallbackOptions
+		options?: CreateCallbackOptions,
 	): Promise<{ uuid: string; url: string }>;
 
 	/**
@@ -255,6 +255,14 @@ export interface TargetAPI {
 	 * @returns The target ID or null if not found
 	 */
 	getTargetIdByHostname(hostname: string): Promise<number | null>;
+
+	/**
+	 * Get all targets with their information
+	 * Only targets enabled for the given task template are returned.
+	 * @param taskTemplateId The task template ID
+	 * @returns Array of targets enabled for the task template
+	 */
+	getTargetsForTask(taskTemplateId: number): Promise<Target[]>;
 }
 
 export interface ServerAPI {
@@ -288,7 +296,7 @@ export interface ServerAPI {
 		interval: number,
 		schedulingType?: "TARGET_BASED" | "GLOBAL" | "CUSTOM",
 		onComplete?: (result: TaskResult) => void,
-		onSchedule?: (templateId: number) => void | Promise<void>
+		onSchedule?: (templateId: number) => void | Promise<void>,
 	): Promise<number>;
 
 	/**
@@ -309,7 +317,7 @@ export interface ServerAPI {
 	createTaskInstance(
 		templateId: number,
 		targetId?: number,
-		customData?: Record<string, any>
+		customData?: Record<string, any>,
 	): Promise<number>;
 
 	/** Register a tool
@@ -334,7 +342,7 @@ export interface ServerAPI {
 		score: number,
 		description: string,
 		endpoint: string,
-		confirmed?: boolean
+		confirmed?: boolean,
 	): Promise<Alert>;
 
 	/**
@@ -353,7 +361,7 @@ export interface ServerAPI {
 		score: number,
 		description: string,
 		endpoint: string,
-		confirmed?: boolean
+		confirmed?: boolean,
 	): Promise<Alert>;
 }
 
@@ -363,7 +371,7 @@ export interface ModuleLifecycle {
 }
 
 export type ModuleFactory = (
-	api: ServerAPI
+	api: ServerAPI,
 ) => ModuleLifecycle | Promise<ModuleLifecycle>;
 
 // Re-export EventBus and related types

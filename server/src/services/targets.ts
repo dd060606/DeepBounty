@@ -34,3 +34,44 @@ export async function getTargetsWithDetails(): Promise<Target[]> {
     `
   );
 }
+
+/**
+ * Fetch all targets with their subdomains and settings.
+ * Only targets enabled for the given task template are returned.
+ */
+export async function getTargetsForTask(taskTemplateId: number): Promise<Target[]> {
+  return await query<Target>(
+    sql`
+      SELECT
+        t.*,
+        -- Subdomains array
+        COALESCE(sd.subdomains, '{}'::text[]) AS subdomains,
+        -- Settings object
+        ts.settings
+      FROM task_templates tt
+      JOIN targets t ON true
+      LEFT JOIN target_task_overrides tto
+        ON tto."targetId" = t.id
+       AND tto."taskTemplateId" = tt.id
+      -- Join with subdomains
+      LEFT JOIN LATERAL (
+        SELECT array_agg(s.subdomain ORDER BY s.subdomain) AS subdomains
+        FROM targets_subdomains s
+        WHERE s."targetId" = t.id
+      ) sd ON true
+      -- Join with settings
+      LEFT JOIN LATERAL (
+        SELECT s.settings
+        FROM targets_settings s
+        WHERE s."targetId" = t.id
+        ORDER BY s."targetId" DESC
+        LIMIT 1
+      ) ts ON true
+      WHERE tt.id = ${taskTemplateId}
+        AND tt.active = true
+        AND t."activeScan" = true
+        AND COALESCE(tto.active, true) = true
+      ORDER BY t.id
+    `
+  );
+}
