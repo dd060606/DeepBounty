@@ -248,26 +248,36 @@ export async function initModules(): Promise<void> {
   }
 }
 
-export function shutdownModules(): void {
+export async function shutdownModules(): Promise<void> {
   try {
-    registry.getLoadedModules().forEach((m) => {
-      // Call stop() method if defined
-      if (typeof m.stop === "function") {
-        m.stop();
-      }
+    const modules = registry.getLoadedModules();
 
-      // Cleanup event listeners for this module
-      const moduleBus = moduleEventBuses.get(m.id);
-      if (moduleBus) {
-        moduleBus.cleanup();
-        moduleEventBuses.delete(m.id);
-      }
+    const shutdownPromises = modules.map(async (m) => {
+      try {
+        // Call stop() method if defined and wait for it
+        if (typeof m.stop === "function") {
+          await m.stop();
+        }
+      } catch (moduleError) {
+        logger.error(`Error stopping module ${m.id}`, moduleError);
+      } finally {
+        // Cleanup event listeners for this module
+        const moduleBus = moduleEventBuses.get(m.id);
+        if (moduleBus) {
+          moduleBus.cleanup();
+          moduleEventBuses.delete(m.id);
+        }
 
-      // Cleanup callback handlers for this module
-      unregisterCallbackHandler(m.id);
+        // Cleanup callback handlers for this module
+        unregisterCallbackHandler(m.id);
+      }
     });
+
+    // Wait for all modules to finish stopping and cleaning up
+    await Promise.all(shutdownPromises);
+
     closeAllDatabases();
   } catch (e) {
-    logger.error("Error while shutting down modules", e);
+    logger.error("Critical error while shutting down modules", e);
   }
 }
