@@ -21,7 +21,7 @@ export class ModuleEventBus implements IEventBus {
   constructor(
     private globalBus: EventBus,
     private moduleId: string,
-    concurrency: number = 20 // Limit concurrency per module
+    concurrency: number = 50 // Limit concurrency per module
   ) {
     this.limit = pLimit(concurrency);
     this.logger = new Logger(`EventBus-${moduleId}`);
