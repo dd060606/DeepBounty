@@ -33,6 +33,8 @@ export interface TaskTemplate {
 	schedulingType: SchedulingType;
 	// Global activation status
 	active: boolean;
+	// Whether the task is marked as aggressive
+	aggressive: boolean;
 }
 
 // Registered scheduled task (template)

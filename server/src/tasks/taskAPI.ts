@@ -29,9 +29,11 @@ export class TaskAPI {
     description: string,
     taskContent: TaskContent,
     interval: number,
+    aggressive: boolean,
     schedulingType: "TARGET_BASED" | "GLOBAL" | "CUSTOM" = "TARGET_BASED",
     onComplete?: (result: TaskResult) => void,
-    onSchedule?: (templateId: number) => void | Promise<void>
+    onSchedule?: (templateId: number) => void | Promise<void>,
+    onManualTrigger?: (templateId: number, targetId: number) => void | Promise<void>
   ): Promise<number> {
     const templateId = await this.taskManager.registerTaskTemplate(
       this.moduleId,
@@ -40,17 +42,21 @@ export class TaskAPI {
       description,
       taskContent,
       interval,
+      aggressive,
       schedulingType,
-      onSchedule
+      onSchedule,
+      onManualTrigger
     );
 
-    // Store callback for result handling (all modes including CUSTOM)
+    // Store callback for result handling
     if (onComplete) {
       this.taskCallbacks.set(templateId, onComplete);
     }
 
     return templateId;
-  } /**
+  }
+
+  /**
    * Unregister a task template
    */
   async unregisterTaskTemplate(templateId: number): Promise<boolean> {

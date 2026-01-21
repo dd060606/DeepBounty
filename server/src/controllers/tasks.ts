@@ -116,6 +116,30 @@ export async function runTemplate(req: Request, res: Response) {
   }
 }
 
+// POST /tasks/templates/:id/run/:targetId - Run a template for a specific target
+export async function runTemplateForTarget(req: Request, res: Response) {
+  try {
+    const { id, targetId } = req.params;
+
+    // Parse IDs
+    const templateIdInt = parseInt(id);
+    const targetIdInt = parseInt(targetId);
+
+    const success = await getTaskManager().runTemplateForTarget(templateIdInt, targetIdInt);
+
+    if (!success) {
+      return res.status(404).json({ error: "Template or Target not found, or not compatible" });
+    }
+
+    logger.info(`Manually triggered template ${templateIdInt} for target ${targetIdInt}`);
+
+    res.sendStatus(200);
+  } catch (error) {
+    logger.error("Error running template for target:", error);
+    res.status(500).json({ error: "Failed to run template" });
+  }
+}
+
 // GET /tasks/targets/:targetId/task-overrides - Get target overrides
 export async function getTargetOverrides(req: Request, res: Response) {
   try {

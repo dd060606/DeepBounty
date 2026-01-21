@@ -8,4 +8,5 @@ export interface Worker {
 	currentTasks: TaskExecution[];
 	availableTools: Tool[];
 	connectedAt: Date;
+	aggressiveTasksEnabled: boolean;
 }

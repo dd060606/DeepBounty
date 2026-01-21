@@ -20,6 +20,7 @@ interface TaskTransport {
     id: number;
     currentTasks: TaskExecution[];
     availableTools: Tool[];
+    aggressiveTasksEnabled: boolean;
   }>;
   sendTask(workerId: number, execution: TaskExecution): boolean;
   onRequeueNeeded?(executionIds: number[]): void;
@@ -32,6 +33,9 @@ type TaskCompletionListener = (execution: TaskExecution, result: TaskResult) => 
 // Callback for CUSTOM scheduling mode (called when schedule is due)
 type ScheduleCallback = (templateId: number) => void | Promise<void>;
 
+// Callback for manual task triggering
+type ManualTriggerCallback = (templateId: number, targetId: number) => void | Promise<void>;
+
 class TaskManager {
   private static instance: TaskManager | null = null;
   private readonly registry = getRegistry();
@@ -42,6 +46,8 @@ class TaskManager {
   private completionListeners: TaskCompletionListener[] = [];
   // Map of template ID to onSchedule callback (for CUSTOM mode)
   private scheduleCallbacks: Map<number, ScheduleCallback> = new Map();
+  // Manual trigger callbacks for tasks
+  private manualTriggerCallbacks: Map<number, ManualTriggerCallback> = new Map();
   // Tools currently being installed per worker (to avoid duplicate installs)
   private pendingInstallations: Map<number, Set<string>> = new Map();
   // Scheduler interval handle
@@ -87,6 +93,7 @@ class TaskManager {
    * @param description - Detailed description of what the task does
    * @param content - Task content including commands and required tools
    * @param interval - Execution interval in seconds
+   * @param aggressive - Whether the task is aggressive (only run on workers that allow aggressive tasks)
    * @param schedulingType - How to schedule tasks
    * @param onSchedule - For CUSTOM mode: callback invoked at interval to create instances
    * @returns Promise resolving to the template ID
@@ -98,8 +105,10 @@ class TaskManager {
     description: string,
     content: TaskContent,
     interval: number,
+    aggressive: boolean,
     schedulingType: "TARGET_BASED" | "GLOBAL" | "CUSTOM" = "TARGET_BASED",
-    onSchedule?: (templateId: number) => void | Promise<void>
+    onSchedule?: (templateId: number) => void | Promise<void>,
+    onManualTrigger?: (templateId: number, targetId: number) => void | Promise<void>
   ): Promise<number> {
     // Create or update template in database
     const templateId = await this.templateService.createTemplate(
@@ -109,12 +118,14 @@ class TaskManager {
       description,
       content,
       interval,
+      aggressive,
       schedulingType
     );
 
     // Store onSchedule callback for CUSTOM mode
-    if (schedulingType === "CUSTOM" && onSchedule) {
-      this.scheduleCallbacks.set(templateId, onSchedule);
+    if (schedulingType === "CUSTOM") {
+      if (onSchedule) this.scheduleCallbacks.set(templateId, onSchedule);
+      if (onManualTrigger) this.manualTriggerCallbacks.set(templateId, onManualTrigger);
     }
 
     // Create scheduled tasks for all active targets
@@ -137,11 +148,49 @@ class TaskManager {
       this.registry.deleteScheduledTask(task.id);
     });
 
-    // Remove schedule callback if exists
+    // Remove schedule and manual trigger callbacks if exists
     this.scheduleCallbacks.delete(templateId);
+    this.manualTriggerCallbacks.delete(templateId);
 
     // Delete template from database
     return await this.templateService.deleteTemplate(templateId);
+  }
+
+  /*
+   * Run a task template immediately for a specific target
+   */
+  async runTemplateForTarget(templateId: number, targetId: number): Promise<boolean> {
+    const template = await this.templateService.getTemplate(templateId);
+    if (!template) return false;
+
+    if (template.schedulingType === "TARGET_BASED") {
+      // Find the specific scheduled task for this target
+      const tasks = this.registry.getScheduledTasksByTemplate(templateId);
+      const targetTask = tasks.find((t) => t.targetId === targetId);
+
+      if (!targetTask) {
+        logger.warn(`No scheduled task found for template ${templateId} and target ${targetId}`);
+        return false;
+      }
+
+      // Force create execution
+      this.createExecution(targetTask);
+      return true;
+    } else if (template.schedulingType === "CUSTOM") {
+      // Check if the module registered a specific handler for this
+      const callback = this.manualTriggerCallbacks.get(templateId);
+
+      if (callback) {
+        // Let the module handle the logic (preparing data, creating the instance)
+        await callback(templateId, targetId);
+        return true;
+      } else {
+        // The module did not register a handler
+        logger.error(`No manual trigger callback registered for template ${templateId}`);
+      }
+    }
+
+    return false;
   }
 
   /**
@@ -533,44 +582,6 @@ class TaskManager {
   }
 
   /**
-   * Register a scheduled task (legacy method for backward compatibility)
-   * @deprecated Use registerTaskTemplate instead for multi-target support
-   * @param content - Task content including commands and required tools
-   * @param interval - Execution interval in seconds
-   * @param moduleId - ID of the module registering the task
-   * @returns The scheduled task ID
-   */
-  registerTask(content: TaskContent, interval: number, moduleId: string): number {
-    const taskId = this.registry.generateTaskId();
-    const now = new Date();
-    const scheduledTask: ScheduledTask = {
-      id: taskId,
-      templateId: 0, // Legacy tasks don't have a template
-      content,
-      interval,
-      moduleId,
-      nextExecutionAt: new Date(now.getTime() + interval * 1000),
-      active: true,
-    };
-    this.registry.registerScheduledTask(scheduledTask);
-    return taskId;
-  }
-
-  /**
-   * Unregister a scheduled task (legacy method)
-   * @deprecated Use unregisterTaskTemplate instead
-   * @param taskId - ID of the task to unregister
-   * @returns true if successful, false if task not found
-   */
-  unregisterTask(taskId: number): boolean {
-    if (!this.registry.hasScheduledTask(taskId)) {
-      return false;
-    }
-    this.registry.deleteScheduledTask(taskId);
-    return true;
-  }
-
-  /**
    * Start the task scheduler
    * @param checkInterval - Interval in milliseconds between scheduler checks (default: 10000)
    * @private
@@ -714,25 +725,43 @@ class TaskManager {
     (this as any)._assigning = true;
 
     try {
-      // Try to fill as many executions as possible while workers are available
-      for (let safety = 0; safety < 1000; safety++) {
-        const nextExecutionId = this.pendingQueue[0];
-        // Pending queue empty
-        if (nextExecutionId == null) break;
+      // Capture the initial length so we don't cycle endlessly in one pass
+      // We only want to try each task in the queue once per function call
+      let tasksToCheck = this.pendingQueue.length;
+      while (tasksToCheck > 0) {
+        tasksToCheck--;
+        // Get fresh list of workers
+        let workers = this.transport.listWorkers();
+
+        if (workers.length === 0) break;
+
+        // Take the next task
+        const nextExecutionId = this.pendingQueue.shift();
+        if (nextExecutionId === undefined) break;
 
         const execution = this.registry.getTaskExecution(nextExecutionId);
         // Pending execution missing or not pending anymore
         if (!execution || execution.status !== "pending") {
-          this.pendingQueue.shift();
+          continue;
+        }
+        // Filter workers for Aggressive tasks
+        let compatibleWorkers = workers;
+        if (execution.templateId) {
+          const template = await this.templateService.getTemplate(execution.templateId);
+          if (template?.aggressive) {
+            compatibleWorkers = workers.filter((w) => w.aggressiveTasksEnabled);
+          }
+        }
+
+        // If no worker can handle this specific task (e.g. it's aggressive but no aggressive workers exist),
+        // push it to the BACK of the queue to try again later, and continue to the next task.
+        if (compatibleWorkers.length === 0) {
+          this.pendingQueue.push(nextExecutionId);
           continue;
         }
 
-        // Get list of available workers
-        const workers = this.transport.listWorkers();
-        if (!workers.length) break;
-
         // Sort by current load
-        workers.sort((a, b) => a.currentTasks.length - b.currentTasks.length);
+        compatibleWorkers.sort((a, b) => a.currentTasks.length - b.currentTasks.length);
 
         // Pick the least busy worker,
         // but skip workers currently installing the same missing tools to avoid duplicate installs.
@@ -742,24 +771,24 @@ class TaskManager {
         for (const worker of workers) {
           const missing = getMissingTools(worker.availableTools, execution.content.requiredTools);
           const pendingSet = this.pendingInstallations.get(worker.id);
-          const hasPendingOverlap = pendingSet
-            ? missing.some((tool) => pendingSet.has(toolKey(tool)))
-            : false;
+          // Check if this worker is already installing these tools
+          const hasOverlap = pendingSet ? missing.some((t) => pendingSet.has(toolKey(t))) : false;
 
-          if (hasPendingOverlap) {
-            continue; // wait for in-flight installs on this worker
+          if (!hasOverlap) {
+            chosen = worker;
+            missingTools = missing;
+            break;
           }
-
-          chosen = worker;
-          missingTools = missing;
-          break;
         }
 
-        // No suitable worker right now (likely waiting for installations to finish)
-        if (!chosen) break;
+        // Workers exist but are currently busy installing tools for this task.
+        // Push to BACK of queue to retry later.
+        if (!chosen) {
+          this.pendingQueue.push(nextExecutionId);
+          continue;
+        }
 
         let executionToSend = execution;
-
         // If tools are missing and no installs are in-flight, send install commands once and mark them as pending
         if (missingTools.length > 0) {
           // Track pending installs for this worker to avoid sending duplicate installers
@@ -806,9 +835,10 @@ class TaskManager {
 
         const sent = this.transport.sendTask(chosen.id, executionToSend);
         if (!sent) {
-          // Could not send right now (e.g. no worker credits); keep it pending and stop.
-          // Next worker:ready (or new worker) will trigger another attempt.
-          break;
+          // SEND FAILED (e.g. no credits):
+          // Push to BACK of queue
+          this.pendingQueue.push(nextExecutionId);
+          continue;
         }
 
         // Mark execution as running only after it was successfully sent.
@@ -826,9 +856,6 @@ class TaskManager {
         logger.info(
           `Sending task execution ${execution.executionId} (${templateName}) to worker ${chosen.id}`
         );
-
-        this.pendingQueue.shift();
-        continue;
       }
     } finally {
       (this as any)._assigning = false;

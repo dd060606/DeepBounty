@@ -148,6 +148,8 @@ Set the environment variables:
 - `SERVER_WS_URL` to your public DeepBounty URL WebSocket endpoint:
     - `wss://deepbounty.example.com/api/ws`
     - or `ws://<ip>:<port>/api/ws` if you don’t use TLS
+- `ENABLE_AGGRESSIVE_TASKS` to `true` to allow more aggressive tasks (subdomain scanning, ffuf, etc.), or `false` to disable them.
+- `MAX_CONCURRENCY` to set the maximum number of concurrent tasks the worker can run (default: 5).
 
 Then run:
 
@@ -163,6 +165,8 @@ docker run -d \
   --name deepbounty-worker \
   -e SERVER_WS_URL="wss://deepbounty.example.com/api/ws" \
   -e SERVER_SECRET_KEY="YOUR_WORKER_KEY" \
+  -e ENABLE_AGGRESSIVE_TASKS="true" \
+  -e MAX_CONCURRENCY="5" \
   dd06/deepbounty-worker:latest
 ```
 

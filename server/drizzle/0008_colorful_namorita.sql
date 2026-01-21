@@ -1,0 +1,1 @@
+ALTER TABLE "task_templates" ADD COLUMN "aggressive" boolean DEFAULT false NOT NULL;

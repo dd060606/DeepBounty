@@ -17,8 +17,9 @@ export default class ExampleModule implements ModuleLifecycle {
 			"Find subdomains using subfinder for all active targets",
 			FIND_SUBDOMAINS_TASK,
 			500, // every 5 minutes,
+			true, // aggressive
 			"TARGET_BASED",
-			(res) => subdomainsCallback(this.api, res)
+			(res) => subdomainsCallback(this.api, res),
 		);
 	}
 
@@ -44,7 +45,7 @@ export default class ExampleModule implements ModuleLifecycle {
 		// Example of using the ModuleConfig
 		await this.api.config.set(
 			"examplePluginLastRun",
-			new Date().toISOString()
+			new Date().toISOString(),
 		);
 		this.api.config.getAll().then((cfg) => {
 			this.api.logger.info(`Current config: ${JSON.stringify(cfg)}`);
@@ -66,7 +67,7 @@ export default class ExampleModule implements ModuleLifecycle {
 			if (event.origin == "server") {
 				const { context, js } = event.data;
 				this.api.logger.info(
-					`Received HTTP JS event: ${context.method} ${context.url} - ${js.slice(0, 100)}${js.length} bytes of JS`
+					`Received HTTP JS event: ${context.method} ${context.url} - ${js.slice(0, 100)}${js.length} bytes of JS`,
 				);
 			}
 		});

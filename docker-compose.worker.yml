@@ -12,3 +12,6 @@ services:
 
             # Must match server/config/config.json => workerKey
             SERVER_SECRET_KEY: ${WORKER_KEY}
+            # Whether to enable aggressive tasks (subdomains scanning, ffuf, etc.)
+            ENABLE_AGGRESSIVE_TASKS: ${ENABLE_AGGRESSIVE_TASKS:-"true"}
+            MAX_CONCURRENCY: ${MAX_CONCURRENCY:-5}

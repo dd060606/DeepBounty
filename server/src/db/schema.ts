@@ -116,6 +116,8 @@ export const taskTemplates = pgTable(
     schedulingType: schedulingTypeEnum().default("TARGET_BASED").notNull(),
     // Global activation status
     active: boolean().default(true).notNull(),
+    // Whether the task is marked as aggressive
+    aggressive: boolean().default(false).notNull(),
   },
   (table) => [unique("task_templates_unique_key").on(table.moduleId, table.uniqueKey)]
 );

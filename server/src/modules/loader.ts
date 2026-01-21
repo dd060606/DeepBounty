@@ -25,6 +25,7 @@ import {
   registerCallbackHandler,
   unregisterCallbackHandler,
 } from "@/services/callbacks.js";
+import { getTaskTemplateService } from "@/tasks/taskTemplateService.js";
 
 const logger = new Logger("Modules-Loader");
 const registry = getRegistry();
@@ -78,9 +79,11 @@ function buildModuleSDK(moduleId: string, moduleName: string): ServerAPI {
       description,
       taskContent,
       interval,
+      aggressive,
       schedulingType,
       onComplete,
-      onSchedule
+      onSchedule,
+      onManualTrigger
     ) => {
       return await taskAPI.registerTaskTemplate(
         uniqueKey,
@@ -88,9 +91,11 @@ function buildModuleSDK(moduleId: string, moduleName: string): ServerAPI {
         description,
         taskContent,
         interval,
+        aggressive,
         schedulingType,
         onComplete,
-        onSchedule
+        onSchedule,
+        onManualTrigger
       );
     },
     unregisterTaskTemplate: async (templateId) => {

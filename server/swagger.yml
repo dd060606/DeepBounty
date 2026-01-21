@@ -801,6 +801,34 @@ paths:
           description: Template not found
         "401":
           description: Unauthorized
+  /tasks/templates/{id}/run/{targetId}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+        description: Task Template ID
+      - name: targetId
+        in: path
+        required: true
+        schema:
+          type: integer
+        description: Target ID
+    post:
+      summary: Run task template immediately for a specific target
+      description: Enqueues executions for the template immediately (CUSTOM templates trigger their onManualTrigger callback).
+      tags:
+        - Tasks
+      security:
+        - sessionCookie: []
+      responses:
+        "200":
+          description: Template enqueued successfully for the specific target
+        "404":
+          description: Template not found or Target not found or not compatible
+        "401":
+          description: Unauthorized
   /tasks/targets/{targetId}/task-overrides:
     parameters:
       - name: targetId

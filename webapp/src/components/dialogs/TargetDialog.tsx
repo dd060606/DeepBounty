@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Trash2, Loader2Icon, Globe2 } from "lucide-react";
+import { Plus, Trash2, Loader2Icon, Globe2, Play } from "lucide-react";
 import {
   defaultWildcard,
   faviconUrl,
@@ -87,6 +87,8 @@ export default function TargetDialog({
   const [tasks, setTasks] = useState<TaskWithOverride[]>([]);
   const [taskSearchQuery, setTaskSearchQuery] = useState("");
   const [loadingTasks, setLoadingTasks] = useState(false);
+  // Tasks busy state (running templates)
+  const [busy, setBusy] = useState<Set<number>>(new Set());
 
   const icon = useMemo(() => faviconUrl(domain), [domain]);
 
@@ -117,8 +119,22 @@ export default function TargetDialog({
           hasOverride: !!override,
         };
       });
+      // Sort runnable tasks first
+      setTasks(
+        tasksWithOverrides.sort((a, b) => {
+          // Sort runnable tasks first
+          const aRunnable =
+            (a.schedulingType === "CUSTOM" && a.interval > 0) ||
+            a.schedulingType === "TARGET_BASED";
+          const bRunnable =
+            (b.schedulingType === "CUSTOM" && b.interval > 0) ||
+            b.schedulingType === "TARGET_BASED";
 
-      setTasks(tasksWithOverrides.sort((a, b) => a.name.localeCompare(b.name)));
+          if (aRunnable && !bRunnable) return -1;
+          if (!aRunnable && bRunnable) return 1;
+          return 0;
+        })
+      );
     } catch {
       toast.error(t("tasks.errors.loadTasks"));
       setTasks([]);
@@ -272,6 +288,24 @@ export default function TargetDialog({
       }
     } catch {
       toast.error(t("tasks.errors.updateTask"));
+    }
+  }
+
+  async function runTemplateForTarget(templateId: number) {
+    if (!initial?.id) return;
+
+    setBusy((s) => new Set(s).add(templateId));
+    try {
+      await ApiClient.post(`/tasks/templates/${templateId}/run/${initial.id}/`);
+      toast.success(t("modules.taskTemplates.success.run"));
+    } catch {
+      toast.error(t("modules.taskTemplates.errors.run"));
+    } finally {
+      setBusy((s) => {
+        const next = new Set(s);
+        next.delete(templateId);
+        return next;
+      });
     }
   }
 
@@ -569,7 +603,7 @@ export default function TargetDialog({
                             key={task.id}
                             className="border-border bg-card hover:bg-muted/50 flex items-start gap-4 rounded-lg border p-4 transition-colors"
                           >
-                            <div className="flex-1 space-y-2">
+                            <div className="flex-1">
                               <div className="flex items-start justify-between gap-2">
                                 <h4 className="text-foreground text-sm font-semibold">
                                   {task.name}
@@ -581,11 +615,27 @@ export default function TargetDialog({
                                 </p>
                               )}
                             </div>
-                            {/* Enable task switch */}
-                            <Switch
-                              checked={effectiveActive}
-                              onCheckedChange={() => toggleTaskOverride(task.id)}
-                            />
+                            <div className="m-auto flex items-center gap-3">
+                              {/* Enable task switch */}
+                              <Switch
+                                checked={effectiveActive}
+                                onCheckedChange={() => toggleTaskOverride(task.id)}
+                              />
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                disabled={
+                                  busy.has(task.id) ||
+                                  (task.schedulingType === "CUSTOM" && task.interval <= 0) ||
+                                  task.schedulingType === "GLOBAL"
+                                }
+                                onClick={() => runTemplateForTarget(task.id)}
+                                className="flex items-center gap-2"
+                              >
+                                <Play className="size-4" />
+                                {t("modules.taskTemplates.run")}
+                              </Button>
+                            </div>
                           </div>
                         );
                       })}

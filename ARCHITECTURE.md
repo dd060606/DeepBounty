@@ -226,7 +226,7 @@ Tasks use one of three scheduling strategies:
 - **Target Access**: Tasks receive `{{TARGET_DOMAIN}}`, `{{TARGET_ID}}` placeholders
 
 ```typescript
-await api.registerTaskTemplate(
+const templateId = await api.registerTaskTemplate(
 	"subdomain-scan",
 	"Subdomain Discovery",
 	"Find subdomains for each target",
@@ -235,6 +235,7 @@ await api.registerTaskTemplate(
 		requiredTools: [SUBFINDER_TOOL],
 	},
 	3600, // Run every hour
+	true, // Aggressive task
 	"TARGET_BASED", // One task per target
 );
 ```
@@ -255,6 +256,7 @@ await api.registerTaskTemplate(
 		commands: ["curl https://cve.api.com/latest"],
 	},
 	7200, // Run every 2 hours
+	false, // Not aggressive
 	"GLOBAL", // Single global task
 );
 ```
@@ -279,6 +281,8 @@ await api.registerTaskTemplate(
     9. Module must manually call `api.createTaskInstance()` when needed (e.g., in response to events)
     10. Task instances execute immediately upon creation
 
+Besides, a manual trigger callback can be provided to handle on-demand task creation for specific targets from the UI.
+
 ```typescript
 // Example 1: CUSTOM with automatic scheduling (interval > 0)
 const scheduledTemplateId = await api.registerTaskTemplate(
@@ -289,7 +293,9 @@ const scheduledTemplateId = await api.registerTaskTemplate(
 		commands: ["tool:{scanner} {{HOSTNAME}} {{PORT}}"],
 	},
 	3600, // onSchedule callback invoked every hour
+	false, // Not aggressive
 	"CUSTOM",
+	// onComplete callback
 	(result) => {
 		// Called for EACH task instance result
 		console.log(`Instance ${result.executionId} completed:`, result.output);
@@ -297,6 +303,7 @@ const scheduledTemplateId = await api.registerTaskTemplate(
 			// Process result data
 		}
 	},
+	// onSchedule callback
 	async (templateId) => {
 		// Called every hour by the scheduler
 		// Fetch targets and create optimized instances
@@ -307,6 +314,19 @@ const scheduledTemplateId = await api.registerTaskTemplate(
 			await api.createTaskInstance(templateId, undefined, {
 				HOSTNAME: hostname,
 				PORT: ports.join(","),
+			});
+		}
+	},
+	// manualTrigger callback
+	async (templateId, targetId) => {
+		// Called when manually triggering a task for a specific target
+		const target = await api.targets
+			.getTargets()
+			.find((t) => t.id === targetId);
+		if (target) {
+			await api.createTaskInstance(templateId, targetId, {
+				HOSTNAME: target.domain,
+				PORT: "80,443",
 			});
 		}
 	},
@@ -321,6 +341,7 @@ const manualTemplateId = await api.registerTaskTemplate(
 		commands: ["tool:{scanner} {{URL}}"],
 	},
 	0, // No automatic scheduling (manual mode)
+	false, // Not aggressive
 	"CUSTOM",
 	(result) => {
 		// Called for each manually triggered task result
@@ -404,6 +425,7 @@ await api.registerTaskTemplate(
 	"...",
 	taskContent,
 	3600,
+	false, // Not aggressive
 	"TARGET_BASED",
 	(result: TaskResult) => {
 		if (result.success && result.output) {
@@ -566,6 +588,7 @@ async registerTaskTemplate(
   description: string,            // Description
   taskContent: TaskContent,       // Commands and tools
   interval: number,               // Seconds between executions. For CUSTOM: if <= 0, no automatic scheduling
+  aggressive: boolean,            // If true, task is marked as aggressive
   schedulingType?: SchedulingType, // TARGET_BASED | GLOBAL | CUSTOM (default: TARGET_BASED)
   onComplete?: (result: TaskResult) => void, // Called when task instances complete
   onSchedule?: (templateId: number) => void | Promise<void> // For CUSTOM: called at interval (not if interval <= 0)
@@ -585,7 +608,8 @@ const templateId = await api.registerTaskTemplate(
     requiredTools: [SUBFINDER_TOOL],
     extractResult: true
   },
-  3600, // 1 hour
+  3600, // 1 hour,
+  true, // Aggressive task
   "TARGET_BASED",
   (result) => {
     if (result.success && result.output) {
@@ -604,6 +628,7 @@ const customTemplateId = await api.registerTaskTemplate(
     commands: ["tool:{scanner} {{TARGETS}}"],
   },
   7200, // onSchedule called every 2 hours
+  true, // Aggressive task
   "CUSTOM",
   (result) => {
     // Called for each instance result
@@ -1189,6 +1214,7 @@ export default class MyModule implements ModuleLifecycle {
 				extractResult: true,
 			},
 			3600, // 1 hour
+			false, // Not aggressive
 			"TARGET_BASED",
 			(result) => this.handleResult(result),
 		);
@@ -1274,6 +1300,7 @@ const templateId = await api.registerTaskTemplate(
 		commands: ["tool:{scanner} {{HOSTNAMES}}"],
 	},
 	3600, // Callback invoked every hour
+	false, // Not aggressive
 	"CUSTOM",
 	async (templateId) => {
 		// Called every hour - analyze and create optimized instances
@@ -1307,6 +1334,7 @@ const scanTemplateId = await api.registerTaskTemplate(
 		extractResult: true,
 	},
 	0, // interval <= 0: manual mode only, no automatic scheduling
+	false, // Not aggressive
 	"CUSTOM",
 	(result) => {
 		if (result.success && result.output) {
@@ -1453,5 +1481,5 @@ See `/example-module` for a working reference implementation demonstrating:
 ---
 
 **Last Updated**: December 2025  
-**SDK Version**: 1.2.6
+**SDK Version**: 1.2.7
 **Minimum Server Version**: 1.0.0

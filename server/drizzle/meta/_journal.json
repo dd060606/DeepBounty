@@ -57,6 +57,13 @@
       "when": 1767888743562,
       "tag": "0007_next_sentry",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1769012251363,
+      "tag": "0008_colorful_namorita",
+      "breakpoints": true
     }
   ]
 }

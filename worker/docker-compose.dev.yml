@@ -18,6 +18,8 @@ services:
     # Environment variables
     environment:
       - NODE_ENV=development
+      - ENABLE_AGGRESSIVE_TASKS=false
+      - MAX_CONCURRENCY=5
     env_file:
       - .env
     network_mode: host

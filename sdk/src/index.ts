@@ -283,9 +283,11 @@ export interface ServerAPI {
 	 * @param description Task description
 	 * @param taskContent The task content including commands and tools
 	 * @param interval Interval in seconds between task executions. For CUSTOM mode: if <= 0, no automatic scheduling (manual mode only)
+	 * @param aggressive Whether the task is aggressive (only run on worker that allows aggressive tasks)
 	 * @param schedulingType How to schedule tasks: "TARGET_BASED" (one per target), "GLOBAL" (single instance), or "CUSTOM" (callback-based)
 	 * @param onComplete Optional callback executed when a task instance completes
 	 * @param onSchedule Optional callback for CUSTOM mode, invoked at interval to create instances (not called if interval <= 0)
+	 * @param onManualTrigger Optional callback invoked when a task instance is manually triggered
 	 * @returns The ID of the registered task template
 	 */
 	registerTaskTemplate(
@@ -294,9 +296,14 @@ export interface ServerAPI {
 		description: string,
 		taskContent: TaskContent,
 		interval: number,
+		aggressive: boolean,
 		schedulingType?: "TARGET_BASED" | "GLOBAL" | "CUSTOM",
 		onComplete?: (result: TaskResult) => void,
 		onSchedule?: (templateId: number) => void | Promise<void>,
+		onManualTrigger?: (
+			templateId: number,
+			targetId: number,
+		) => void | Promise<void>,
 	): Promise<number>;
 
 	/**

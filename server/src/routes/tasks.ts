@@ -7,6 +7,7 @@ import {
   runTemplate,
   setOverrides,
   updateTemplate,
+  runTemplateForTarget,
 } from "@/controllers/tasks.js";
 import { validateBody, validateParams } from "@/middlewares/validate.js";
 import { idParamSchema, targetIdParamSchema } from "@/schemas/commonSchema.js";
@@ -37,6 +38,12 @@ router.delete("/templates/:id", validateParams(idParamSchema), deleteTemplate);
 
 // POST /tasks/templates/:id/run
 router.post("/templates/:id/run", validateParams(idParamSchema), runTemplate);
+// POST /tasks/templates/:id/run/:targetId
+router.post(
+  "/templates/:id/run/:targetId",
+  validateParams(idParamSchema.extend(targetIdParamSchema.shape)),
+  runTemplateForTarget
+);
 // GET /tasks/targets/:targetId/task-overrides
 router.get(
   "/targets/:targetId/task-overrides",

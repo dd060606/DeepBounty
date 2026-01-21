@@ -24,6 +24,7 @@ class WebSocketHandler {
   private readonly maxConcurrencyPerWorker: number = Number(
     process.env.WORKER_MAX_CONCURRENCY ?? 5
   );
+  private nextWorkerId = 1;
   // Task manager instance
   private readonly taskManager = getTaskManager();
   // Server registry instance
@@ -41,6 +42,7 @@ class WebSocketHandler {
             id: w.id,
             currentTasks: w.currentTasks,
             availableTools: w.availableTools,
+            aggressiveTasksEnabled: w.aggressiveTasksEnabled,
           })),
       // Send task execution to worker
       sendTask: (workerId: number, execution: TaskExecution) => this.sendTask(workerId, execution),
@@ -103,6 +105,8 @@ class WebSocketHandler {
   // Handle incoming connections
   private handleConnection = (worker: WebSocket, req: IncomingMessage): void => {
     const workerKey = req?.headers?.["x-worker-key"];
+    const aggressiveTasksHeader = req?.headers?.["aggressive-tasks"];
+    const aggressiveTasksEnabled = aggressiveTasksHeader === "true";
     // Check for a valid worker key
     if (!workerKey || Array.isArray(workerKey)) {
       worker.close(1008, "Missing x-worker-key header");
@@ -114,7 +118,7 @@ class WebSocketHandler {
       return;
     }
     // Add the new worker
-    this.addWorker(worker, this.getRemoteIp(req));
+    this.addWorker(worker, this.getRemoteIp(req), aggressiveTasksEnabled);
   };
 
   private getRemoteIp(req: IncomingMessage): string {
@@ -134,9 +138,9 @@ class WebSocketHandler {
   }
 
   // Add a new worker
-  public addWorker(ws: WebSocket, ip?: string): void {
+  public addWorker(ws: WebSocket, ip?: string, aggressiveTasksEnabled: boolean = false): void {
     // Generate a new worker ID
-    const workerId = this.workers.size + 1;
+    const workerId = this.nextWorkerId++;
     const newWorker: WorkerWithSocket = {
       id: workerId,
       currentTasks: [],
@@ -144,6 +148,7 @@ class WebSocketHandler {
       socket: ws,
       ip,
       connectedAt: new Date(),
+      aggressiveTasksEnabled,
     };
     this.workers.set(workerId, newWorker);
     this.workerCredits.set(workerId, 0);

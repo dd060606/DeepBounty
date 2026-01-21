@@ -17,6 +17,7 @@ export class TaskTemplateService {
     description: string | undefined,
     content: TaskContent,
     interval: number,
+    aggressive: boolean,
     schedulingType: "TARGET_BASED" | "GLOBAL" | "CUSTOM" = "TARGET_BASED"
   ): Promise<number> {
     // Check if template already exists
@@ -35,6 +36,7 @@ export class TaskTemplateService {
               description = ${description}, 
               content = ${JSON.stringify(content)}, 
               interval = ${interval},
+              aggressive = ${aggressive},
               "schedulingType" = ${schedulingType}
           WHERE id = ${existing.id}
         `);
@@ -45,6 +47,7 @@ export class TaskTemplateService {
           SET name = ${name}, 
               description = ${description}, 
               content = ${JSON.stringify(content)},
+              aggressive = ${aggressive},
               "schedulingType" = ${schedulingType}
           WHERE id = ${existing.id}
         `);
@@ -54,8 +57,8 @@ export class TaskTemplateService {
 
     // Create new template
     const result = await queryOne<{ id: number }>(
-      sql`INSERT INTO task_templates ("moduleId", "uniqueKey", name, description, content, interval, "schedulingType", active) 
-      VALUES (${moduleId}, ${uniqueKey}, ${name}, ${description}, ${JSON.stringify(content)}, ${interval}, ${schedulingType}, true) 
+      sql`INSERT INTO task_templates ("moduleId", "uniqueKey", name, description, content, interval, aggressive, "schedulingType", active) 
+      VALUES (${moduleId}, ${uniqueKey}, ${name}, ${description}, ${JSON.stringify(content)}, ${interval}, ${aggressive}, ${schedulingType}, true) 
       RETURNING id`
     );
 
@@ -85,6 +88,7 @@ export class TaskTemplateService {
       interval: template.interval,
       schedulingType: template.schedulingType || "TARGET_BASED",
       active: template.active,
+      aggressive: template.aggressive,
     };
   }
 
@@ -107,6 +111,7 @@ export class TaskTemplateService {
       interval: template.interval,
       schedulingType: template.schedulingType || "TARGET_BASED",
       active: template.active,
+      aggressive: template.aggressive,
     };
   }
 
@@ -126,6 +131,7 @@ export class TaskTemplateService {
       interval: template.interval,
       schedulingType: template.schedulingType || "TARGET_BASED",
       active: template.active,
+      aggressive: template.aggressive,
     }));
   }
 
@@ -147,6 +153,7 @@ export class TaskTemplateService {
       interval: template.interval,
       schedulingType: template.schedulingType || "TARGET_BASED",
       active: template.active,
+      aggressive: template.aggressive,
     }));
   }
 
