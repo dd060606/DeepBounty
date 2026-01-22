@@ -778,8 +778,14 @@ class TaskManager {
             continue;
           }
 
-          // Sort workers by current load (least busy first)
-          compatibleWorkers.sort((a, b) => a.currentTasks.length - b.currentTasks.length);
+          compatibleWorkers.sort((a, b) => {
+            // Always prioritize the worker with fewer tasks (Load Balancing)
+            const loadDiff = a.currentTasks.length - b.currentTasks.length;
+            if (loadDiff !== 0) return loadDiff;
+
+            // If loads are equal, prefer the worker that is not aggressive (save the aggressive one)
+            return (a.aggressiveTasksEnabled ? 1 : 0) - (b.aggressiveTasksEnabled ? 1 : 0);
+          });
 
           // Find a worker that isn't busy installing tools for this specific task
           let chosen: (typeof workers)[number] | undefined;
