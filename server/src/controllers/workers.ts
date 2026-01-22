@@ -12,6 +12,7 @@ export const getWorkers = async (req: Request, res: Response) => {
       connectedAt: w.connectedAt,
       tasksCount: w.currentTasks.length,
       toolsCount: w.availableTools.length,
+      aggressiveMode: w.aggressiveTasksEnabled,
     }))
   );
 };

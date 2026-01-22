@@ -12,7 +12,9 @@
     "save": "Enregistrer",
     "saving": "Enregistrement...",
     "actions": "Actions",
-    "delete": "Supprimer"
+    "delete": "Supprimer",
+    "yes": "Oui",
+    "no": "Non"
   },
   "nav": {
     "alerts": "Alertes",
@@ -334,7 +336,8 @@
       "disconnectSuccess": "Worker déconnecté avec succès",
       "disconnectError": "Impossible de déconnecter le worker",
       "confirmDisconnect": "Déconnecter le worker",
-      "confirmDisconnectDesc": "Êtes-vous sûr de vouloir déconnecter ce worker ? Les tâches en cours seront interrompues et le worker devra être redémarré manuellement."
+      "confirmDisconnectDesc": "Êtes-vous sûr de vouloir déconnecter ce worker ? Les tâches en cours seront interrompues et le worker devra être redémarré manuellement.",
+      "aggressiveMode": "Accepte les tâches agressives"
     }
   }
 }

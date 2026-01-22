@@ -1,4 +1,4 @@
-import { Monitor, Clock, Activity, Wrench, X } from "lucide-react";
+import { Monitor, Clock, Activity, Wrench, X, Zap } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 
@@ -8,6 +8,7 @@ export type WorkerInfo = {
   connectedAt: Date;
   tasksCount: number;
   toolsCount: number;
+  aggressiveMode: boolean;
 };
 
 export default function WorkerCard({
@@ -52,6 +53,13 @@ export default function WorkerCard({
           <Wrench className="size-3.5" />
           <span>
             {t("settings.workers.installedTools")}: {worker.toolsCount}
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <Zap className="size-3.5" />
+          <span>
+            {t("settings.workers.aggressiveMode")}:{" "}
+            {worker.aggressiveMode ? t("common.yes") : t("common.no")}
           </span>
         </div>
         <div className="flex items-center gap-2">

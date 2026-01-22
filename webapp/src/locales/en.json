@@ -12,7 +12,9 @@
     "save": "Save",
     "saving": "Saving...",
     "actions": "Actions",
-    "delete": "Delete"
+    "delete": "Delete",
+    "yes": "Yes",
+    "no": "No"
   },
   "nav": {
     "alerts": "Alerts",
@@ -336,8 +338,7 @@
       "disconnectError": "Failed to disconnect worker",
       "confirmDisconnect": "Disconnect Worker",
       "confirmDisconnectDesc": "Are you sure you want to disconnect this worker? Any running tasks will be interrupted and the worker will need to be restarted manually.",
-      "restart": "Restart",
-      "restartServer": "Restart Server"
+      "aggressiveMode": "Accepts aggressive tasks"
     }
   }
 }

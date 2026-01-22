@@ -1450,15 +1450,21 @@ paths:
                     id:
                       type: string
                       example: "worker-1"
-                    status:
+                    ip:
                       type: string
-                      example: "connected"
+                      example: "192.168.1.100"
                     connectedAt:
                       type: string
                       format: date-time
-                    lastSeen:
-                      type: string
-                      format: date-time
+                    tasksCount:
+                      type: integer
+                      example: 5
+                    toolsCount:
+                      type: integer
+                      example: 12
+                    aggressiveMode:
+                      type: boolean
+                      example: false
         "401":
           description: Unauthorized
   /workers/{id}/disconnect:
