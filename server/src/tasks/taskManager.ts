@@ -715,153 +715,163 @@ class TaskManager {
 
   /**
    * Attempt to assign the next pending execution to an available worker
-   * Handles tool installation, placeholder replacement, and load balancing
    */
   async assignNextTask() {
-    if (!this.transport) return;
+    if (!this.transport) {
+      return;
+    }
 
-    // Prevent concurrent executions of this method
-    if ((this as any)._assigning) return;
+    // If we are already assigning, mark that a new request came in so we run again later.
+    if ((this as any)._assigning) {
+      (this as any)._hasPendingRequest = true;
+      return;
+    }
+
+    // Lock the scheduler
     (this as any)._assigning = true;
+    (this as any)._hasPendingRequest = false;
 
     try {
-      // Capture the initial length so we don't cycle endlessly in one pass
-      // We only want to try each task in the queue once per function call
-      let tasksToCheck = this.pendingQueue.length;
-      while (tasksToCheck > 0) {
-        tasksToCheck--;
-        // Get fresh list of workers
-        let workers = this.transport.listWorkers();
+      // Loop as long as there are pending requests (handles new tasks added during processing)
+      do {
+        (this as any)._hasPendingRequest = false; // Clear flag for this pass
 
-        if (workers.length === 0) break;
+        // Capture initial length to avoid infinite loops if we re-queue items
+        let tasksToCheck = this.pendingQueue.length;
 
-        // Take the next task
-        const nextExecutionId = this.pendingQueue.shift();
-        if (nextExecutionId === undefined) break;
-
-        const execution = this.registry.getTaskExecution(nextExecutionId);
-        // Pending execution missing or not pending anymore
-        if (!execution || execution.status !== "pending") {
+        if (tasksToCheck === 0) {
           continue;
         }
-        // Filter workers for Aggressive tasks
-        let compatibleWorkers = workers;
-        if (execution.templateId) {
-          const template = await this.templateService.getTemplate(execution.templateId);
-          if (template?.aggressive) {
-            compatibleWorkers = workers.filter((w) => w.aggressiveTasksEnabled);
+
+        while (tasksToCheck > 0) {
+          tasksToCheck--;
+
+          // Get fresh list of workers
+          let workers = this.transport.listWorkers();
+
+          // If no workers exist/have credits, stop.
+          if (workers.length === 0) break;
+
+          // Take the next task from the queue
+          const nextExecutionId = this.pendingQueue.shift();
+          if (nextExecutionId === undefined) break;
+
+          const execution = this.registry.getTaskExecution(nextExecutionId);
+          // If task is missing or no longer pending, skip it
+          if (!execution || execution.status !== "pending") {
+            continue;
           }
-        }
 
-        // If no worker can handle this specific task (e.g. it's aggressive but no aggressive workers exist),
-        // push it to the BACK of the queue to try again later, and continue to the next task.
-        if (compatibleWorkers.length === 0) {
-          this.pendingQueue.push(nextExecutionId);
-          continue;
-        }
-
-        // Sort by current load
-        compatibleWorkers.sort((a, b) => a.currentTasks.length - b.currentTasks.length);
-
-        // Pick the least busy worker,
-        // but skip workers currently installing the same missing tools to avoid duplicate installs.
-        let chosen: (typeof workers)[number] | undefined;
-        let missingTools: Tool[] = [];
-
-        for (const worker of workers) {
-          const missing = getMissingTools(worker.availableTools, execution.content.requiredTools);
-          const pendingSet = this.pendingInstallations.get(worker.id);
-          // Check if this worker is already installing these tools
-          const hasOverlap = pendingSet ? missing.some((t) => pendingSet.has(toolKey(t))) : false;
-
-          if (!hasOverlap) {
-            chosen = worker;
-            missingTools = missing;
-            break;
+          // Filter for Aggressive Workers if needed
+          let compatibleWorkers = workers;
+          if (execution.templateId) {
+            const template = await this.templateService.getTemplate(execution.templateId);
+            if (template?.aggressive) {
+              compatibleWorkers = workers.filter((w) => w.aggressiveTasksEnabled);
+            }
           }
-        }
 
-        // Workers exist but are currently busy installing tools for this task.
-        // Push to BACK of queue to retry later.
-        if (!chosen) {
-          this.pendingQueue.push(nextExecutionId);
-          continue;
-        }
+          // If task needs aggressive worker but none are available
+          if (compatibleWorkers.length === 0) {
+            // Re-queue execution for later
+            this.pendingQueue.push(nextExecutionId);
+            continue;
+          }
 
-        let executionToSend = execution;
-        // If tools are missing and no installs are in-flight, send install commands once and mark them as pending
-        if (missingTools.length > 0) {
-          // Track pending installs for this worker to avoid sending duplicate installers
-          const pendingSet = this.pendingInstallations.get(chosen.id) || new Set<string>();
-          missingTools.forEach((tool) => pendingSet.add(toolKey(tool)));
-          this.pendingInstallations.set(chosen.id, pendingSet);
+          // Sort workers by current load (least busy first)
+          compatibleWorkers.sort((a, b) => a.currentTasks.length - b.currentTasks.length);
 
-          // Clone the execution to avoid modifying the original
-          executionToSend = {
-            ...execution,
-            content: {
-              commands: [...execution.content.commands],
-              requiredTools: execution.content.requiredTools
-                ? [...execution.content.requiredTools]
-                : undefined,
-              extractResult: execution.content.extractResult,
-            },
-          };
-          // Add installation commands for missing tools
-          executionToSend.content.commands = installToolsTask(
-            missingTools,
-            executionToSend.content
+          // Find a worker that isn't busy installing tools for this specific task
+          let chosen: (typeof workers)[number] | undefined;
+          let missingTools: Tool[] = [];
+
+          for (const worker of compatibleWorkers) {
+            const missing = getMissingTools(worker.availableTools, execution.content.requiredTools);
+            const pendingSet = this.pendingInstallations.get(worker.id);
+            const hasOverlap = pendingSet ? missing.some((t) => pendingSet.has(toolKey(t))) : false;
+
+            if (!hasOverlap) {
+              chosen = worker;
+              missingTools = missing;
+              break;
+            }
+          }
+
+          // If all eligible workers are busy installing tools, re-queue execution
+          if (!chosen) {
+            this.pendingQueue.push(nextExecutionId);
+            continue;
+          }
+
+          // Prepare execution object (handle tool installation injection)
+          let executionToSend = execution;
+          if (missingTools.length > 0) {
+            const pendingSet = this.pendingInstallations.get(chosen.id) || new Set<string>();
+            missingTools.forEach((tool) => pendingSet.add(toolKey(tool)));
+            this.pendingInstallations.set(chosen.id, pendingSet);
+
+            // Clone content to inject installation commands
+            executionToSend = {
+              ...execution,
+              content: {
+                ...execution.content,
+                commands: [...execution.content.commands],
+              },
+            };
+            executionToSend.content.commands = installToolsTask(
+              missingTools,
+              executionToSend.content
+            );
+          }
+
+          // Replace placeholders (Tools, Targets, CustomData)
+          executionToSend.content.commands = replaceToolPlaceholders(
+            executionToSend.content.commands,
+            executionToSend.content.requiredTools || []
+          );
+          executionToSend.content.commands = await replaceTargetPlaceholders(
+            executionToSend.content.commands,
+            executionToSend.targetId
+          );
+          executionToSend.content.commands = await replaceCustomDataPlaceholders(
+            executionToSend.content.commands,
+            executionToSend.customData,
+            executionToSend.targetId
+          );
+
+          // Send to worker
+          const sent = this.transport.sendTask(chosen.id, executionToSend);
+
+          if (!sent) {
+            // Sending failed - re-queue execution
+            this.pendingQueue.push(nextExecutionId);
+            continue;
+          }
+
+          // Success: update registry
+          this.registry.updateTaskExecution(execution.executionId, {
+            workerId: chosen.id,
+            status: "running",
+          });
+          // Get template name for logging
+          const scheduledTask = this.registry.getScheduledTask(execution.scheduledTaskId);
+          const templateName = scheduledTask?.templateId
+            ? (await this.templateService.getTemplate(scheduledTask.templateId))?.name
+            : "unknown";
+
+          logger.info(
+            `Sending task execution ${execution.executionId} (${templateName}) to worker ${chosen.id}`
           );
         }
-
-        // Replace tool placeholders in commands before sending
-        executionToSend.content.commands = replaceToolPlaceholders(
-          executionToSend.content.commands,
-          executionToSend.content.requiredTools || []
-        );
-
-        // Replace target placeholders if applicable
-        executionToSend.content.commands = await replaceTargetPlaceholders(
-          executionToSend.content.commands,
-          executionToSend.targetId
-        );
-
-        // Replace custom data placeholders if applicable
-        executionToSend.content.commands = await replaceCustomDataPlaceholders(
-          executionToSend.content.commands,
-          executionToSend.customData,
-          executionToSend.targetId
-        );
-
-        const sent = this.transport.sendTask(chosen.id, executionToSend);
-        if (!sent) {
-          // SEND FAILED (e.g. no credits):
-          // Push to BACK of queue
-          this.pendingQueue.push(nextExecutionId);
-          continue;
-        }
-
-        // Mark execution as running only after it was successfully sent.
-        this.registry.updateTaskExecution(execution.executionId, {
-          workerId: chosen.id,
-          status: "running",
-        });
-
-        // Get template name for logging
-        const scheduledTask = this.registry.getScheduledTask(execution.scheduledTaskId);
-        const templateName = scheduledTask?.templateId
-          ? (await this.templateService.getTemplate(scheduledTask.templateId))?.name
-          : "unknown";
-
-        logger.info(
-          `Sending task execution ${execution.executionId} (${templateName}) to worker ${chosen.id}`
-        );
-      }
+      } while ((this as any)._hasPendingRequest);
+    } catch (err) {
+      logger.error(`Error while assigning tasks: ${err}`);
     } finally {
+      // Always unlock the scheduler
       (this as any)._assigning = false;
+      (this as any)._hasPendingRequest = false;
     }
   }
-
   /**
    * Handle a worker disconnection
    * Requeues all running tasks from the disconnected worker

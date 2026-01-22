@@ -125,13 +125,13 @@ export async function runTemplateForTarget(req: Request, res: Response) {
     const templateIdInt = parseInt(id);
     const targetIdInt = parseInt(targetId);
 
+    logger.info(`Manually triggered template ${templateIdInt} for target ${targetIdInt}`);
+
     const success = await getTaskManager().runTemplateForTarget(templateIdInt, targetIdInt);
 
     if (!success) {
       return res.status(404).json({ error: "Template or Target not found, or not compatible" });
     }
-
-    logger.info(`Manually triggered template ${templateIdInt} for target ${targetIdInt}`);
 
     res.sendStatus(200);
   } catch (error) {

@@ -63,7 +63,9 @@ const attachEventHandlers = (socket: WebSocket) => {
     }
 
     // Pull-based model: announce initial capacity. Server decides what to assign.
-    sendMessage("worker:ready", { count: MAX_CONCURRENCY });
+    setTimeout(() => {
+      sendMessage("worker:ready", { count: MAX_CONCURRENCY });
+    }, 500);
   });
 
   socket.on("message", (data) => {
