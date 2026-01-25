@@ -119,9 +119,13 @@ export async function createAlert(alertToCreate: CreateAlertParams): Promise<Ale
     sendAlertNotification(fullAlert.name, fullAlert.targetName);
 
     return fullAlert;
-  } catch (error) {
+  } catch (error: any) {
     // Catch all errors to prevent server crash
     logger.error(`Error creating alert "${name}" for "${subdomainForLog ?? "<unknown>"}":`, error);
+    if (error.code) logger.error(`Code: ${error.code}`);
+    if (error.detail) logger.error(`Detail: ${error.detail}`);
+    if (error.hint) logger.error(`Hint: ${error.hint}`);
+    if (error.column) logger.error(`Column: ${error.column}`);
     return null;
   }
 }
