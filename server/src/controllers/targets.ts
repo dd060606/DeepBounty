@@ -105,11 +105,13 @@ export function deleteTarget(req: Request, res: Response) {
 export function getTargetSubdomains(req: Request, res: Response) {
   const { id } = req.params;
 
-  query<{ subdomain: string }>(
-    sql`SELECT subdomain FROM targets_subdomains WHERE "targetId" = ${id}`
+  query<{ subdomain: string; isOutOfScope: boolean }>(
+    sql`SELECT subdomain, "isOutOfScope" FROM targets_subdomains WHERE "targetId" = ${id}`
   )
     .then((subdomains) => {
-      res.json(subdomains.map((sd) => sd.subdomain));
+      res.json(
+        subdomains.map((sd) => ({ subdomain: sd.subdomain, isOutOfScope: sd.isOutOfScope }))
+      );
     })
     .catch((error) => {
       logger.error("Error fetching subdomains:", error);
@@ -120,15 +122,26 @@ export function getTargetSubdomains(req: Request, res: Response) {
 // POST /targets/:id/subdomains  add / edit subdomains for a specific target
 export function setTargetSubdomains(req: Request, res: Response) {
   const { id } = req.params;
+  const newSubdomains: { subdomain: string; isOutOfScope: boolean }[] = req.body;
   // Update subdomains in the database
   query(sql`DELETE FROM targets_subdomains WHERE "targetId" = ${id}`)
     .then(() => {
-      const promises = req.body.map((sd: string) =>
-        query(sql`INSERT INTO targets_subdomains ("targetId", subdomain) VALUES (${id}, ${sd})`)
+      const promises = newSubdomains.map((sd: { subdomain: string; isOutOfScope: boolean }) =>
+        query(
+          sql`INSERT INTO targets_subdomains ("targetId", subdomain, "isOutOfScope") VALUES (${id}, ${sd.subdomain}, ${sd.isOutOfScope})`
+        )
       );
       return Promise.all(promises);
     })
     .then(() => {
+      // Send target:scopeChanged event to alert modules of the change
+      getEventBus().emit("target:scopeChanged", {
+        subdomains: newSubdomains.filter((sd) => !sd.isOutOfScope).map((sd) => sd.subdomain),
+        outOfScopeSubdomains: newSubdomains
+          .filter((sd) => sd.isOutOfScope)
+          .map((sd) => sd.subdomain),
+        targetId: Number(id),
+      });
       incrementScopeVersion();
       res.sendStatus(200);
     })

@@ -14,7 +14,9 @@
     "actions": "Actions",
     "delete": "Supprimer",
     "yes": "Oui",
-    "no": "Non"
+    "no": "Non",
+    "inScope": "In-scope",
+    "outOfScope": "Out-of-scope"
   },
   "nav": {
     "alerts": "Alertes",
@@ -28,7 +30,8 @@
   "tabs": {
     "general": "Général",
     "advanced": "Avancé",
-    "tasks": "Tâches"
+    "tasks": "Tâches",
+    "scope": "Scope"
   },
   "alerts": {
     "searchPlaceholder": "Rechercher une alerte, une entreprise ou un domaine...",
@@ -125,10 +128,12 @@
       "companyName": "Nom de l'entreprise",
       "mainDomain": "Domaine principal",
       "subdomains": "Sous-domaines in-scope",
+      "outOfScope": "Sous-domaines out-of-scope",
       "addSubdomainTitle": "Ajouter un sous-domaine",
       "removeSubdomainTitle": "Supprimer ce sous-domaine",
       "activeScan": "Scan actif",
       "defaultScope": "Par défaut : <code>*.{{domain}}</code>. Ajoutez des lignes pour préciser les domaines in-scope.",
+      "outOfScopeHint": "Ajoutez des lignes pour préciser les domaines out-of-scope.",
       "customHeader": "En-tête HTTP personnalisé",
       "errors": {
         "nameRequired": "Un nom est requis.",

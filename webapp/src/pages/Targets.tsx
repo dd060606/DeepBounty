@@ -40,14 +40,12 @@ export default function Targets() {
       const res = await ApiClient.get<TaskTemplate[]>("/tasks/templates");
       setAllTasks(res.data || []);
     } catch {
-      // Silent fail - tasks will be empty but won't block the UI
       setAllTasks([]);
     }
   }
 
   useEffect(() => {
     fetchTargets();
-    // Fetch tasks in background
     fetchAllTasks();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -57,7 +55,6 @@ export default function Targets() {
     if (!targets) return [];
     const q = query.trim().toLowerCase();
     if (!q) return targets;
-    // Check name, domain, and subdomains
     return targets.filter((t) => {
       const name = t.name?.toLowerCase() || "";
       const domain = normalizeDomain(t.domain) || "";
@@ -66,10 +63,19 @@ export default function Targets() {
     });
   }, [targets, query]);
 
+  // Format subdomains for the API
+  const formatSubdomainsPayload = (inScope: string[] = [], outScope: string[] = []) => {
+    return [
+      ...inScope.map((s) => ({ subdomain: s, isOutOfScope: false })),
+      ...outScope.map((s) => ({ subdomain: s, isOutOfScope: true })),
+    ];
+  };
+
   async function addNewTarget(data: Partial<Target>) {
     let res;
     let success = true;
-    // First, create the target
+
+    // Create target
     try {
       res = await ApiClient.post("/targets", {
         name: data.name,
@@ -79,26 +85,24 @@ export default function Targets() {
     } catch {
       success = false;
       toast.error(t("targets.errors.newTarget"));
+      return;
     }
-    // Then, create the subdomains
+
+    if (!res?.data?.id) return;
+
+    // Create subdomains
     try {
-      if (res?.data.id) {
-        await ApiClient.post(`/targets/${res.data.id}/subdomains`, data.subdomains);
-      } else {
-        throw new Error("No target ID returned from server");
-      }
+      const payload = formatSubdomainsPayload(data.subdomains, data.outOfScopeSubdomains);
+      await ApiClient.post(`/targets/${res.data.id}/subdomains`, payload);
     } catch {
       success = false;
       toast.error(t("targets.errors.subdomains"));
     }
-    // Finally, add optional settings
+
+    // Add settings
     if (data.settings) {
       try {
-        if (res?.data.id) {
-          await ApiClient.post(`/targets/${res.data.id}/settings`, data.settings);
-        } else {
-          throw new Error("No target ID returned from server");
-        }
+        await ApiClient.post(`/targets/${res.data.id}/settings`, data.settings);
       } catch {
         success = false;
         toast.error(t("targets.errors.settings"));
@@ -113,21 +117,25 @@ export default function Targets() {
 
   async function updateTarget(id: number, data: Partial<Target>) {
     let success = true;
-    // Update target
+
+    // Update target details
     try {
       await ApiClient.patch(`/targets/${id}`, data);
     } catch {
       success = false;
       toast.error(t("targets.errors.updateTarget"));
     }
-    // Then, update subdomains
+
+    // Update subdomains
     try {
-      await ApiClient.post(`/targets/${edit!.id}/subdomains`, data.subdomains);
+      const payload = formatSubdomainsPayload(data.subdomains, data.outOfScopeSubdomains);
+      await ApiClient.post(`/targets/${edit!.id}/subdomains`, payload);
     } catch {
       success = false;
       toast.error(t("targets.errors.subdomains"));
     }
-    // Finally, update settings
+
+    // Update settings
     try {
       await ApiClient.post(`/targets/${edit!.id}/settings`, data.settings);
     } catch {
@@ -177,7 +185,6 @@ export default function Targets() {
       </div>
 
       {loading ? (
-        // Show card skeletons while loading
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {Array.from({ length: 6 }).map((_, i) => (
             <TargetSkeleton key={i} />
@@ -194,16 +201,13 @@ export default function Targets() {
             <TargetCard
               key={tgt.id}
               target={tgt}
-              onEdit={(t) => {
-                setEdit(t);
-              }}
+              onEdit={(t) => setEdit(t)}
               onDelete={(t) => setConfirmDelete(t)}
             />
           ))}
         </div>
       )}
 
-      {/* Edit dialog */}
       {edit ? (
         <TargetDialog
           mode="edit"
@@ -217,7 +221,6 @@ export default function Targets() {
         />
       ) : null}
 
-      {/* Confirm delete */}
       {confirmDelete ? (
         <ConfirmDialog
           open={true}

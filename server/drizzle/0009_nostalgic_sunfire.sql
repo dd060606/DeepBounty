@@ -1,0 +1,1 @@
+ALTER TABLE "targets_subdomains" ADD COLUMN "isOutOfScope" boolean DEFAULT false NOT NULL;

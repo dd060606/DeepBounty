@@ -25,7 +25,6 @@ import {
   registerCallbackHandler,
   unregisterCallbackHandler,
 } from "@/services/callbacks.js";
-import { getTaskTemplateService } from "@/tasks/taskTemplateService.js";
 
 const logger = new Logger("Modules-Loader");
 const registry = getRegistry();

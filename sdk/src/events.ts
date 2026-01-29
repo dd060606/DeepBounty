@@ -34,6 +34,11 @@ export interface CoreEvents {
 	"target:created": Target;
 	"target:updated": Target;
 	"target:deleted": Target;
+	"target:scopeChanged": {
+		subdomains: string[];
+		outOfScopeSubdomains: string[];
+		targetId: number;
+	};
 }
 
 /**
@@ -41,7 +46,7 @@ export interface CoreEvents {
  * Receives event data wrapped with metadata about its origin
  */
 export type EventHandler<T = any> = (
-	event: EventMetadata<T>
+	event: EventMetadata<T>,
 ) => void | Promise<void>;
 
 /**
@@ -60,11 +65,11 @@ export interface IEventBus {
 	 */
 	subscribe<K extends keyof CoreEvents>(
 		event: K,
-		handler: EventHandler<CoreEvents[K]>
+		handler: EventHandler<CoreEvents[K]>,
 	): EventSubscription;
 	subscribe<T = any>(
 		event: string,
-		handler: EventHandler<T>
+		handler: EventHandler<T>,
 	): EventSubscription;
 
 	/**

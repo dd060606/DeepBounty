@@ -171,7 +171,7 @@ export async function isHostnameInScope(hostname: string): Promise<boolean> {
   const normalized = normalizeDomain(hostname);
   if (!isValidDomain(normalized)) return false;
 
-  // 1. Check if hostname is a main target (exact match only)
+  // Check if hostname is a main target (exact match only)
   const targetMatch = await queryOne(
     sql`SELECT 1 FROM targets WHERE domain = ${normalized} AND "activeScan" = true LIMIT 1`
   );
@@ -184,9 +184,6 @@ export async function isHostnameInScope(hostname: string): Promise<boolean> {
   checks.push(normalized);
 
   // Wildcards for hostname and all parents
-  // e.g. for api.example.com:
-  // - *.api.example.com (covers self)
-  // - *.example.com (covers child)
   for (let i = 0; i < parts.length; i++) {
     const domain = parts.slice(i).join(".");
     if (!isValidDomain(domain)) continue;
@@ -195,18 +192,28 @@ export async function isHostnameInScope(hostname: string): Promise<boolean> {
 
   if (checks.length === 0) return false;
 
-  // Check targets_subdomains for any matches
-  const subdomainsQuery = sql`
-    SELECT 1
+  // Fetch all matching rules (both In-Scope and Out-Of-Scope)
+  const matches = await query<{ isOutOfScope: boolean; subdomain: string }>(
+    sql`
+    SELECT ts."isOutOfScope", ts.subdomain
     FROM targets_subdomains ts
     JOIN targets t ON t.id = ts."targetId"
     WHERE ts.subdomain IN ${checks}
       AND t."activeScan" = true
-    LIMIT 1
-  `;
-  const subdomainMatch = await queryOne(subdomainsQuery);
+  `
+  );
 
-  return !!subdomainMatch;
+  if (matches.length === 0) return false;
+
+  // Determine "Most Specific Match"
+  // We sort by length descending.
+  // "*.cdn.domain.com" (length 16) is more specific than "*.domain.com" (length 12)
+  matches.sort((a, b) => b.subdomain.length - a.subdomain.length);
+
+  const bestMatch = matches[0];
+
+  // Return true only if the most specific rule is NOT out of scope
+  return !bestMatch.isOutOfScope;
 }
 
 /*

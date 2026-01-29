@@ -34,6 +34,7 @@ export const targetsSubdomains = pgTable(
     id: serial().primaryKey().notNull(),
     targetId: integer().notNull(),
     subdomain: text().notNull(),
+    isOutOfScope: boolean().default(false).notNull(),
   },
   (table) => [
     foreignKey({

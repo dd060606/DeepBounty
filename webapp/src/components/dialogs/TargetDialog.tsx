@@ -57,16 +57,20 @@ export default function TargetDialog({
   const [internalOpen, setInternalOpen] = useState(false);
   const isOpen = isControlled ? (openProp as boolean) : internalOpen;
   const [saving, setSaving] = useState(false);
+
   const [touched, setTouched] = useState<{
     name?: boolean;
     domain?: boolean;
     subs?: Record<number, boolean>;
+    oos?: Record<number, boolean>;
   }>({});
 
-  //Target data
+  // Target data
   const [name, setName] = useState(initial?.name ?? "");
   const [domain, setDomain] = useState(initial?.domain ?? "");
   const [activeScan, setActiveScan] = useState(initial?.activeScan ?? true);
+
+  // In-Scope Subdomains
   const [subdomains, setSubdomains] = useState<string[]>(
     initial?.subdomains && initial.subdomains.length > 0
       ? initial.subdomains
@@ -74,6 +78,14 @@ export default function TargetDialog({
         ? [defaultWildcard(initial.domain)]
         : []
   );
+
+  // Out-Of-Scope Subdomains
+  const [oosSubdomains, setOosSubdomains] = useState<string[]>(
+    initial?.outOfScopeSubdomains && initial.outOfScopeSubdomains.length > 0
+      ? initial.outOfScopeSubdomains
+      : [""]
+  );
+
   // Advanced settings
   const [userAgent, setUserAgent] = useState<string>(initial?.settings?.userAgent ?? "");
   const [headerName, setHeaderName] = useState<string>(
@@ -87,12 +99,10 @@ export default function TargetDialog({
   const [tasks, setTasks] = useState<TaskWithOverride[]>([]);
   const [taskSearchQuery, setTaskSearchQuery] = useState("");
   const [loadingTasks, setLoadingTasks] = useState(false);
-  // Tasks busy state (running templates)
   const [busy, setBusy] = useState<Set<number>>(new Set());
 
   const icon = useMemo(() => faviconUrl(domain), [domain]);
 
-  // Load task overrides for edit mode
   useEffect(() => {
     if (isOpen && mode === "edit" && initial?.id) {
       fetchTaskOverrides();
@@ -109,7 +119,6 @@ export default function TargetDialog({
       );
       const overrides = res.data || [];
 
-      // Merge tasks with their overrides
       const tasksWithOverrides: TaskWithOverride[] = allTasks.map((task) => {
         const override = overrides.find((o) => o.taskTemplateId === task.id);
         return {
@@ -119,10 +128,9 @@ export default function TargetDialog({
           hasOverride: !!override,
         };
       });
-      // Sort runnable tasks first
+
       setTasks(
         tasksWithOverrides.sort((a, b) => {
-          // Sort runnable tasks first
           const aRunnable =
             (a.schedulingType === "CUSTOM" && a.interval > 0) ||
             a.schedulingType === "TARGET_BASED";
@@ -153,26 +161,14 @@ export default function TargetDialog({
     setTasks((prev) =>
       prev.map((task) => {
         if (task.id !== taskId) return task;
-
-        // If there's already an override, toggle it
         if (task.hasOverride) {
-          return {
-            ...task,
-            overrideActive: !task.overrideActive,
-          };
+          return { ...task, overrideActive: !task.overrideActive };
         }
-
-        // Create a new override with opposite of template's active state
-        return {
-          ...task,
-          overrideActive: !task.active,
-          hasOverride: true,
-        };
+        return { ...task, overrideActive: !task.active, hasOverride: true };
       })
     );
   }
 
-  // Validation helpers
   const nameError = !name.trim() ? t("targets.form.errors.nameRequired") : null;
   const domainRequired = !normalizeDomain(domain);
   const domainInvalid = !domainRequired && !isValidDomain(domain);
@@ -181,7 +177,8 @@ export default function TargetDialog({
     : domainInvalid
       ? t("targets.form.errors.domainInvalid")
       : null;
-  // Subdomain validation: flag invalid non-empty rows
+
+  // Subdomain validation
   const subdomainErrors: Record<number, string> = {};
   subdomains.forEach((sd, idx) => {
     const v = sd.trim();
@@ -189,53 +186,83 @@ export default function TargetDialog({
       subdomainErrors[idx] = t("targets.form.errors.subdomainInvalid");
     }
   });
-  const hasErrors = Boolean(nameError || domainError || Object.keys(subdomainErrors).length > 0);
 
-  function handleAddRow(index?: number) {
-    const next = [...subdomains];
+  // Out-of-scope validation
+  const oosErrors: Record<number, string> = {};
+  oosSubdomains.forEach((sd, idx) => {
+    const v = sd.trim();
+    if (v && !isValidSubdomainEntry(v)) {
+      oosErrors[idx] = t("targets.form.errors.subdomainInvalid");
+    }
+  });
+
+  const hasErrors = Boolean(
+    nameError ||
+      domainError ||
+      Object.keys(subdomainErrors).length > 0 ||
+      Object.keys(oosErrors).length > 0
+  );
+
+  // Row (subdomain and out of scope) handlers
+  function handleAddRow(type: "sub" | "oos", index?: number) {
+    const setFn = type === "sub" ? setSubdomains : setOosSubdomains;
+    const current = type === "sub" ? subdomains : oosSubdomains;
+
+    const next = [...current];
     const insertAt = typeof index === "number" ? index + 1 : next.length;
     next.splice(insertAt, 0, "");
-    setSubdomains(next);
+    setFn(next);
   }
 
-  function handleRemoveRow(index: number) {
-    const next = subdomains.filter((_, i) => i !== index);
-    setSubdomains(next.length ? next : [""]);
+  function handleRemoveRow(type: "sub" | "oos", index: number) {
+    const setFn = type === "sub" ? setSubdomains : setOosSubdomains;
+    const current = type === "sub" ? subdomains : oosSubdomains;
+
+    const next = current.filter((_, i) => i !== index);
+    setFn(next.length ? next : [""]);
   }
 
-  function handleChangeRow(index: number, value: string) {
-    const next = [...subdomains];
+  function handleChangeRow(type: "sub" | "oos", index: number, value: string) {
+    const setFn = type === "sub" ? setSubdomains : setOosSubdomains;
+    const current = type === "sub" ? subdomains : oosSubdomains;
+
+    const next = [...current];
     next[index] = value;
-    setSubdomains(next);
+    setFn(next);
   }
 
+  // Submit handler
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (saving) return;
-    // Mark fields as touched to show errors if any
+
+    // Mark all as touched
     setTouched((s) => ({
       name: true,
       domain: true,
-      subs: {
-        ...(s.subs || {}),
-        ...Object.fromEntries(subdomains.map((_, i) => [i, true])),
-      },
+      subs: { ...(s.subs || {}), ...Object.fromEntries(subdomains.map((_, i) => [i, true])) },
+      oos: { ...(s.oos || {}), ...Object.fromEntries(oosSubdomains.map((_, i) => [i, true])) },
     }));
+
     if (hasErrors) return;
     setSaving(true);
+
     const normalizedDomain = normalizeDomain(domain);
-    // Ensure we have at least one in-scope subdomain before sending (default: *.<domain>)
     let cleanedSubdomains = subdomains.map((s) => s.trim()).filter((s) => s.length > 0);
+    const cleanedOos = oosSubdomains.map((s) => s.trim()).filter((s) => s.length > 0);
+
+    // Default wildcard if empty
     if (cleanedSubdomains.length === 0) {
       const d = defaultWildcard(normalizedDomain || domain);
       if (d) cleanedSubdomains = [d];
     }
+
     try {
-      // Submit the form data
       await onSubmit?.({
         name: name.trim(),
         domain: normalizedDomain,
         subdomains: cleanedSubdomains,
+        outOfScopeSubdomains: cleanedOos,
         activeScan,
         settings: {
           userAgent: userAgent.trim() || undefined,
@@ -246,41 +273,32 @@ export default function TargetDialog({
         },
       });
 
-      // Save task overrides only in edit mode
       if (mode === "edit" && initial?.id) {
         await saveTaskOverrides(initial.id);
       }
-
       handleOpenChange(false);
     } finally {
       setSaving(false);
     }
   }
 
+  // Save task overrides
   async function saveTaskOverrides(targetId: number) {
     const overridesToSet: { templateId: number; active: boolean }[] = [];
     const overridesToRemove: number[] = [];
 
     tasks.forEach((task) => {
       if (task.hasOverride) {
-        // Set or update override
-        overridesToSet.push({
-          templateId: task.id,
-          active: task.overrideActive!,
-        });
+        overridesToSet.push({ templateId: task.id, active: task.overrideActive! });
       } else if (task.overrideId) {
-        // Remove override (was overridden before, but user removed it)
         overridesToRemove.push(task.id);
       }
     });
 
     try {
-      // Set overrides
       if (overridesToSet.length > 0) {
         await ApiClient.put(`/tasks/targets/${targetId}/task-overrides`, overridesToSet);
       }
-
-      // Remove overrides
       if (overridesToRemove.length > 0) {
         await ApiClient.delete(`/tasks/targets/${targetId}/task-overrides`, {
           data: { templateIds: overridesToRemove },
@@ -291,9 +309,9 @@ export default function TargetDialog({
     }
   }
 
+  // Run template for a specific target
   async function runTemplateForTarget(templateId: number) {
     if (!initial?.id) return;
-
     setBusy((s) => new Set(s).add(templateId));
     try {
       await ApiClient.post(`/tasks/templates/${templateId}/run/${initial.id}/`);
@@ -309,27 +327,27 @@ export default function TargetDialog({
     }
   }
 
-  const title = mode === "create" ? t("targets.dialog.createTitle") : t("targets.dialog.editTitle");
-  const description =
-    mode === "create" ? t("targets.dialog.createDesc") : t("targets.dialog.editDesc");
-
   function initFromInitial() {
-    // Initialize form state from initial values
     setName(initial?.name ?? "");
     setDomain(initial?.domain ?? "");
     setActiveScan(initial?.activeScan ?? true);
     setUserAgent(initial?.settings?.userAgent ?? "");
     setHeaderName(initial?.settings?.customHeader?.split(":")[0] ?? "");
     setHeaderValue(initial?.settings?.customHeader?.split(":")[1] ?? "");
-    const subs = initial?.subdomains && initial.subdomains.length > 0 ? initial.subdomains : [""];
-    setSubdomains(subs);
+
+    setSubdomains(initial?.subdomains && initial.subdomains.length > 0 ? initial.subdomains : [""]);
+    setOosSubdomains(
+      initial?.outOfScopeSubdomains && initial.outOfScopeSubdomains.length > 0
+        ? initial.outOfScopeSubdomains
+        : [""]
+    );
+
     setTouched({});
     setSaving(false);
     setTaskSearchQuery("");
   }
 
   function resetForm() {
-    // Clear form state
     setName("");
     setDomain("");
     setActiveScan(true);
@@ -337,6 +355,7 @@ export default function TargetDialog({
     setHeaderName("");
     setHeaderValue("");
     setSubdomains([]);
+    setOosSubdomains([]);
     setTouched({});
     setSaving(false);
     setTasks([]);
@@ -344,17 +363,71 @@ export default function TargetDialog({
   }
 
   function handleOpenChange(next: boolean) {
-    // If uncontrolled, update internal state
-    if (!isControlled) {
-      setInternalOpen(next);
-    }
+    if (!isControlled) setInternalOpen(next);
     onOpenChange?.(next);
-    if (next) {
-      initFromInitial();
-    } else {
-      resetForm();
-    }
+    if (next) initFromInitial();
+    else resetForm();
   }
+
+  // Render a subdomain list
+  const renderList = (type: "sub" | "oos", list: string[], errors: Record<number, string>) => (
+    <div className="border-border rounded-lg border p-2">
+      <div className="max-h-56 space-y-2 overflow-y-auto pr-1">
+        {list.map((sd, idx) => {
+          const err = errors[idx];
+          const isTouched = type === "sub" ? touched.subs?.[idx] : touched.oos?.[idx];
+          return (
+            <div key={idx} className="space-y-1">
+              <div className="relative">
+                <Input
+                  value={sd}
+                  onChange={(e) => handleChangeRow(type, idx, e.target.value)}
+                  onBlur={() =>
+                    setTouched((s) => ({
+                      ...s,
+                      [type === "sub" ? "subs" : "oos"]: {
+                        ...(s[type === "sub" ? "subs" : "oos"] || {}),
+                        [idx]: true,
+                      },
+                    }))
+                  }
+                  placeholder={domain ? `*.${normalizeDomain(domain)}` : "*.example.com"}
+                  className={`m-0.5 pr-20`}
+                  aria-invalid={Boolean(isTouched && err)}
+                />
+                <div className="pointer-events-none absolute top-0 right-1 flex h-9 items-center gap-1">
+                  <div className="pointer-events-auto flex items-center gap-1">
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="ghostNoHover"
+                      className="text-muted-foreground hover:text-foreground h-7 w-7"
+                      onClick={() => handleAddRow(type, idx)}
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="ghostNoHover"
+                      className="text-muted-foreground hover:text-destructive h-7 w-7"
+                      onClick={() => handleRemoveRow(type, idx)}
+                      disabled={list.length <= 1}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+              {isTouched && err ? (
+                <p className="text-destructive text-xs font-medium">{err}</p>
+              ) : null}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
 
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
@@ -362,19 +435,24 @@ export default function TargetDialog({
       <DialogContent className="sm:max-w-[640px]">
         <form onSubmit={handleSubmit} className="space-y-6">
           <DialogHeader>
-            <DialogTitle className="text-foreground">{title}</DialogTitle>
-            <DialogDescription>{description}</DialogDescription>
+            <DialogTitle className="text-foreground">
+              {mode === "create" ? t("targets.dialog.createTitle") : t("targets.dialog.editTitle")}
+            </DialogTitle>
+            <DialogDescription>
+              {mode === "create" ? t("targets.dialog.createDesc") : t("targets.dialog.editDesc")}
+            </DialogDescription>
           </DialogHeader>
 
           <Tabs defaultValue="general" className="w-full">
             <TabsList>
               <TabsTrigger value="general">{t("tabs.general")}</TabsTrigger>
+              <TabsTrigger value="scope">{t("tabs.scope")}</TabsTrigger>
               <TabsTrigger value="advanced">{t("tabs.advanced")}</TabsTrigger>
               {mode === "edit" && <TabsTrigger value="tasks">{t("tabs.tasks")}</TabsTrigger>}
             </TabsList>
 
+            {/* GENERAL TAB */}
             <TabsContent value="general">
-              {/* Target name and icon */}
               <div className="grid grid-cols-1 gap-5 pt-2">
                 <div className="grid gap-2">
                   <Label htmlFor="target-name">{t("targets.form.companyName")}</Label>
@@ -404,14 +482,11 @@ export default function TargetDialog({
                       required
                     />
                   </div>
-                  {touched.name && nameError ? (
-                    <p className="text-destructive text-xs font-medium" role="alert">
-                      {nameError}
-                    </p>
-                  ) : null}
+                  {touched.name && nameError && (
+                    <p className="text-destructive text-xs font-medium">{nameError}</p>
+                  )}
                 </div>
 
-                {/* Target domain */}
                 <div className="grid gap-2">
                   <Label htmlFor="target-domain">{t("targets.form.mainDomain")}</Label>
                   <Input
@@ -423,99 +498,11 @@ export default function TargetDialog({
                     aria-invalid={touched.domain && Boolean(domainError)}
                     required
                   />
-                  {touched.domain && domainError ? (
-                    <p className="text-destructive text-xs font-medium" role="alert">
-                      {domainError}
-                    </p>
-                  ) : null}
+                  {touched.domain && domainError && (
+                    <p className="text-destructive text-xs font-medium">{domainError}</p>
+                  )}
                 </div>
 
-                {/* Target subdomains */}
-                <div className="grid gap-3">
-                  <div className="flex items-center justify-between">
-                    <Label>{t("targets.form.subdomains")}</Label>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleAddRow()}
-                    >
-                      <Plus className="mr-1 h-4 w-4" /> {t("common.add")}
-                    </Button>
-                  </div>
-                  <div className="border-border rounded-lg border p-2">
-                    <div className="max-h-56 space-y-2 overflow-y-auto pr-1">
-                      {/* Subdomain list */}
-                      {subdomains.map((sd, idx) => {
-                        const err = subdomainErrors[idx];
-                        const isTouched = touched.subs?.[idx];
-                        return (
-                          <div key={idx} className="space-y-1">
-                            <div className="relative">
-                              {/* Subdomain input */}
-                              <Input
-                                value={sd}
-                                onChange={(e) => handleChangeRow(idx, e.target.value)}
-                                onBlur={() =>
-                                  setTouched((s) => ({
-                                    ...s,
-                                    subs: { ...(s.subs || {}), [idx]: true },
-                                  }))
-                                }
-                                placeholder={
-                                  domain ? `*.${normalizeDomain(domain)}` : "*.example.com"
-                                }
-                                className="m-0.5 pr-20"
-                                aria-invalid={Boolean(isTouched && err)}
-                              />
-                              {/* Subdomain actions */}
-                              <div className="pointer-events-none absolute top-0 right-1 flex h-9 items-center gap-1">
-                                <div className="pointer-events-auto flex items-center gap-1">
-                                  <Button
-                                    type="button"
-                                    size="icon"
-                                    variant="ghostNoHover"
-                                    className="text-muted-foreground hover:text-foreground h-7 w-7"
-                                    onClick={() => handleAddRow(idx)}
-                                    title={t("targets.form.addSubdomainTitle")}
-                                  >
-                                    <Plus className="h-4 w-4" />
-                                  </Button>
-                                  <Button
-                                    type="button"
-                                    size="icon"
-                                    variant="ghostNoHover"
-                                    className="text-muted-foreground hover:text-destructive h-7 w-7"
-                                    onClick={() => handleRemoveRow(idx)}
-                                    title={t("targets.form.removeSubdomainTitle")}
-                                    disabled={subdomains.length <= 1}
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                </div>
-                              </div>
-                            </div>
-                            {/* Subdomain error message */}
-                            {isTouched && err ? (
-                              <p className="text-destructive text-xs font-medium" role="alert">
-                                {err}
-                              </p>
-                            ) : null}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                  <p className="text-muted-foreground text-xs">
-                    <Trans
-                      i18nKey="targets.form.defaultScope"
-                      values={{ domain: normalizeDomain(domain) || "domain.com" }}
-                      components={{ code: <code /> }}
-                    />
-                  </p>
-                </div>
-
-                {/* Enable scan */}
                 <div className="flex items-center gap-3">
                   <Checkbox
                     id="active-scan"
@@ -530,32 +517,78 @@ export default function TargetDialog({
               </div>
             </TabsContent>
 
+            {/* SCOPE TAB */}
+            <TabsContent value="scope">
+              <div className="space-y-6 pt-2">
+                {/* In Scope */}
+                <div className="grid gap-3">
+                  <div className="flex items-center justify-between">
+                    <Label className="flex items-center gap-2">
+                      {t("targets.form.subdomains")}
+                    </Label>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleAddRow("sub")}
+                    >
+                      <Plus className="mr-1 h-4 w-4" /> {t("common.add")}
+                    </Button>
+                  </div>
+                  {renderList("sub", subdomains, subdomainErrors)}
+                  <p className="text-muted-foreground text-xs">
+                    <Trans
+                      i18nKey="targets.form.defaultScope"
+                      values={{ domain: normalizeDomain(domain) || "domain.com" }}
+                      components={{ code: <code /> }}
+                    />
+                  </p>
+                </div>
+
+                {/* Out of Scope */}
+                <div className="grid gap-3">
+                  <div className="flex items-center justify-between">
+                    <Label className="flex items-center gap-2">
+                      {t("targets.form.outOfScope")}
+                    </Label>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleAddRow("oos")}
+                    >
+                      <Plus className="mr-1 h-4 w-4" /> {t("common.add")}
+                    </Button>
+                  </div>
+                  {renderList("oos", oosSubdomains, oosErrors)}
+                  <p className="text-muted-foreground text-xs">
+                    {t("targets.form.outOfScopeHint")}
+                  </p>
+                </div>
+              </div>
+            </TabsContent>
+
             <TabsContent value="advanced">
               <div className="grid grid-cols-1 gap-5 pt-2">
-                {/* User-Agent */}
                 <div className="grid gap-2">
                   <Label htmlFor="user-agent">User-Agent</Label>
                   <Input
                     id="user-agent"
-                    placeholder="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127 Safari/537.36"
+                    placeholder="Mozilla/5.0..."
                     value={userAgent}
                     onChange={(e) => setUserAgent(e.target.value)}
                   />
                 </div>
-
-                {/* Custom Header */}
                 <div className="grid gap-2">
                   <Label>{t("targets.form.customHeader")}</Label>
                   <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                     <Input
-                      id="header-name"
                       placeholder="X-Bug-Bounty"
                       value={headerName}
                       onChange={(e) => setHeaderName(e.target.value)}
                     />
                     <Input
-                      id="header-value"
-                      placeholder="your-bugbounty-username"
+                      placeholder="username"
                       value={headerValue}
                       onChange={(e) => setHeaderValue(e.target.value)}
                     />
@@ -564,18 +597,14 @@ export default function TargetDialog({
               </div>
             </TabsContent>
 
-            {/* Tasks tab - only in edit mode */}
             {mode === "edit" && (
               <TabsContent value="tasks">
                 <div className="space-y-4 pt-2">
-                  {/* Search bar */}
                   <Input
                     value={taskSearchQuery}
                     onChange={(e) => setTaskSearchQuery(e.target.value)}
                     placeholder={t("tasks.searchPlaceholder")}
                   />
-
-                  {/* Tasks list or loading/empty state */}
                   {loadingTasks ? (
                     <div className="space-y-3">
                       {[...Array(3)].map((_, i) => (
@@ -588,57 +617,34 @@ export default function TargetDialog({
                   ) : filteredTasks.length === 0 ? (
                     <div className="text-muted-foreground border-border bg-card/60 flex flex-col rounded-xl border p-8 text-center">
                       <p className="text-sm font-medium">{t("tasks.empty.title")}</p>
-                      <p className="text-xs">{t("tasks.empty.hint")}</p>
                     </div>
                   ) : (
                     <div className="scrollbar-thin max-h-[400px] space-y-3 overflow-y-auto pr-1">
-                      {filteredTasks.map((task) => {
-                        // Determine the effective active state
-                        const effectiveActive = task.hasOverride
-                          ? task.overrideActive!
-                          : task.active;
-
-                        return (
-                          <div
-                            key={task.id}
-                            className="border-border bg-card hover:bg-muted/50 flex items-start gap-4 rounded-lg border p-4 transition-colors"
-                          >
-                            <div className="flex-1">
-                              <div className="flex items-start justify-between gap-2">
-                                <h4 className="text-foreground text-sm font-semibold">
-                                  {task.name}
-                                </h4>
-                              </div>
-                              {task.description && (
-                                <p className="text-muted-foreground text-xs leading-relaxed">
-                                  {task.description}
-                                </p>
-                              )}
-                            </div>
-                            <div className="m-auto flex items-center gap-3">
-                              {/* Enable task switch */}
-                              <Switch
-                                checked={effectiveActive}
-                                onCheckedChange={() => toggleTaskOverride(task.id)}
-                              />
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                disabled={
-                                  busy.has(task.id) ||
-                                  (task.schedulingType === "CUSTOM" && task.interval <= 0) ||
-                                  task.schedulingType === "GLOBAL"
-                                }
-                                onClick={() => runTemplateForTarget(task.id)}
-                                className="flex items-center gap-2"
-                              >
-                                <Play className="size-4" />
-                                {t("modules.taskTemplates.run")}
-                              </Button>
-                            </div>
+                      {filteredTasks.map((task) => (
+                        <div
+                          key={task.id}
+                          className="border-border bg-card hover:bg-muted/50 flex items-start gap-4 rounded-lg border p-4 transition-colors"
+                        >
+                          <div className="flex-1">
+                            <h4 className="text-foreground text-sm font-semibold">{task.name}</h4>
+                            <p className="text-muted-foreground text-xs">{task.description}</p>
                           </div>
-                        );
-                      })}
+                          <div className="m-auto flex items-center gap-3">
+                            <Switch
+                              checked={task.hasOverride ? task.overrideActive! : task.active}
+                              onCheckedChange={() => toggleTaskOverride(task.id)}
+                            />
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled={busy.has(task.id) || task.schedulingType === "GLOBAL"}
+                              onClick={() => runTemplateForTarget(task.id)}
+                            >
+                              <Play className="size-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   )}
                 </div>
@@ -646,7 +652,6 @@ export default function TargetDialog({
             )}
           </Tabs>
 
-          {/* Button actions */}
           <DialogFooter>
             <Button
               type="button"
@@ -658,9 +663,7 @@ export default function TargetDialog({
             </Button>
             <Button type="submit" disabled={saving || hasErrors} className="min-w-[120px]">
               {saving ? (
-                <span className="inline-flex items-center gap-2">
-                  <Loader2Icon className="h-4 w-4 animate-spin" />
-                </span>
+                <Loader2Icon className="h-4 w-4 animate-spin" />
               ) : mode === "create" ? (
                 t("common.add")
               ) : (

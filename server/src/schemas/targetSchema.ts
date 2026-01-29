@@ -10,7 +10,10 @@ export const addTargetSchema = z.object({
 });
 
 export const addSubdomainsSchema = z.array(
-  z.string().refine((s) => isValidSubdomainEntry(s), {
-    message: "Invalid subdomain format",
+  z.object({
+    subdomain: z.string().refine((s) => isValidSubdomainEntry(s), {
+      message: "Invalid subdomain format",
+    }),
+    isOutOfScope: z.boolean(),
   })
 );

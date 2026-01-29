@@ -11,14 +11,18 @@ export async function getTargetsWithDetails(): Promise<Target[]> {
     sql`
       SELECT
         t.*,
-        -- Subdomains array
+        -- Subdomains array (In-Scope)
         COALESCE(sd.subdomains, '{}'::text[]) AS subdomains,
+        -- Out of Scope Subdomains array
+        COALESCE(sd.out_of_scope_subdomains, '{}'::text[]) AS "outOfScopeSubdomains",
         -- Settings object
         ts.settings
       FROM targets t
       -- Join with subdomains
       LEFT JOIN LATERAL (
-        SELECT array_agg(s.subdomain ORDER BY s.subdomain) AS subdomains
+        SELECT 
+          array_agg(s.subdomain ORDER BY s.subdomain) FILTER (WHERE s."isOutOfScope" = false) AS subdomains,
+          array_agg(s.subdomain ORDER BY s.subdomain) FILTER (WHERE s."isOutOfScope" = true) AS out_of_scope_subdomains
         FROM targets_subdomains s
         WHERE s."targetId" = t.id
       ) sd ON true
@@ -44,8 +48,10 @@ export async function getTargetsForTask(taskTemplateId: number): Promise<Target[
     sql`
       SELECT
         t.*,
-        -- Subdomains array
+        -- Subdomains array (In-Scope)
         COALESCE(sd.subdomains, '{}'::text[]) AS subdomains,
+        -- Out of Scope Subdomains array
+        COALESCE(sd.out_of_scope_subdomains, '{}'::text[]) AS "outOfScopeSubdomains",
         -- Settings object
         ts.settings
       FROM task_templates tt
@@ -55,7 +61,9 @@ export async function getTargetsForTask(taskTemplateId: number): Promise<Target[
        AND tto."taskTemplateId" = tt.id
       -- Join with subdomains
       LEFT JOIN LATERAL (
-        SELECT array_agg(s.subdomain ORDER BY s.subdomain) AS subdomains
+        SELECT 
+          array_agg(s.subdomain ORDER BY s.subdomain) FILTER (WHERE s."isOutOfScope" = false) AS subdomains,
+          array_agg(s.subdomain ORDER BY s.subdomain) FILTER (WHERE s."isOutOfScope" = true) AS out_of_scope_subdomains
         FROM targets_subdomains s
         WHERE s."targetId" = t.id
       ) sd ON true

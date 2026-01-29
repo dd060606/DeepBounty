@@ -25,7 +25,7 @@ export async function getScope(req: Request, res: Response) {
       sql`SELECT DISTINCT ts.subdomain
           FROM targets_subdomains ts
           JOIN targets t ON t.id = ts."targetId"
-          WHERE t."activeScan" = true
+          WHERE t."activeScan" = true AND ts."isOutOfScope" = false
           ORDER BY ts.subdomain`
     );
 
