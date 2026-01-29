@@ -24,16 +24,17 @@ export default function Alerts() {
   const [pageSize, setPageSize] = useState(PAGE_SIZE);
   const [pageCount, setPageCount] = useState(1);
   const [total, setTotal] = useState(0);
+  const [searchQuery, setSearchQuery] = useState("");
   const [selected, setSelected] = useState<Alert | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{
     open: boolean;
     alertIds: number[];
   }>({ open: false, alertIds: [] });
 
-  async function fetchAlerts(nextPageIndex = 0) {
+  async function fetchAlerts(nextPageIndex = 0, query = searchQuery) {
     try {
       const res = await ApiClient.get<AlertsResponse>("/alerts", {
-        params: { page: nextPageIndex + 1, pageSize: PAGE_SIZE },
+        params: { page: nextPageIndex + 1, pageSize: PAGE_SIZE, search: query },
       });
       const data = res.data;
       const alerts = data.alerts ?? [];
@@ -98,11 +99,18 @@ export default function Alerts() {
 
   function handlePageChange(nextPageIndex: number) {
     setPageIndex(nextPageIndex);
-    fetchAlerts(nextPageIndex);
+    fetchAlerts(nextPageIndex, searchQuery);
+  }
+
+  function handleSearch(newQuery: string) {
+    setSearchQuery(newQuery);
+    // Reset to first page
+    setPageIndex(0);
+    fetchAlerts(0, newQuery);
   }
 
   useEffect(() => {
-    fetchAlerts(0);
+    fetchAlerts(0, "");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -126,6 +134,7 @@ export default function Alerts() {
           pageCount={pageCount}
           pageSize={pageSize}
           onPageChange={handlePageChange}
+          onSearch={handleSearch}
         />
       )}
 

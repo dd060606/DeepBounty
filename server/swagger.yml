@@ -411,6 +411,11 @@ paths:
             maximum: 25
             default: 25
           description: Number of alerts per page (max 25)
+        - in: query
+          name: search
+          schema:
+            type: string
+          description: Search term to filter alerts by name, domain or subdomain
       responses:
         "200":
           description: A paginated list of alerts

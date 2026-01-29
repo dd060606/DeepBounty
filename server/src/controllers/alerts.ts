@@ -11,14 +11,29 @@ const MAX_PAGE_SIZE = 25;
 // GET /alerts - list all alerts joined with target name and domain
 export async function getAlerts(req: Request, res: Response) {
   try {
-    const { page = 1, pageSize = MAX_PAGE_SIZE } = req.query as {
+    const {
+      page = 1,
+      pageSize = MAX_PAGE_SIZE,
+      search = "",
+    } = req.query as {
       page?: number;
       pageSize?: number;
+      search?: string;
     };
 
     const limit = Math.min(Number(pageSize) || MAX_PAGE_SIZE, MAX_PAGE_SIZE);
     const currentPage = Math.max(1, Number(page) || 1);
     const offset = (currentPage - 1) * limit;
+
+    // Construct search clause
+    const searchClause = search
+      ? sql`AND (
+          a.name ILIKE ${`%${search}%`} OR 
+          t.name ILIKE ${`%${search}%`} OR 
+          a.subdomain ILIKE ${`%${search}%`} OR 
+          COALESCE(t.domain, '') ILIKE ${`%${search}%`}
+        )`
+      : sql``;
 
     const [rows, totalRow] = await Promise.all([
       query<Alert>(
@@ -35,10 +50,17 @@ export async function getAlerts(req: Request, res: Response) {
           to_char(a."createdAt", 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') as "createdAt"
         FROM alerts a
         LEFT JOIN targets t ON t.id = a."targetId"
+        WHERE 1=1 ${searchClause}
         ORDER BY a."createdAt" DESC, a.id DESC
         LIMIT ${limit} OFFSET ${offset}`
       ),
-      queryOne<{ count: number }>(sql`SELECT COUNT(*)::int as count FROM alerts`),
+      // Update count to reflect search results
+      queryOne<{ count: number }>(
+        sql`SELECT COUNT(*)::int as count 
+            FROM alerts a 
+            LEFT JOIN targets t ON t.id = a."targetId"
+            WHERE 1=1 ${searchClause}`
+      ),
     ]);
 
     res.json({ alerts: rows, total: totalRow?.count ?? 0, page: currentPage, pageSize: limit });

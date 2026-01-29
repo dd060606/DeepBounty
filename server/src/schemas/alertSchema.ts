@@ -4,6 +4,7 @@ import { isValidSubdomainEntry } from "@/utils/domains.js";
 export const getAlertsQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1).optional(),
   pageSize: z.coerce.number().int().min(1).max(50).default(50).optional(),
+  search: z.string().trim().optional(),
 });
 
 export const addAlertSchema = z.object({

@@ -4,7 +4,7 @@ import { faviconUrl } from "@/utils/domains";
 import type { Alert } from "@deepbounty/sdk/types";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "react-i18next";
-import { ArrowUpDown, ListFilter, MoreHorizontal, Trash2 } from "lucide-react";
+import { ArrowUpDown, ListFilter, MoreHorizontal, Trash2, X } from "lucide-react";
 import type { Column, ColumnDef } from "@tanstack/react-table";
 import { DataTable } from "@/components/ui/data-table";
 import SeverityBadge from "./SeverityBadge";
@@ -25,6 +25,49 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { formatDate } from "@/utils/date";
 
+// This component manages its own state to prevent the parent Table from re-rendering on every keystroke.
+function SearchInput({
+  onSearch,
+  placeholder,
+}: {
+  onSearch: (query: string) => void;
+  placeholder: string;
+}) {
+  const [value, setValue] = useState("");
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      onSearch(value);
+    }
+  };
+
+  const handleClear = () => {
+    setValue("");
+    onSearch("");
+  };
+
+  return (
+    <div className="relative w-full sm:max-w-xl">
+      <Input
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        onKeyDown={handleKeyDown}
+        placeholder={placeholder}
+        className="pr-8"
+      />
+      {value && (
+        <button
+          onClick={handleClear}
+          className="text-muted-foreground hover:text-foreground absolute top-1/2 right-2.5 -translate-y-1/2"
+          type="button"
+        >
+          <X className="size-4" />
+        </button>
+      )}
+    </div>
+  );
+}
+
 type Props = {
   alerts: Alert[];
   onRowClick?: (alert: Alert) => void;
@@ -34,6 +77,7 @@ type Props = {
   pageCount: number;
   pageSize: number;
   onPageChange: (pageIndex: number) => void;
+  onSearch: (query: string) => void;
 };
 
 // A header component that allows sorting
@@ -55,10 +99,11 @@ export default function AlertsTable({
   pageCount,
   pageSize,
   onPageChange,
+  onSearch,
 }: Props) {
   const { t } = useTranslation();
-  const [query, setQuery] = useState("");
   const [rowSelection, setRowSelection] = useState({});
+
   // Filters
   const [severityFilter, setSeverityFilter] = useState({
     critical: true,
@@ -72,159 +117,135 @@ export default function AlertsTable({
     unconfirmed: true,
   });
 
-  // Columns definition
-  const alertsColumns: ColumnDef<Alert>[] = [
-    {
-      id: "select",
-      header: ({ table }) => (
-        <Checkbox
-          checked={
-            table.getIsAllPageRowsSelected() ||
-            (table.getIsSomePageRowsSelected() && "indeterminate")
-          }
-          className="size-5"
-          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-          aria-label="Select all"
-        />
-      ),
-      cell: ({ row }) => (
-        <Checkbox
-          checked={row.getIsSelected()}
-          className="size-5"
-          onCheckedChange={(value) => row.toggleSelected(!!value)}
-          aria-label="Select row"
-          onClick={(e) => e.stopPropagation()}
-        />
-      ),
-      enableSorting: false,
-      enableHiding: false,
-    },
-    {
-      accessorKey: "id",
-      cell: ({ row }) => `#${row.original.id}`,
-      header: ({ column }) => {
-        return <TableHeader column={column} title="ID" />;
+  // Columns definition (Memoized)
+  const alertsColumns = useMemo<ColumnDef<Alert>[]>(
+    () => [
+      {
+        id: "select",
+        header: ({ table }) => (
+          <Checkbox
+            checked={
+              table.getIsAllPageRowsSelected() ||
+              (table.getIsSomePageRowsSelected() && "indeterminate")
+            }
+            className="size-5"
+            onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+            aria-label="Select all"
+          />
+        ),
+        cell: ({ row }) => (
+          <Checkbox
+            checked={row.getIsSelected()}
+            className="size-5"
+            onCheckedChange={(value) => row.toggleSelected(!!value)}
+            aria-label="Select row"
+            onClick={(e) => e.stopPropagation()}
+          />
+        ),
+        enableSorting: false,
+        enableHiding: false,
       },
-    },
-    {
-      accessorKey: "name",
-      header: ({ column }) => {
-        return <TableHeader column={column} title={t("common.name")} />;
+      {
+        accessorKey: "id",
+        cell: ({ row }) => `#${row.original.id}`,
+        header: ({ column }) => <TableHeader column={column} title="ID" />,
       },
-    },
-    {
-      accessorKey: "targetName",
-      header: ({ column }) => {
-        return <TableHeader column={column} title={t("common.company")} />;
+      {
+        accessorKey: "name",
+        header: ({ column }) => <TableHeader column={column} title={t("common.name")} />,
       },
-      cell: ({ row }) => {
-        const hasTarget = row.original.targetName && row.original.domain;
-        return (
-          <div className="flex items-center gap-3">
-            {hasTarget && (
-              <img
-                src={faviconUrl(row.original.domain)!}
-                alt={`${row.original.targetName} favicon`}
-                className="h-6 w-6 rounded-sm"
-              />
-            )}
-            {/* empty placeholder to keep alignment */}
-            {!hasTarget && <div className="h-6 w-6 rounded-sm" />}
-            <div className="ml-sm flex flex-col">
-              <div className="font-medium">{row.original.targetName || t("alerts.noTarget")}</div>
-              <div className="text-muted-foreground text-xs">{row.original.subdomain}</div>
+      {
+        accessorKey: "targetName",
+        header: ({ column }) => <TableHeader column={column} title={t("common.company")} />,
+        cell: ({ row }) => {
+          const hasTarget = row.original.targetName && row.original.domain;
+          return (
+            <div className="flex items-center gap-3">
+              {hasTarget && (
+                <img
+                  src={faviconUrl(row.original.domain)!}
+                  alt={`${row.original.targetName} favicon`}
+                  className="h-6 w-6 rounded-sm"
+                />
+              )}
+              {!hasTarget && <div className="h-6 w-6 rounded-sm" />}
+              <div className="ml-sm flex flex-col">
+                <div className="font-medium">{row.original.targetName || t("alerts.noTarget")}</div>
+                <div className="text-muted-foreground text-xs">{row.original.subdomain}</div>
+              </div>
             </div>
-          </div>
-        );
+          );
+        },
       },
-    },
-    {
-      accessorKey: "score",
-      header: ({ column }) => {
-        return <TableHeader column={column} title={t("alerts.score")} />;
+      {
+        accessorKey: "score",
+        header: ({ column }) => <TableHeader column={column} title={t("alerts.score")} />,
+        cell: ({ row }) => <SeverityBadge score={row.original.score} />,
       },
-      cell: ({ row }) => {
-        return <SeverityBadge score={row.original.score} />;
+      {
+        accessorKey: "confirmed",
+        header: ({ column }) => <TableHeader column={column} title={t("alerts.status")} />,
+        cell: ({ row }) => {
+          if (row.original.confirmed) {
+            return <Badge>{t("alerts.confirmed")}</Badge>;
+          }
+          return <Badge variant="destructive">{t("alerts.unconfirmed")}</Badge>;
+        },
       },
-    },
-    {
-      accessorKey: "confirmed",
-      header: ({ column }) => {
-        return <TableHeader column={column} title={t("alerts.status")} />;
+      {
+        accessorKey: "createdAt",
+        header: ({ column }) => <TableHeader column={column} title={t("common.date")} />,
+        cell: ({ row }) => <div>{formatDate(row.original.createdAt)}</div>,
       },
-      cell: ({ row }) => {
-        if (row.original.confirmed) {
-          return <Badge>{t("alerts.confirmed")}</Badge>;
-        }
-        return <Badge variant="destructive">{t("alerts.unconfirmed")}</Badge>;
-      },
-    },
-    {
-      accessorKey: "createdAt",
-      header: ({ column }) => {
-        return <TableHeader column={column} title={t("common.date")} />;
-      },
-      cell: ({ row }) => {
-        return <div>{formatDate(row.original.createdAt)}</div>;
-      },
-    },
-    {
-      id: "actions",
-      enableHiding: false,
-      cell: ({ row }) => {
-        const alert = row.original;
+      {
+        id: "actions",
+        enableHiding: false,
+        cell: ({ row }) => {
+          const alert = row.original;
 
-        return (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0" onClick={(e) => e.stopPropagation()}>
-                <span className="sr-only">Open menu</span>
-                <MoreHorizontal className="size-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel>{t("common.actions")}</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                className="text-destructive focus:text-destructive"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDelete?.(alert.id);
-                }}
-              >
-                <Trash2 className="mr-2 size-4" />
-                {t("common.delete")}
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        );
+          return (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  className="h-8 w-8 p-0"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <span className="sr-only">Open menu</span>
+                  <MoreHorizontal className="size-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>{t("common.actions")}</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  className="text-destructive focus:text-destructive"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete?.(alert.id);
+                  }}
+                >
+                  <Trash2 className="mr-2 size-4" />
+                  {t("common.delete")}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          );
+        },
       },
-    },
-  ];
+    ],
+    [t, onDelete]
+  );
 
   // Filter alerts based on search query
   const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    const base = q
-      ? alerts.filter((a) => {
-          return (
-            a.name.toLowerCase().includes(q) ||
-            a.targetName.toLowerCase().includes(q) ||
-            a.subdomain.toLowerCase().includes(q) ||
-            a.domain.toLowerCase().includes(q)
-          );
-        })
-      : alerts;
-    // Apply severity and status filters
-    return base.filter((a) => {
-      // Determine severity key
+    return alerts.filter((a) => {
       const sevKey = (({ 1: "low", 2: "medium", 3: "high", 4: "critical" } as const)[a.score] ??
         "informational") as keyof typeof severityFilter;
-      // Determine status key
       const statusKey = a.confirmed ? "confirmed" : "unconfirmed";
       return (severityFilter[sevKey] ?? true) && statusFilter[statusKey];
     });
-  }, [alerts, query, severityFilter, statusFilter]);
+  }, [alerts, severityFilter, statusFilter]);
 
   // Get selected alert IDs
   const selectedAlertIds = useMemo(() => {
@@ -248,12 +269,9 @@ export default function AlertsTable({
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <Input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder={t("alerts.searchPlaceholder")}
-          className="sm:max-w-xl"
-        />
+        {/* REPLACED: Input logic with Isolated SearchInput */}
+        <SearchInput onSearch={onSearch} placeholder={t("alerts.searchPlaceholder")} />
+
         <div className="flex gap-2">
           {selectedAlertIds.length > 0 && (
             <Button
@@ -355,7 +373,6 @@ export default function AlertsTable({
           onPageChange={onPageChange}
         />
       ) : (
-        // Empty message
         <div className="text-muted-foreground border-border bg-card/60 mx-auto max-w-2xl rounded-xl border p-8 text-center">
           <p className="text-sm font-medium">{t("alerts.empty.title")}</p>
           <p className="text-xs">{t("alerts.empty.hint")}</p>
