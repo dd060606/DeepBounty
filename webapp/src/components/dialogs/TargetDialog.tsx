@@ -432,8 +432,8 @@ export default function TargetDialog({
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       {trigger ? <DialogTrigger asChild>{trigger}</DialogTrigger> : null}
-      <DialogContent className="sm:max-w-[640px]">
-        <form onSubmit={handleSubmit} className="space-y-6">
+      <DialogContent className="flex max-h-[90vh] flex-col sm:max-w-[640px]">
+        <form onSubmit={handleSubmit} className="flex h-full flex-col overflow-hidden">
           <DialogHeader>
             <DialogTitle className="text-foreground">
               {mode === "create" ? t("targets.dialog.createTitle") : t("targets.dialog.editTitle")}
@@ -442,217 +442,218 @@ export default function TargetDialog({
               {mode === "create" ? t("targets.dialog.createDesc") : t("targets.dialog.editDesc")}
             </DialogDescription>
           </DialogHeader>
+          <div className="flex-1 overflow-y-auto px-1 py-4">
+            <Tabs defaultValue="general" className="w-full">
+              <TabsList>
+                <TabsTrigger value="general">{t("tabs.general")}</TabsTrigger>
+                <TabsTrigger value="scope">{t("tabs.scope")}</TabsTrigger>
+                <TabsTrigger value="advanced">{t("tabs.advanced")}</TabsTrigger>
+                {mode === "edit" && <TabsTrigger value="tasks">{t("tabs.tasks")}</TabsTrigger>}
+              </TabsList>
 
-          <Tabs defaultValue="general" className="w-full">
-            <TabsList>
-              <TabsTrigger value="general">{t("tabs.general")}</TabsTrigger>
-              <TabsTrigger value="scope">{t("tabs.scope")}</TabsTrigger>
-              <TabsTrigger value="advanced">{t("tabs.advanced")}</TabsTrigger>
-              {mode === "edit" && <TabsTrigger value="tasks">{t("tabs.tasks")}</TabsTrigger>}
-            </TabsList>
-
-            {/* GENERAL TAB */}
-            <TabsContent value="general">
-              <div className="grid grid-cols-1 gap-5 pt-2">
-                <div className="grid gap-2">
-                  <Label htmlFor="target-name">{t("targets.form.companyName")}</Label>
-                  <div className="flex items-center gap-3">
-                    <div className="border-border bg-muted relative h-10 w-10 flex-shrink-0 overflow-hidden rounded-md border">
-                      {icon ? (
-                        <img
-                          src={icon}
-                          alt="favicon"
-                          className="h-full w-full object-cover"
-                          onError={(e) => {
-                            (e.currentTarget as HTMLImageElement).style.display = "none";
-                          }}
-                        />
-                      ) : (
-                        <div className="text-muted-foreground flex h-full w-full items-center justify-center">
-                          <Globe2 className="h-5 w-5" />
-                        </div>
-                      )}
+              {/* GENERAL TAB */}
+              <TabsContent value="general">
+                <div className="grid grid-cols-1 gap-5 pt-2">
+                  <div className="grid gap-2">
+                    <Label htmlFor="target-name">{t("targets.form.companyName")}</Label>
+                    <div className="flex items-center gap-3">
+                      <div className="border-border bg-muted relative h-10 w-10 flex-shrink-0 overflow-hidden rounded-md border">
+                        {icon ? (
+                          <img
+                            src={icon}
+                            alt="favicon"
+                            className="h-full w-full object-cover"
+                            onError={(e) => {
+                              (e.currentTarget as HTMLImageElement).style.display = "none";
+                            }}
+                          />
+                        ) : (
+                          <div className="text-muted-foreground flex h-full w-full items-center justify-center">
+                            <Globe2 className="h-5 w-5" />
+                          </div>
+                        )}
+                      </div>
+                      <Input
+                        id="target-name"
+                        placeholder={t("common.company")}
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        onBlur={() => setTouched((s) => ({ ...s, name: true }))}
+                        required
+                      />
                     </div>
+                    {touched.name && nameError && (
+                      <p className="text-destructive text-xs font-medium">{nameError}</p>
+                    )}
+                  </div>
+
+                  <div className="grid gap-2">
+                    <Label htmlFor="target-domain">{t("targets.form.mainDomain")}</Label>
                     <Input
-                      id="target-name"
-                      placeholder={t("common.company")}
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      onBlur={() => setTouched((s) => ({ ...s, name: true }))}
+                      id="target-domain"
+                      placeholder="example.com"
+                      value={domain}
+                      onChange={(e) => setDomain(e.target.value)}
+                      onBlur={() => setTouched((s) => ({ ...s, domain: true }))}
+                      aria-invalid={touched.domain && Boolean(domainError)}
                       required
                     />
+                    {touched.domain && domainError && (
+                      <p className="text-destructive text-xs font-medium">{domainError}</p>
+                    )}
                   </div>
-                  {touched.name && nameError && (
-                    <p className="text-destructive text-xs font-medium">{nameError}</p>
-                  )}
-                </div>
 
-                <div className="grid gap-2">
-                  <Label htmlFor="target-domain">{t("targets.form.mainDomain")}</Label>
-                  <Input
-                    id="target-domain"
-                    placeholder="example.com"
-                    value={domain}
-                    onChange={(e) => setDomain(e.target.value)}
-                    onBlur={() => setTouched((s) => ({ ...s, domain: true }))}
-                    aria-invalid={touched.domain && Boolean(domainError)}
-                    required
-                  />
-                  {touched.domain && domainError && (
-                    <p className="text-destructive text-xs font-medium">{domainError}</p>
-                  )}
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <Checkbox
-                    id="active-scan"
-                    className="size-5"
-                    checked={activeScan}
-                    onCheckedChange={(checked) => setActiveScan(checked === true)}
-                  />
-                  <Label htmlFor="active-scan" className="cursor-pointer">
-                    {t("targets.form.activeScan")}
-                  </Label>
-                </div>
-              </div>
-            </TabsContent>
-
-            {/* SCOPE TAB */}
-            <TabsContent value="scope">
-              <div className="space-y-6 pt-2">
-                {/* In Scope */}
-                <div className="grid gap-3">
-                  <div className="flex items-center justify-between">
-                    <Label className="flex items-center gap-2">
-                      {t("targets.form.subdomains")}
+                  <div className="flex items-center gap-3">
+                    <Checkbox
+                      id="active-scan"
+                      className="size-5"
+                      checked={activeScan}
+                      onCheckedChange={(checked) => setActiveScan(checked === true)}
+                    />
+                    <Label htmlFor="active-scan" className="cursor-pointer">
+                      {t("targets.form.activeScan")}
                     </Label>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleAddRow("sub")}
-                    >
-                      <Plus className="mr-1 h-4 w-4" /> {t("common.add")}
-                    </Button>
                   </div>
-                  {renderList("sub", subdomains, subdomainErrors)}
-                  <p className="text-muted-foreground text-xs">
-                    <Trans
-                      i18nKey="targets.form.defaultScope"
-                      values={{ domain: normalizeDomain(domain) || "domain.com" }}
-                      components={{ code: <code /> }}
-                    />
-                  </p>
-                </div>
-
-                {/* Out of Scope */}
-                <div className="grid gap-3">
-                  <div className="flex items-center justify-between">
-                    <Label className="flex items-center gap-2">
-                      {t("targets.form.outOfScope")}
-                    </Label>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleAddRow("oos")}
-                    >
-                      <Plus className="mr-1 h-4 w-4" /> {t("common.add")}
-                    </Button>
-                  </div>
-                  {renderList("oos", oosSubdomains, oosErrors)}
-                  <p className="text-muted-foreground text-xs">
-                    {t("targets.form.outOfScopeHint")}
-                  </p>
-                </div>
-              </div>
-            </TabsContent>
-
-            <TabsContent value="advanced">
-              <div className="grid grid-cols-1 gap-5 pt-2">
-                <div className="grid gap-2">
-                  <Label htmlFor="user-agent">User-Agent</Label>
-                  <Input
-                    id="user-agent"
-                    placeholder="Mozilla/5.0..."
-                    value={userAgent}
-                    onChange={(e) => setUserAgent(e.target.value)}
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label>{t("targets.form.customHeader")}</Label>
-                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                    <Input
-                      placeholder="X-Bug-Bounty"
-                      value={headerName}
-                      onChange={(e) => setHeaderName(e.target.value)}
-                    />
-                    <Input
-                      placeholder="username"
-                      value={headerValue}
-                      onChange={(e) => setHeaderValue(e.target.value)}
-                    />
-                  </div>
-                </div>
-              </div>
-            </TabsContent>
-
-            {mode === "edit" && (
-              <TabsContent value="tasks">
-                <div className="space-y-4 pt-2">
-                  <Input
-                    value={taskSearchQuery}
-                    onChange={(e) => setTaskSearchQuery(e.target.value)}
-                    placeholder={t("tasks.searchPlaceholder")}
-                  />
-                  {loadingTasks ? (
-                    <div className="space-y-3">
-                      {[...Array(3)].map((_, i) => (
-                        <div
-                          key={i}
-                          className="border-border bg-card/60 h-24 animate-pulse rounded-lg border"
-                        />
-                      ))}
-                    </div>
-                  ) : filteredTasks.length === 0 ? (
-                    <div className="text-muted-foreground border-border bg-card/60 flex flex-col rounded-xl border p-8 text-center">
-                      <p className="text-sm font-medium">{t("tasks.empty.title")}</p>
-                    </div>
-                  ) : (
-                    <div className="scrollbar-thin max-h-[400px] space-y-3 overflow-y-auto pr-1">
-                      {filteredTasks.map((task) => (
-                        <div
-                          key={task.id}
-                          className="border-border bg-card hover:bg-muted/50 flex items-start gap-4 rounded-lg border p-4 transition-colors"
-                        >
-                          <div className="flex-1">
-                            <h4 className="text-foreground text-sm font-semibold">{task.name}</h4>
-                            <p className="text-muted-foreground text-xs">{task.description}</p>
-                          </div>
-                          <div className="m-auto flex items-center gap-3">
-                            <Switch
-                              checked={task.hasOverride ? task.overrideActive! : task.active}
-                              onCheckedChange={() => toggleTaskOverride(task.id)}
-                            />
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              disabled={busy.has(task.id) || task.schedulingType === "GLOBAL"}
-                              onClick={() => runTemplateForTarget(task.id)}
-                            >
-                              <Play className="size-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
                 </div>
               </TabsContent>
-            )}
-          </Tabs>
 
-          <DialogFooter>
+              {/* SCOPE TAB */}
+              <TabsContent value="scope">
+                <div className="space-y-6 pt-2">
+                  {/* In Scope */}
+                  <div className="grid gap-3">
+                    <div className="flex items-center justify-between">
+                      <Label className="flex items-center gap-2">
+                        {t("targets.form.subdomains")}
+                      </Label>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleAddRow("sub")}
+                      >
+                        <Plus className="mr-1 h-4 w-4" /> {t("common.add")}
+                      </Button>
+                    </div>
+                    {renderList("sub", subdomains, subdomainErrors)}
+                    <p className="text-muted-foreground text-xs">
+                      <Trans
+                        i18nKey="targets.form.defaultScope"
+                        values={{ domain: normalizeDomain(domain) || "domain.com" }}
+                        components={{ code: <code /> }}
+                      />
+                    </p>
+                  </div>
+
+                  {/* Out of Scope */}
+                  <div className="grid gap-3">
+                    <div className="flex items-center justify-between">
+                      <Label className="flex items-center gap-2">
+                        {t("targets.form.outOfScope")}
+                      </Label>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleAddRow("oos")}
+                      >
+                        <Plus className="mr-1 h-4 w-4" /> {t("common.add")}
+                      </Button>
+                    </div>
+                    {renderList("oos", oosSubdomains, oosErrors)}
+                    <p className="text-muted-foreground text-xs">
+                      {t("targets.form.outOfScopeHint")}
+                    </p>
+                  </div>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="advanced">
+                <div className="grid grid-cols-1 gap-5 pt-2">
+                  <div className="grid gap-2">
+                    <Label htmlFor="user-agent">User-Agent</Label>
+                    <Input
+                      id="user-agent"
+                      placeholder="Mozilla/5.0..."
+                      value={userAgent}
+                      onChange={(e) => setUserAgent(e.target.value)}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label>{t("targets.form.customHeader")}</Label>
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                      <Input
+                        placeholder="X-Bug-Bounty"
+                        value={headerName}
+                        onChange={(e) => setHeaderName(e.target.value)}
+                      />
+                      <Input
+                        placeholder="username"
+                        value={headerValue}
+                        onChange={(e) => setHeaderValue(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </TabsContent>
+
+              {mode === "edit" && (
+                <TabsContent value="tasks">
+                  <div className="space-y-4 pt-2">
+                    <Input
+                      value={taskSearchQuery}
+                      onChange={(e) => setTaskSearchQuery(e.target.value)}
+                      placeholder={t("tasks.searchPlaceholder")}
+                    />
+                    {loadingTasks ? (
+                      <div className="space-y-3">
+                        {[...Array(3)].map((_, i) => (
+                          <div
+                            key={i}
+                            className="border-border bg-card/60 h-24 animate-pulse rounded-lg border"
+                          />
+                        ))}
+                      </div>
+                    ) : filteredTasks.length === 0 ? (
+                      <div className="text-muted-foreground border-border bg-card/60 flex flex-col rounded-xl border p-8 text-center">
+                        <p className="text-sm font-medium">{t("tasks.empty.title")}</p>
+                      </div>
+                    ) : (
+                      <div className="scrollbar-thin max-h-[400px] space-y-3 overflow-y-auto pr-1">
+                        {filteredTasks.map((task) => (
+                          <div
+                            key={task.id}
+                            className="border-border bg-card hover:bg-muted/50 flex items-start gap-4 rounded-lg border p-4 transition-colors"
+                          >
+                            <div className="flex-1">
+                              <h4 className="text-foreground text-sm font-semibold">{task.name}</h4>
+                              <p className="text-muted-foreground text-xs">{task.description}</p>
+                            </div>
+                            <div className="m-auto flex items-center gap-3">
+                              <Switch
+                                checked={task.hasOverride ? task.overrideActive! : task.active}
+                                onCheckedChange={() => toggleTaskOverride(task.id)}
+                              />
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                disabled={busy.has(task.id) || task.schedulingType === "GLOBAL"}
+                                onClick={() => runTemplateForTarget(task.id)}
+                              >
+                                <Play className="size-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </TabsContent>
+              )}
+            </Tabs>
+          </div>
+
+          <DialogFooter className="mt-2">
             <Button
               type="button"
               variant="outline"
