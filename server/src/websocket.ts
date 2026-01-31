@@ -32,7 +32,7 @@ class WebSocketHandler {
 
   constructor(server: Server) {
     WebSocketHandler.instance = this;
-    this.websocketServer = new WebSocketServer({ server });
+    this.websocketServer = new WebSocketServer({ server, maxPayload: 50 * 1024 * 1024 });
     this.taskManager.registerTransport({
       // List connected workers
       listWorkers: () =>

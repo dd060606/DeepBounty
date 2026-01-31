@@ -34,6 +34,8 @@ server {
   root /usr/share/nginx/html;
   index index.html;
 
+  client_max_body_size 100M;
+
   # Workers connect here (WebSocket upgrade). Kept public so remote workers can connect.
   location /api/ws {
     proxy_pass http://server:3000;
