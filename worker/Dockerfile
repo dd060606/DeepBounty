@@ -30,7 +30,8 @@ RUN apk add --no-cache \
     gcompat \
     ca-certificates \
     python3 \
-    py3-pip
+    py3-pip \
+    openjdk21
 
 RUN ln -sf python3 /usr/bin/python
 ENV PIP_BREAK_SYSTEM_PACKAGES=1
