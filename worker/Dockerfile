@@ -1,4 +1,4 @@
-FROM node:22-alpine AS builder
+FROM node:22-bookworm-slim AS builder
 WORKDIR /app
 
 COPY package.json package-lock.json ./
@@ -16,10 +16,10 @@ RUN npm run -w sdk build
 RUN npm run -w worker build
 
 
-FROM node:22-alpine AS runner
+FROM node:22-bookworm-slim AS runner
 
 # Install common tools used by task executions
-RUN apk add --no-cache \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     bash \
     curl \
     jq \
@@ -27,11 +27,12 @@ RUN apk add --no-cache \
     unzip \
     zip \
     git \
-    gcompat \
     ca-certificates \
     python3 \
-    py3-pip \
-    openjdk21
+    python3-pip \
+    python3-venv \
+    openjdk-17-jre-headless \
+    && rm -rf /var/lib/apt/lists/*
 
 RUN ln -sf python3 /usr/bin/python
 ENV PIP_BREAK_SYSTEM_PACKAGES=1
