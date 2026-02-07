@@ -39,6 +39,10 @@ export interface CoreEvents {
 		outOfScopeSubdomains: string[];
 		targetId: number;
 	};
+	"target:packagesChanged": {
+		packageNames: string[];
+		targetId: number;
+	};
 }
 
 /**

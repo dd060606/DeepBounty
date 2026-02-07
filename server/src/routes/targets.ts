@@ -5,13 +5,15 @@ import {
   deleteTarget,
   getTargetSubdomains,
   setTargetSubdomains,
+  getTargetPackages,
+  setTargetPackages,
   getTargetSettings,
   setTargetSettings,
   getTargetsFull,
 } from "@/controllers/targets.js";
 import { validateBody, validateParams } from "@/middlewares/validate.js";
 import { idParamSchema } from "@/schemas/commonSchema.js";
-import { addSubdomainsSchema, addTargetSchema } from "@/schemas/targetSchema.js";
+import { addSubdomainsSchema, addTargetSchema, addPackagesSchema } from "@/schemas/targetSchema.js";
 import { Router } from "express";
 
 const router = Router();
@@ -40,6 +42,17 @@ router.post(
   validateParams(idParamSchema),
   validateBody(addSubdomainsSchema),
   setTargetSubdomains
+);
+
+// GET /targets/:id/packages
+router.get("/:id/packages", validateParams(idParamSchema), getTargetPackages);
+
+// POST /targets/:id/packages
+router.post(
+  "/:id/packages",
+  validateParams(idParamSchema),
+  validateBody(addPackagesSchema),
+  setTargetPackages
 );
 
 // GET /targets/:id/settings

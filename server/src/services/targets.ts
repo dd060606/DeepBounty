@@ -3,7 +3,7 @@ import { query } from "@/db/database.js";
 import { Target } from "@deepbounty/sdk/types";
 
 /**
- * Fetch all targets with their subdomains and settings.
+ * Fetch all targets with their subdomains, packages, and settings.
  * Shared between controllers and module SDK to avoid duplicated SQL.
  */
 export async function getTargetsWithDetails(): Promise<Target[]> {
@@ -15,6 +15,8 @@ export async function getTargetsWithDetails(): Promise<Target[]> {
         COALESCE(sd.subdomains, '{}'::text[]) AS subdomains,
         -- Out of Scope Subdomains array
         COALESCE(sd.out_of_scope_subdomains, '{}'::text[]) AS "outOfScopeSubdomains",
+        -- Package names array
+        COALESCE(pkg.packages, '{}'::text[]) AS "packageNames",
         -- Settings object
         ts.settings
       FROM targets t
@@ -26,6 +28,13 @@ export async function getTargetsWithDetails(): Promise<Target[]> {
         FROM targets_subdomains s
         WHERE s."targetId" = t.id
       ) sd ON true
+      -- Join with packages
+      LEFT JOIN LATERAL (
+        SELECT
+          array_agg(p."packageName" ORDER BY p."packageName") AS packages
+        FROM targets_packages p
+        WHERE p."targetId" = t.id
+      ) pkg ON true
       -- Join with settings
       LEFT JOIN LATERAL (
         SELECT s.settings
@@ -40,7 +49,7 @@ export async function getTargetsWithDetails(): Promise<Target[]> {
 }
 
 /**
- * Fetch all targets with their subdomains and settings.
+ * Fetch all targets with their subdomains, packages, and settings.
  * Only targets enabled for the given task template are returned.
  */
 export async function getTargetsForTask(taskTemplateId: number): Promise<Target[]> {
@@ -52,6 +61,8 @@ export async function getTargetsForTask(taskTemplateId: number): Promise<Target[
         COALESCE(sd.subdomains, '{}'::text[]) AS subdomains,
         -- Out of Scope Subdomains array
         COALESCE(sd.out_of_scope_subdomains, '{}'::text[]) AS "outOfScopeSubdomains",
+        -- Package names array
+        COALESCE(pkg.packages, '{}'::text[]) AS "packageNames",
         -- Settings object
         ts.settings
       FROM task_templates tt
@@ -67,6 +78,13 @@ export async function getTargetsForTask(taskTemplateId: number): Promise<Target[
         FROM targets_subdomains s
         WHERE s."targetId" = t.id
       ) sd ON true
+      -- Join with packages
+      LEFT JOIN LATERAL (
+        SELECT
+          array_agg(p."packageName" ORDER BY p."packageName") AS packages
+        FROM targets_packages p
+        WHERE p."targetId" = t.id
+      ) pkg ON true
       -- Join with settings
       LEFT JOIN LATERAL (
         SELECT s.settings

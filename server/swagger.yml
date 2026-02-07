@@ -314,8 +314,14 @@ paths:
               schema:
                 type: array
                 items:
-                  type: string
-                  example: "sub.example.com"
+                  type: object
+                  properties:
+                    subdomain:
+                      type: string
+                      example: "sub.example.com"
+                    isOutOfScope:
+                      type: boolean
+                      example: false
         "401":
           description: Unauthorized
     post:
@@ -331,11 +337,68 @@ paths:
             schema:
               type: array
               items:
-                type: string
-                example: "sub.example.com"
+                type: object
+                properties:
+                  subdomain:
+                    type: string
+                    example: "sub.example.com"
+                  isOutOfScope:
+                    type: boolean
+                    example: false
       responses:
         "200":
           description: Subdomains added successfully
+        "400":
+          description: Invalid request
+        "401":
+          description: Unauthorized
+  /targets/{id}/packages:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+        description: Target ID
+    get:
+      summary: Get package names for a target
+      tags:
+        - Targets
+      security:
+        - sessionCookie: []
+      responses:
+        "200":
+          description: A list of package names for the target
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+                  example: "com.example.app"
+        "401":
+          description: Unauthorized
+    post:
+      summary: Add package names to a target
+      tags:
+        - Targets
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                type: object
+                properties:
+                  packageName:
+                    type: string
+                    example: "com.example.app"
+      responses:
+        "200":
+          description: Package names added successfully
         "400":
           description: Invalid request
         "401":

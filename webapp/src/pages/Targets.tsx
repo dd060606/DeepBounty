@@ -59,7 +59,8 @@ export default function Targets() {
       const name = t.name?.toLowerCase() || "";
       const domain = normalizeDomain(t.domain) || "";
       const subs = (t.subdomains || []).join(" ").toLowerCase();
-      return name.includes(q) || domain.includes(q) || subs.includes(q);
+      const pkgs = (t.packageNames || []).join(" ").toLowerCase();
+      return name.includes(q) || domain.includes(q) || subs.includes(q) || pkgs.includes(q);
     });
   }, [targets, query]);
 
@@ -69,6 +70,10 @@ export default function Targets() {
       ...inScope.map((s) => ({ subdomain: s, isOutOfScope: false })),
       ...outScope.map((s) => ({ subdomain: s, isOutOfScope: true })),
     ];
+  };
+
+  const formatPackagesPayload = (packages: string[] = []) => {
+    return packages.map((p) => ({ packageName: p }));
   };
 
   async function addNewTarget(data: Partial<Target>) {
@@ -109,6 +114,17 @@ export default function Targets() {
       }
     }
 
+    // Add packages
+    if (data.packageNames) {
+      try {
+        const payload = formatPackagesPayload(data.packageNames);
+        await ApiClient.post(`/targets/${res.data.id}/packages`, payload);
+      } catch {
+        success = false;
+        toast.error(t("targets.errors.packages"));
+      }
+    }
+
     if (success) {
       toast.success(t("targets.success.newTarget"));
       fetchTargets();
@@ -141,6 +157,15 @@ export default function Targets() {
     } catch {
       success = false;
       toast.error(t("targets.errors.settings"));
+    }
+
+    // Update packages
+    try {
+      const payload = formatPackagesPayload(data.packageNames || []);
+      await ApiClient.post(`/targets/${edit!.id}/packages`, payload);
+    } catch {
+      success = false;
+      toast.error(t("targets.errors.packages"));
     }
 
     setEdit(null);

@@ -4,6 +4,7 @@ export interface Target {
 	domain: string;
 	subdomains: string[];
 	outOfScopeSubdomains: string[];
+	packageNames: string[];
 	activeScan: boolean;
 	// Custom settings for the target
 	settings?: {

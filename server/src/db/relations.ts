@@ -2,6 +2,7 @@ import { relations } from "drizzle-orm/relations";
 import {
   targets,
   targetsSubdomains,
+  targetsPackages,
   targetsSettings,
   alerts,
   taskTemplates,
@@ -17,9 +18,17 @@ export const targetsSubdomainsRelations = relations(targetsSubdomains, ({ one })
 
 export const targetsRelations = relations(targets, ({ many }) => ({
   targetsSubdomains: many(targetsSubdomains),
+  targetsPackages: many(targetsPackages),
   targetsSettings: many(targetsSettings),
   alerts: many(alerts),
   targetTaskOverrides: many(targetTaskOverrides),
+}));
+
+export const targetsPackagesRelations = relations(targetsPackages, ({ one }) => ({
+  target: one(targets, {
+    fields: [targetsPackages.targetId],
+    references: [targets.id],
+  }),
 }));
 
 export const targetsSettingsRelations = relations(targetsSettings, ({ one }) => ({

@@ -130,17 +130,20 @@
       "mainDomain": "Primary domain",
       "subdomains": "In-scope subdomains",
       "outOfScope": "Out-of-scope subdomains",
+      "mobilePackages": "Mobile apps",
       "addSubdomainTitle": "Add a subdomain",
       "removeSubdomainTitle": "Remove this subdomain",
       "activeScan": "Active scan",
       "defaultScope": "Default: <code>*.{{domain}}</code>. Add lines to refine in-scope domains.",
       "outOfScopeHint": "Add lines to refine out-of-scope domains.",
+      "mobilePackagesHint": "Add package names for mobile applications in scope.",
       "customHeader": "Custom HTTP Header",
       "errors": {
         "nameRequired": "A name is required.",
         "domainRequired": "A primary domain is required.",
         "domainInvalid": "Please enter a valid domain (e.g., example.com).",
-        "subdomainInvalid": "Invalid subdomain format. Use example.com, api.example.com or *.example.com."
+        "subdomainInvalid": "Invalid subdomain format. Use example.com, api.example.com or *.example.com.",
+        "packageInvalid": "Invalid package name format. Use com.example.app"
       }
     },
     "success": {
@@ -151,6 +154,7 @@
     "errors": {
       "newTarget": "Failed to add new target",
       "subdomains": "Failed to add target subdomains",
+      "packages": "Failed to add target packages",
       "settings": "Failed to add target settings",
       "loadTargets": "Failed to load targets",
       "loadSubdomains": "Failed to load subdomains",

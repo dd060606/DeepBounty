@@ -17,3 +17,13 @@ export const addSubdomainsSchema = z.array(
     isOutOfScope: z.boolean(),
   })
 );
+
+export const addPackagesSchema = z.array(
+  z.object({
+    packageName: z
+      .string()
+      .trim()
+      .min(1, { error: "Package name is required" })
+      .regex(/^[A-Za-z0-9._-]+$/, { message: "Invalid package name format" }),
+  })
+);

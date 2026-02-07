@@ -129,17 +129,20 @@
       "mainDomain": "Domaine principal",
       "subdomains": "Sous-domaines in-scope",
       "outOfScope": "Sous-domaines out-of-scope",
+      "mobilePackages": "Applications mobiles",
       "addSubdomainTitle": "Ajouter un sous-domaine",
       "removeSubdomainTitle": "Supprimer ce sous-domaine",
       "activeScan": "Scan actif",
       "defaultScope": "Par défaut : <code>*.{{domain}}</code>. Ajoutez des lignes pour préciser les domaines in-scope.",
       "outOfScopeHint": "Ajoutez des lignes pour préciser les domaines out-of-scope.",
+      "mobilePackagesHint": "Ajoutez des noms de package d'applications mobiles in-scope.",
       "customHeader": "En-tête HTTP personnalisé",
       "errors": {
         "nameRequired": "Un nom est requis.",
         "domainRequired": "Un domaine principal est requis.",
         "domainInvalid": "Veuillez saisir un domaine valide (ex. : example.com).",
-        "subdomainInvalid": "Format de sous-domaine invalide. Utilisez example.com, api.example.com ou *.example.com."
+        "subdomainInvalid": "Format de sous-domaine invalide. Utilisez example.com, api.example.com ou *.example.com.",
+        "packageInvalid": "Format de package invalide. Utilisez com.example.app"
       }
     },
     "success": {
@@ -150,6 +153,7 @@
     "errors": {
       "newTarget": "Impossible d'ajouter la nouvelle cible",
       "subdomains": "Impossible d'ajouter les sous-domaines de la cible",
+      "packages": "Impossible d'ajouter les packages de la cible",
       "settings": "Impossible d'ajouter les paramètres de la cible",
       "loadTargets": "Impossible de charger les cibles",
       "loadSubdomains": "Impossible de charger les sous-domaines",

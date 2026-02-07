@@ -151,6 +151,49 @@ export function setTargetSubdomains(req: Request, res: Response) {
     });
 }
 
+// GET /targets/:id/packages - get all package names for a specific target
+export function getTargetPackages(req: Request, res: Response) {
+  const { id } = req.params;
+
+  query<{ packageName: string }>(
+    sql`SELECT "packageName" FROM targets_packages WHERE "targetId" = ${id} ORDER BY "packageName"`
+  )
+    .then((packages) => {
+      res.json(packages.map((pkg) => pkg.packageName));
+    })
+    .catch((error) => {
+      logger.error("Error fetching packages:", error);
+      res.status(500).json({ error: "Internal server error" });
+    });
+}
+
+// POST /targets/:id/packages - add / edit packages for a specific target
+export function setTargetPackages(req: Request, res: Response) {
+  const { id } = req.params;
+  const newPackages: { packageName: string }[] = req.body;
+
+  query(sql`DELETE FROM targets_packages WHERE "targetId" = ${id}`)
+    .then(() => {
+      const promises = newPackages.map((pkg: { packageName: string }) =>
+        query(
+          sql`INSERT INTO targets_packages ("targetId", "packageName") VALUES (${id}, ${pkg.packageName})`
+        )
+      );
+      return Promise.all(promises);
+    })
+    .then(() => {
+      getEventBus().emit("target:packagesChanged", {
+        packageNames: newPackages.map((pkg) => pkg.packageName),
+        targetId: Number(id),
+      });
+      res.sendStatus(200);
+    })
+    .catch((error) => {
+      logger.error("Error updating packages:", error);
+      res.status(500).json({ error: "Internal server error" });
+    });
+}
+
 // GET /targets/:id/settings - get all settings for a specific target
 export function getTargetSettings(req: Request, res: Response) {
   const { id } = req.params;

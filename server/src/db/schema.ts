@@ -45,6 +45,23 @@ export const targetsSubdomains = pgTable(
   ]
 );
 
+// Target packages table
+export const targetsPackages = pgTable(
+  "targets_packages",
+  {
+    id: serial().primaryKey().notNull(),
+    targetId: integer().notNull(),
+    packageName: text().notNull(),
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.targetId],
+      foreignColumns: [targets.id],
+      name: "targets_packages_targetId_fkey",
+    }).onDelete("cascade"),
+  ]
+);
+
 // Target settings table
 export const targetsSettings = pgTable(
   "targets_settings",

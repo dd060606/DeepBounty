@@ -63,6 +63,7 @@ export default function TargetDialog({
     domain?: boolean;
     subs?: Record<number, boolean>;
     oos?: Record<number, boolean>;
+    pkgs?: Record<number, boolean>;
   }>({});
 
   // Target data
@@ -84,6 +85,11 @@ export default function TargetDialog({
     initial?.outOfScopeSubdomains && initial.outOfScopeSubdomains.length > 0
       ? initial.outOfScopeSubdomains
       : [""]
+  );
+
+  // Mobile packages
+  const [packageNames, setPackageNames] = useState<string[]>(
+    initial?.packageNames && initial.packageNames.length > 0 ? initial.packageNames : [""]
   );
 
   // Advanced settings
@@ -196,17 +202,29 @@ export default function TargetDialog({
     }
   });
 
+  // Package validation
+  const packageErrors: Record<number, string> = {};
+  const packageNameRe = /^[A-Za-z0-9._-]+$/;
+  packageNames.forEach((pkg, idx) => {
+    const v = pkg.trim();
+    if (v && !packageNameRe.test(v)) {
+      packageErrors[idx] = t("targets.form.errors.packageInvalid");
+    }
+  });
+
   const hasErrors = Boolean(
     nameError ||
       domainError ||
       Object.keys(subdomainErrors).length > 0 ||
-      Object.keys(oosErrors).length > 0
+      Object.keys(oosErrors).length > 0 ||
+      Object.keys(packageErrors).length > 0
   );
 
   // Row (subdomain and out of scope) handlers
-  function handleAddRow(type: "sub" | "oos", index?: number) {
-    const setFn = type === "sub" ? setSubdomains : setOosSubdomains;
-    const current = type === "sub" ? subdomains : oosSubdomains;
+  function handleAddRow(type: "sub" | "oos" | "pkg", index?: number) {
+    const setFn =
+      type === "sub" ? setSubdomains : type === "oos" ? setOosSubdomains : setPackageNames;
+    const current = type === "sub" ? subdomains : type === "oos" ? oosSubdomains : packageNames;
 
     const next = [...current];
     const insertAt = typeof index === "number" ? index + 1 : next.length;
@@ -214,17 +232,19 @@ export default function TargetDialog({
     setFn(next);
   }
 
-  function handleRemoveRow(type: "sub" | "oos", index: number) {
-    const setFn = type === "sub" ? setSubdomains : setOosSubdomains;
-    const current = type === "sub" ? subdomains : oosSubdomains;
+  function handleRemoveRow(type: "sub" | "oos" | "pkg", index: number) {
+    const setFn =
+      type === "sub" ? setSubdomains : type === "oos" ? setOosSubdomains : setPackageNames;
+    const current = type === "sub" ? subdomains : type === "oos" ? oosSubdomains : packageNames;
 
     const next = current.filter((_, i) => i !== index);
     setFn(next.length ? next : [""]);
   }
 
-  function handleChangeRow(type: "sub" | "oos", index: number, value: string) {
-    const setFn = type === "sub" ? setSubdomains : setOosSubdomains;
-    const current = type === "sub" ? subdomains : oosSubdomains;
+  function handleChangeRow(type: "sub" | "oos" | "pkg", index: number, value: string) {
+    const setFn =
+      type === "sub" ? setSubdomains : type === "oos" ? setOosSubdomains : setPackageNames;
+    const current = type === "sub" ? subdomains : type === "oos" ? oosSubdomains : packageNames;
 
     const next = [...current];
     next[index] = value;
@@ -242,6 +262,10 @@ export default function TargetDialog({
       domain: true,
       subs: { ...(s.subs || {}), ...Object.fromEntries(subdomains.map((_, i) => [i, true])) },
       oos: { ...(s.oos || {}), ...Object.fromEntries(oosSubdomains.map((_, i) => [i, true])) },
+      pkgs: {
+        ...(s.pkgs || {}),
+        ...Object.fromEntries(packageNames.map((_, i) => [i, true])),
+      },
     }));
 
     if (hasErrors) return;
@@ -250,6 +274,7 @@ export default function TargetDialog({
     const normalizedDomain = normalizeDomain(domain);
     let cleanedSubdomains = subdomains.map((s) => s.trim()).filter((s) => s.length > 0);
     const cleanedOos = oosSubdomains.map((s) => s.trim()).filter((s) => s.length > 0);
+    const cleanedPackages = packageNames.map((s) => s.trim()).filter((s) => s.length > 0);
 
     // Default wildcard if empty
     if (cleanedSubdomains.length === 0) {
@@ -263,6 +288,7 @@ export default function TargetDialog({
         domain: normalizedDomain,
         subdomains: cleanedSubdomains,
         outOfScopeSubdomains: cleanedOos,
+        packageNames: cleanedPackages,
         activeScan,
         settings: {
           userAgent: userAgent.trim() || undefined,
@@ -341,6 +367,9 @@ export default function TargetDialog({
         ? initial.outOfScopeSubdomains
         : [""]
     );
+    setPackageNames(
+      initial?.packageNames && initial.packageNames.length > 0 ? initial.packageNames : [""]
+    );
 
     setTouched({});
     setSaving(false);
@@ -356,6 +385,7 @@ export default function TargetDialog({
     setHeaderValue("");
     setSubdomains([]);
     setOosSubdomains([]);
+    setPackageNames([]);
     setTouched({});
     setSaving(false);
     setTasks([]);
@@ -370,12 +400,17 @@ export default function TargetDialog({
   }
 
   // Render a subdomain list
-  const renderList = (type: "sub" | "oos", list: string[], errors: Record<number, string>) => (
+  const renderList = (
+    type: "sub" | "oos" | "pkg",
+    list: string[],
+    errors: Record<number, string>
+  ) => (
     <div className="border-border rounded-lg border p-2">
       <div className="max-h-56 space-y-2 overflow-y-auto pr-1">
         {list.map((sd, idx) => {
           const err = errors[idx];
-          const isTouched = type === "sub" ? touched.subs?.[idx] : touched.oos?.[idx];
+          const isTouched =
+            type === "sub" ? touched.subs?.[idx] : type === "oos" ? touched.oos?.[idx] : touched.pkgs?.[idx];
           return (
             <div key={idx} className="space-y-1">
               <div className="relative">
@@ -385,13 +420,19 @@ export default function TargetDialog({
                   onBlur={() =>
                     setTouched((s) => ({
                       ...s,
-                      [type === "sub" ? "subs" : "oos"]: {
-                        ...(s[type === "sub" ? "subs" : "oos"] || {}),
+                      [type === "sub" ? "subs" : type === "oos" ? "oos" : "pkgs"]: {
+                        ...(s[type === "sub" ? "subs" : type === "oos" ? "oos" : "pkgs"] || {}),
                         [idx]: true,
                       },
                     }))
                   }
-                  placeholder={domain ? `*.${normalizeDomain(domain)}` : "*.example.com"}
+                  placeholder={
+                    type === "pkg"
+                      ? "com.example.app"
+                      : domain
+                        ? `*.${normalizeDomain(domain)}`
+                        : "*.example.com"
+                  }
                   className={`m-0.5 pr-20`}
                   aria-invalid={Boolean(isTouched && err)}
                 />
@@ -563,6 +604,27 @@ export default function TargetDialog({
                     {renderList("oos", oosSubdomains, oosErrors)}
                     <p className="text-muted-foreground text-xs">
                       {t("targets.form.outOfScopeHint")}
+                    </p>
+                  </div>
+
+                  {/* Mobile apps */}
+                  <div className="grid gap-3">
+                    <div className="flex items-center justify-between">
+                      <Label className="flex items-center gap-2">
+                        {t("targets.form.mobilePackages")}
+                      </Label>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleAddRow("pkg")}
+                      >
+                        <Plus className="mr-1 h-4 w-4" /> {t("common.add")}
+                      </Button>
+                    </div>
+                    {renderList("pkg", packageNames, packageErrors)}
+                    <p className="text-muted-foreground text-xs">
+                      {t("targets.form.mobilePackagesHint")}
                     </p>
                   </div>
                 </div>
