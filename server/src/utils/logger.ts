@@ -6,6 +6,7 @@ const LOG_RETENTION_DAYS = 30;
 
 // We store the path for the current server session here
 let currentLogFilePath: string;
+let logStream: fs.WriteStream | null = null;
 
 export function initLogger() {
   // Ensure directory exists
@@ -20,8 +21,12 @@ export function initLogger() {
   const filename = `server-${getSafeFileNameDate()}.txt`;
   currentLogFilePath = path.join(logsDir, filename);
 
-  // Create the file immediately
+  // Create the file/stream immediately (non-blocking writes during runtime)
   fs.writeFileSync(currentLogFilePath, `# Log session started : ${currentDate()}\n`);
+  logStream = fs.createWriteStream(currentLogFilePath, { flags: "a" });
+  logStream.on("error", (error) => {
+    console.error(`[Logger] Stream error:`, error);
+  });
 }
 
 function cleanupOldLogs() {
@@ -62,9 +67,15 @@ export default class Logger {
       console.log(formattedMessage);
     }
 
-    // File output
+    // File output (non-blocking)
+    if (logStream) {
+      logStream.write(formattedMessage + "\n");
+      return;
+    }
+
+    // Fallback when stream is not initialized yet
     if (currentLogFilePath) {
-      fs.appendFileSync(currentLogFilePath, formattedMessage + "\n");
+      fs.appendFile(currentLogFilePath, formattedMessage + "\n", () => {});
     }
   }
 

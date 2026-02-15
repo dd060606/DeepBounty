@@ -78,22 +78,11 @@ export async function replaceCustomDataPlaceholders(
   customData: Record<string, any> | undefined,
   targetId?: number
 ): Promise<string[]> {
-  // Fetch target settings if targetId is provided
+  // Use defaults here; target-specific replacements are handled by replaceTargetPlaceholders
+  // in the main execution pipeline.
   let userAgent = "DeepBounty-Agent/1.0";
   let customHeader = "X-Bug-Bounty: DeepBounty";
-  if (targetId) {
-    const targetSettings = await queryOne<{ settings: Record<string, any> } | undefined>(
-      sql`SELECT settings FROM targets_settings WHERE "targetId" = ${targetId}`
-    );
-    const settings = targetSettings?.settings || {};
-    // Override userAgent and customHeader if set in target settings
-    if (settings.userAgent) {
-      userAgent = settings.userAgent;
-    }
-    if (settings.customHeader) {
-      customHeader = settings.customHeader;
-    }
-  }
+  void targetId;
 
   return commands.map((cmd) => {
     let replaced = cmd;

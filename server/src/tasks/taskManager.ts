@@ -666,10 +666,6 @@ class TaskManager {
 
       // Handle oneTime tasks: delete after execution
       if (scheduledTask.oneTime) {
-        // Get template name before deleting for logging
-        const templateName = scheduledTask.templateId
-          ? (await this.templateService.getTemplate(scheduledTask.templateId))?.name || "unknown"
-          : "unknown";
         this.registry.deleteScheduledTask(scheduledTask.id);
       } else {
         // Update next execution time for recurring tasks
@@ -732,6 +728,15 @@ class TaskManager {
     (this as any)._hasPendingRequest = false;
 
     try {
+      const templateCache = new Map<number, Awaited<ReturnType<typeof this.templateService.getTemplate>>>();
+      const getTemplateCached = async (templateId: number) => {
+        if (!templateCache.has(templateId)) {
+          const template = await this.templateService.getTemplate(templateId);
+          templateCache.set(templateId, template);
+        }
+        return templateCache.get(templateId);
+      };
+
       // Loop as long as there are pending requests (handles new tasks added during processing)
       do {
         (this as any)._hasPendingRequest = false; // Clear flag for this pass
@@ -765,7 +770,7 @@ class TaskManager {
           // Filter for Aggressive Workers if needed
           let compatibleWorkers = workers;
           if (execution.templateId) {
-            const template = await this.templateService.getTemplate(execution.templateId);
+            const template = await getTemplateCached(execution.templateId);
             if (template?.aggressive) {
               compatibleWorkers = workers.filter((w) => w.aggressiveTasksEnabled);
             }
@@ -861,7 +866,7 @@ class TaskManager {
           });
           // Get template name for logging
           const templateName = execution.templateId
-            ? (await this.templateService.getTemplate(execution.templateId))?.name
+            ? (await getTemplateCached(execution.templateId))?.name
             : "unknown";
 
           logger.info(
