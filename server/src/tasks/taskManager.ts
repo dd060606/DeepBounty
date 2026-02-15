@@ -860,9 +860,8 @@ class TaskManager {
             status: "running",
           });
           // Get template name for logging
-          const scheduledTask = this.registry.getScheduledTask(execution.scheduledTaskId);
-          const templateName = scheduledTask?.templateId
-            ? (await this.templateService.getTemplate(scheduledTask.templateId))?.name
+          const templateName = execution.templateId
+            ? (await this.templateService.getTemplate(execution.templateId))?.name
             : "unknown";
 
           logger.info(
