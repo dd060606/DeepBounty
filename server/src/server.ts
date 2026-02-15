@@ -28,7 +28,7 @@ export const gracefulShutdown = async (signal: string) => {
   logger.info(`Received ${signal}, starting graceful shutdown...`);
 
   // Stop modules
-  shutdownModules();
+  await shutdownModules();
 
   // Stop DNS Service
   dnsService.stop();
