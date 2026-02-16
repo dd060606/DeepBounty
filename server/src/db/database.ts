@@ -17,7 +17,7 @@ const pool = new Pool({
   keepAlive: true,
   // Close idle clients after 30 seconds
   idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 5000,
+  connectionTimeoutMillis: 10000,
 });
 
 // This prevents the unhandled promise rejection that crashes the server when the database connection is lost
@@ -64,9 +64,15 @@ async function withRetry<T>(operation: () => Promise<T>): Promise<T> {
     try {
       return await operation();
     } catch (error: any) {
-      // Check if it's a network/connection drop error
+      const errorMessage = error.message || "";
+      const causeMessage = error.cause?.message || "";
+
+      // Check if either the wrapper or the root cause is a network/connection drop error
       const isConnectionError =
-        error.message?.includes("Connection terminated") || error.message?.includes("timeout");
+        errorMessage.includes("Connection terminated") ||
+        errorMessage.includes("timeout") ||
+        causeMessage.includes("Connection terminated") ||
+        causeMessage.includes("timeout");
 
       if (isConnectionError && attempt < MAX_RETRIES) {
         logger.warn(
@@ -76,7 +82,6 @@ async function withRetry<T>(operation: () => Promise<T>): Promise<T> {
         continue;
       }
 
-      // If it's a syntax error, or we ran out of retries, throw it up the chain
       logger.error("Database operation failed fatally", error);
       throw error;
     }
