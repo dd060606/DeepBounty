@@ -55,13 +55,47 @@ export async function initDatabase() {
   }
 }
 
-// Send a SQL query
-export async function query<T = unknown>(q: SQL): Promise<T[]> {
-  const result = await db.execute(q);
-  return result.rows as T[];
+const MAX_RETRIES = 3;
+const RETRY_DELAY_MS = 500;
+
+// Handle execution with retries
+async function withRetry<T>(operation: () => Promise<T>): Promise<T> {
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      return await operation();
+    } catch (error: any) {
+      // Check if it's a network/connection drop error
+      const isConnectionError =
+        error.message?.includes("Connection terminated") || error.message?.includes("timeout");
+
+      if (isConnectionError && attempt < MAX_RETRIES) {
+        logger.warn(
+          `Database query failed (attempt ${attempt}/${MAX_RETRIES}). Retrying in ${RETRY_DELAY_MS}ms...`
+        );
+        await new Promise((res) => setTimeout(res, RETRY_DELAY_MS));
+        continue;
+      }
+
+      // If it's a syntax error, or we ran out of retries, throw it up the chain
+      logger.error("Database operation failed fatally", error);
+      throw error;
+    }
+  }
+  throw new Error("Unreachable code reached in withRetry");
 }
 
+// Send a SQL query
+export async function query<T = unknown>(q: SQL): Promise<T[]> {
+  return withRetry(async () => {
+    const result = await db.execute(q);
+    return result.rows as T[];
+  });
+}
+
+// Send a SQL query for one result
 export async function queryOne<T = unknown>(q: SQL): Promise<T> {
-  const result = await db.execute(q);
-  return result.rows[0] as T;
+  return withRetry(async () => {
+    const result = await db.execute(q);
+    return result.rows[0] as T;
+  });
 }
