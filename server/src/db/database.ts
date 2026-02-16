@@ -14,6 +14,7 @@ const pool = new Pool({
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
   // Add network resilience settings
+  max: 50,
   keepAlive: true,
   // Close idle clients after 30 seconds
   idleTimeoutMillis: 30000,
@@ -67,22 +68,39 @@ async function withRetry<T>(operation: () => Promise<T>): Promise<T> {
       const errorMessage = error.message || "";
       const causeMessage = error.cause?.message || "";
 
-      // Check if either the wrapper or the root cause is a network/connection drop error
+      // Is the database explicitly telling us it's overloaded?
+      const isOverload =
+        errorMessage.includes("canceling authentication due to timeout") ||
+        causeMessage.includes("canceling authentication due to timeout");
+
+      // Is it a genuine network drop?
       const isConnectionError =
         errorMessage.includes("Connection terminated") ||
-        errorMessage.includes("timeout") ||
+        errorMessage.includes("ECONNRESET") ||
+        errorMessage.includes("socket hang up") ||
+        (errorMessage.includes("timeout") && !isOverload) || // Catch generic timeouts, but NOT overloads
         causeMessage.includes("Connection terminated") ||
-        causeMessage.includes("timeout");
+        causeMessage.includes("ECONNRESET");
 
       if (isConnectionError && attempt < MAX_RETRIES) {
+        // Calculate Exponential Backoff with Jitter (e.g., 500ms, 1000ms, 1500ms + random 0-200ms)
+        const jitter = Math.floor(Math.random() * 200);
+        const delayMs = RETRY_DELAY_MS * attempt + jitter;
+
         logger.warn(
-          `Database query failed (attempt ${attempt}/${MAX_RETRIES}). Retrying in ${RETRY_DELAY_MS}ms...`
+          `Database query failed (attempt ${attempt}/${MAX_RETRIES}). Retrying in ${delayMs}ms...`
         );
-        await new Promise((res) => setTimeout(res, RETRY_DELAY_MS));
+
+        await new Promise((res) => setTimeout(res, delayMs));
         continue;
       }
 
-      logger.error("Database operation failed fatally", error);
+      // If it's an overload, or we ran out of retries, fail fast.
+      if (isOverload) {
+        logger.error("Database is overloaded (Authentication Timeout). Failing fast.");
+      } else {
+        logger.error("Database operation failed fatally", error);
+      }
       throw error;
     }
   }

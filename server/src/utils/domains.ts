@@ -2,6 +2,12 @@ import { query, queryOne } from "@/db/database.js";
 import { sql } from "drizzle-orm";
 import config from "./config.js";
 
+const CACHE_TTL_MS = 60000;
+
+// Simple in-memory Maps to hold our cached database answers
+const targetIdCache = new Map<string, { value: number | null; timestamp: number }>();
+const scopeCache = new Map<string, { value: boolean; timestamp: number }>();
+
 export function normalizeDomain(input: string): string {
   const trimmed = input.trim();
   if (!trimmed) return "";
@@ -83,6 +89,41 @@ export function extractDomainsFromCommands(commands: string[]): string[] {
   return Array.from(domains);
 }
 
+// Detect target ID from subdomain
+export async function detectTargetId(subdomain: string): Promise<number | null> {
+  const now = Date.now();
+  const cached = targetIdCache.get(subdomain);
+
+  // If we have a fresh cached value, return it instantly!
+  if (cached && now - cached.timestamp < CACHE_TTL_MS) {
+    return cached.value;
+  }
+
+  // Otherwise, ask the database and store the result
+  const result = await _detectTargetId(subdomain);
+  targetIdCache.set(subdomain, { value: result, timestamp: now });
+  return result;
+}
+
+// Check if a hostname is in scope with caching
+export async function isHostnameInScope(hostname: string): Promise<boolean> {
+  const normalized = normalizeDomain(hostname);
+  if (!isValidDomain(normalized)) return false;
+
+  const now = Date.now();
+  const cached = scopeCache.get(normalized);
+
+  // Return instantly if cached
+  if (cached && now - cached.timestamp < CACHE_TTL_MS) {
+    return cached.value;
+  }
+
+  // Ask database and store the result
+  const result = await _isHostnameInScope(normalized);
+  scopeCache.set(normalized, { value: result, timestamp: now });
+  return result;
+}
+
 /**
  * Detect target ID from subdomain by checking:
  * 1. Exact match with target's main domain
@@ -90,7 +131,7 @@ export function extractDomainsFromCommands(commands: string[]): string[] {
  * 3. Wildcard match with registered subdomain patterns (*.example.com)
  * 4. Parent domain match (check if subdomain ends with any target domain)
  */
-export async function detectTargetId(subdomain: string): Promise<number | null> {
+export async function _detectTargetId(subdomain: string): Promise<number | null> {
   // 1. Check if subdomain matches a target's main domain exactly
   const targetByDomain = await queryOne<{ id: number }>(
     sql`SELECT id FROM targets WHERE domain = ${subdomain}`
@@ -167,7 +208,7 @@ export async function detectTargetId(subdomain: string): Promise<number | null> 
 /**
  * Check if a hostname is in scope
  */
-export async function isHostnameInScope(hostname: string): Promise<boolean> {
+export async function _isHostnameInScope(hostname: string): Promise<boolean> {
   const normalized = normalizeDomain(hostname);
   if (!isValidDomain(normalized)) return false;
 
