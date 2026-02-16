@@ -1,20 +1,32 @@
+import pg from "pg";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import Logger from "@/utils/logger.js";
 import { SQL, sql } from "drizzle-orm";
 
 const logger = new Logger("DB");
+const { Pool } = pg;
 
-// Database connection
-const db = drizzle({
-  connection: {
-    host: process.env.DB_HOST,
-    port: Number(process.env.DB_PORT),
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME,
-  },
+const pool = new Pool({
+  host: process.env.DB_HOST,
+  port: Number(process.env.DB_PORT),
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_NAME,
+  // Add network resilience settings
+  keepAlive: true,
+  // Close idle clients after 30 seconds
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 5000,
 });
+
+// This prevents the unhandled promise rejection that crashes the server when the database connection is lost
+pool.on("error", (err) => {
+  logger.error("Unexpected database error on idle client (network drop)", err);
+});
+
+// Pass the pool into Drizzle
+const db = drizzle(pool);
 
 // Wait for the database to be ready (with retry)
 async function waitForDatabaseReady() {
