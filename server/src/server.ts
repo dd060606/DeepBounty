@@ -43,3 +43,12 @@ export const gracefulShutdown = async (signal: string) => {
 // Handle shutdown signals
 process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
 process.on("SIGINT", () => gracefulShutdown("SIGINT"));
+
+// Prevent process crashes on unhandled async failures (log + continue)
+process.on("unhandledRejection", (reason) => {
+  logger.error("Unhandled promise rejection", reason);
+});
+
+process.on("uncaughtException", (error) => {
+  logger.error("Uncaught exception", error);
+});

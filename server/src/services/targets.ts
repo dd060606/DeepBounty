@@ -2,12 +2,28 @@ import { sql } from "drizzle-orm";
 import { query } from "@/db/database.js";
 import { Target } from "@deepbounty/sdk/types";
 
+const TARGETS_CACHE_TTL_MS = 5000;
+
+let allTargetsCache: { expiresAt: number; value: Target[] } | null = null;
+let allTargetsInFlight: Promise<Target[]> | null = null;
+const targetsForTaskCache = new Map<number, { expiresAt: number; value: Target[] }>();
+const targetsForTaskInFlight = new Map<number, Promise<Target[]>>();
+
 /**
  * Fetch all targets with their subdomains, packages, and settings.
  * Shared between controllers and module SDK to avoid duplicated SQL.
  */
 export async function getTargetsWithDetails(): Promise<Target[]> {
-  return await query<Target>(
+  const now = Date.now();
+  if (allTargetsCache && allTargetsCache.expiresAt > now) {
+    return allTargetsCache.value;
+  }
+
+  if (allTargetsInFlight) {
+    return await allTargetsInFlight;
+  }
+
+  allTargetsInFlight = query<Target>(
     sql`
       SELECT
         t.*,
@@ -46,6 +62,17 @@ export async function getTargetsWithDetails(): Promise<Target[]> {
       ORDER BY t.id
     `
   );
+
+  try {
+    const rows = await allTargetsInFlight;
+    allTargetsCache = {
+      value: rows,
+      expiresAt: Date.now() + TARGETS_CACHE_TTL_MS,
+    };
+    return rows;
+  } finally {
+    allTargetsInFlight = null;
+  }
 }
 
 /**
@@ -53,7 +80,18 @@ export async function getTargetsWithDetails(): Promise<Target[]> {
  * Only targets enabled for the given task template are returned.
  */
 export async function getTargetsForTask(taskTemplateId: number): Promise<Target[]> {
-  return await query<Target>(
+  const now = Date.now();
+  const cached = targetsForTaskCache.get(taskTemplateId);
+  if (cached && cached.expiresAt > now) {
+    return cached.value;
+  }
+
+  const inFlight = targetsForTaskInFlight.get(taskTemplateId);
+  if (inFlight) {
+    return await inFlight;
+  }
+
+  const request = query<Target>(
     sql`
       SELECT
         t.*,
@@ -100,4 +138,17 @@ export async function getTargetsForTask(taskTemplateId: number): Promise<Target[
       ORDER BY t.id
     `
   );
+
+  targetsForTaskInFlight.set(taskTemplateId, request);
+
+  try {
+    const rows = await request;
+    targetsForTaskCache.set(taskTemplateId, {
+      value: rows,
+      expiresAt: Date.now() + TARGETS_CACHE_TTL_MS,
+    });
+    return rows;
+  } finally {
+    targetsForTaskInFlight.delete(taskTemplateId);
+  }
 }

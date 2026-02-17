@@ -43,7 +43,9 @@ export function addTarget(req: Request, res: Response) {
     .then((result) => {
       logger.info(`Added new target: ${name} (${domain})`);
       //Sync tasks for the new target
-      getTaskManager().syncAllTasks();
+      getTaskManager()
+        .syncAllTasks()
+        .catch((err) => logger.error("Failed to sync tasks after addTarget", err));
       getEventBus().emit("target:created", result);
       res.status(201).json(result);
     })
@@ -68,7 +70,9 @@ export function editTarget(req: Request, res: Response) {
       logger.info(`Updated target: ${name} (${domain})`);
       if (activeScan) {
         //Sync tasks if activeScan is enabled
-        getTaskManager().syncAllTasks();
+        getTaskManager()
+          .syncAllTasks()
+          .catch((err) => logger.error("Failed to sync tasks after editTarget", err));
       }
 
       getEventBus().emit("target:updated", result);
@@ -91,7 +95,9 @@ export function deleteTarget(req: Request, res: Response) {
       }
       logger.info(`Deleted target: ${result.name} (${result.domain})`);
       incrementScopeVersion();
-      getTaskManager().syncAllTasks();
+      getTaskManager()
+        .syncAllTasks()
+        .catch((err) => logger.error("Failed to sync tasks after deleteTarget", err));
       getEventBus().emit("target:deleted", result);
       res.sendStatus(200);
     })

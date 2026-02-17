@@ -11,7 +11,7 @@ const logger = new Logger("TaskAPI");
 export class TaskAPI {
   private readonly taskManager = getTaskManager();
   // Store completion callbacks for tasks, keyed by scheduledTaskId
-  private taskCallbacks: Map<number, (result: TaskResult) => void> = new Map();
+  private taskCallbacks: Map<number, (result: TaskResult) => void | Promise<void>> = new Map();
 
   constructor(private moduleId: string) {
     // Listen for task completion events
@@ -108,7 +108,15 @@ export class TaskAPI {
 
     // Notify callback
     try {
-      callback(result);
+      const callbackResult = callback(result);
+      if (callbackResult && typeof (callbackResult as Promise<void>).then === "function") {
+        (callbackResult as Promise<void>).catch((error) => {
+          logger.error(
+            `Async error in task completion callback for task ${result.scheduledTaskId}`,
+            error
+          );
+        });
+      }
     } catch (error) {
       logger.error(
         `Error in task completion callback for task ${result.scheduledTaskId}: ${(error as Error).message}`

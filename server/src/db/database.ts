@@ -59,48 +59,103 @@ export async function initDatabase() {
 const MAX_RETRIES = 3;
 const RETRY_DELAY_MS = 500;
 
+function collectErrorDetails(error: any): {
+  code?: string;
+  messages: string[];
+  names: string[];
+} {
+  const messages: string[] = [];
+  const names: string[] = [];
+  let code: string | undefined;
+
+  let current: any = error;
+  let depth = 0;
+  while (current && depth < 5) {
+    if (typeof current.message === "string" && current.message.trim()) {
+      messages.push(current.message);
+    }
+    if (typeof current.name === "string" && current.name.trim()) {
+      names.push(current.name);
+    }
+    if (!code && typeof current.code === "string") {
+      code = current.code;
+    }
+    current = current.cause;
+    depth += 1;
+  }
+
+  return { code, messages, names };
+}
+
+function isRetryableDbError(error: any): { retryable: boolean; reason: string } {
+  const details = collectErrorDetails(error);
+  const combinedMessage = details.messages.join(" | ").toLowerCase();
+
+  // Retry network/protocol/transient connection errors
+  const retryableCodes = new Set([
+    "ECONNRESET",
+    "EPIPE",
+    "ETIMEDOUT",
+    "ECONNREFUSED",
+    "57P01", // admin_shutdown
+    "57P02", // crash_shutdown
+    "57P03", // cannot_connect_now
+    "53300", // too_many_connections
+  ]);
+
+  if (details.code && retryableCodes.has(details.code)) {
+    return { retryable: true, reason: `code:${details.code}` };
+  }
+
+  const retryableMessageFragments = [
+    "connection terminated",
+    "socket hang up",
+    "timeout exceeded when trying to connect",
+    "connection terminated unexpectedly",
+    "the database system is starting up",
+    "too many clients already",
+    "terminating connection due to administrator command",
+    "could not connect to server",
+  ];
+
+  if (retryableMessageFragments.some((fragment) => combinedMessage.includes(fragment))) {
+    return { retryable: true, reason: "message-match" };
+  }
+
+  // Generic timeout handling for transient infra issues
+  if (combinedMessage.includes("timeout")) {
+    return { retryable: true, reason: "generic-timeout" };
+  }
+
+  return { retryable: false, reason: "non-retryable" };
+}
+
 // Handle execution with retries
 async function withRetry<T>(operation: () => Promise<T>): Promise<T> {
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
       return await operation();
     } catch (error: any) {
-      const errorMessage = error.message || "";
-      const causeMessage = error.cause?.message || "";
+      const details = collectErrorDetails(error);
+      const retry = isRetryableDbError(error);
 
-      // Is the database explicitly telling us it's overloaded?
-      const isOverload =
-        errorMessage.includes("canceling authentication due to timeout") ||
-        causeMessage.includes("canceling authentication due to timeout");
-
-      // Is it a genuine network drop?
-      const isConnectionError =
-        errorMessage.includes("Connection terminated") ||
-        errorMessage.includes("ECONNRESET") ||
-        errorMessage.includes("socket hang up") ||
-        (errorMessage.includes("timeout") && !isOverload) || // Catch generic timeouts, but NOT overloads
-        causeMessage.includes("Connection terminated") ||
-        causeMessage.includes("ECONNRESET");
-
-      if (isConnectionError && attempt < MAX_RETRIES) {
+      if (retry.retryable && attempt < MAX_RETRIES) {
         // Calculate Exponential Backoff with Jitter (e.g., 500ms, 1000ms, 1500ms + random 0-200ms)
         const jitter = Math.floor(Math.random() * 200);
         const delayMs = RETRY_DELAY_MS * attempt + jitter;
 
         logger.warn(
-          `Database query failed (attempt ${attempt}/${MAX_RETRIES}). Retrying in ${delayMs}ms...`
+          `Database query failed (attempt ${attempt}/${MAX_RETRIES}, reason=${retry.reason}, code=${details.code || "n/a"}). Retrying in ${delayMs}ms...`
         );
 
         await new Promise((res) => setTimeout(res, delayMs));
         continue;
       }
 
-      // If it's an overload, or we ran out of retries, fail fast.
-      if (isOverload) {
-        logger.error("Database is overloaded (Authentication Timeout). Failing fast.");
-      } else {
-        logger.error("Database operation failed fatally", error);
-      }
+      logger.error(
+        `Database operation failed fatally (attempt=${attempt}, reason=${retry.reason}, code=${details.code || "n/a"})`,
+        error
+      );
       throw error;
     }
   }
