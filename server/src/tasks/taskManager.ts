@@ -52,6 +52,8 @@ class TaskManager {
   private pendingInstallations: Map<number, Set<string>> = new Map();
   // Scheduler interval handle
   private schedulerInterval?: NodeJS.Timeout;
+  // In-memory cache to avoid repeated DB lookups in createTaskInstance bursts
+  private taskInstanceTemplateCache: Map<number, any> = new Map();
 
   private constructor() {
     // Start the scheduler (check every 5 seconds)
@@ -122,6 +124,9 @@ class TaskManager {
       schedulingType
     );
 
+    // Invalidate createTaskInstance cache for this template
+    this.taskInstanceTemplateCache.delete(templateId);
+
     // Store onSchedule callback for CUSTOM mode
     if (schedulingType === "CUSTOM") {
       if (onSchedule) this.scheduleCallbacks.set(templateId, onSchedule);
@@ -151,6 +156,7 @@ class TaskManager {
     // Remove schedule and manual trigger callbacks if exists
     this.scheduleCallbacks.delete(templateId);
     this.manualTriggerCallbacks.delete(templateId);
+    this.taskInstanceTemplateCache.delete(templateId);
 
     // Delete template from database
     return await this.templateService.deleteTemplate(templateId);
@@ -473,7 +479,7 @@ class TaskManager {
     targetId?: number,
     customData?: Record<string, any>
   ): Promise<number> {
-    const template = await this.templateService.getTemplate(templateId);
+    const template = await this.getCachedTemplateForTaskInstance(templateId);
     if (!template) {
       throw new Error(`Template ${templateId} not found`);
     }
@@ -540,6 +546,16 @@ class TaskManager {
     return taskId;
   }
 
+  private async getCachedTemplateForTaskInstance(templateId: number) {
+    if (this.taskInstanceTemplateCache.has(templateId)) {
+      return this.taskInstanceTemplateCache.get(templateId);
+    }
+
+    const template = await this.templateService.getTemplate(templateId);
+    this.taskInstanceTemplateCache.set(templateId, template);
+    return template;
+  }
+
   /**
    * Synchronize all tasks when a new target is added or target settings change
    * Ensures all templates have scheduled tasks for all applicable targets
@@ -560,6 +576,7 @@ class TaskManager {
   async setTaskTemplateActive(templateId: number, active: boolean): Promise<boolean> {
     const success = await this.templateService.setTemplateActive(templateId, active);
     if (success) {
+      this.taskInstanceTemplateCache.delete(templateId);
       await this.syncTasksForTemplate(templateId);
     }
     return success;
@@ -577,6 +594,7 @@ class TaskManager {
     targetId: number,
     active: boolean
   ): Promise<void> {
+    this.taskInstanceTemplateCache.delete(templateId);
     await this.templateService.setTargetOverride(targetId, templateId, active);
     await this.syncTasksForTemplate(templateId);
   }
@@ -728,7 +746,10 @@ class TaskManager {
     (this as any)._hasPendingRequest = false;
 
     try {
-      const templateCache = new Map<number, Awaited<ReturnType<typeof this.templateService.getTemplate>>>();
+      const templateCache = new Map<
+        number,
+        Awaited<ReturnType<typeof this.templateService.getTemplate>>
+      >();
       const getTemplateCached = async (templateId: number) => {
         if (!templateCache.has(templateId)) {
           const template = await this.templateService.getTemplate(templateId);
