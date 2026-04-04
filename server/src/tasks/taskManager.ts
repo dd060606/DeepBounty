@@ -1,4 +1,12 @@
-import { ScheduledTask, TaskContent, TaskExecution, TaskResult, Tool } from "@deepbounty/sdk/types";
+import {
+  ScheduledTask,
+  TaskContent,
+  TaskExecution,
+  TaskResult,
+  Tool,
+  TaskTemplate,
+  TargetTaskOverride,
+} from "@deepbounty/sdk/types";
 import {
   installToolsTask,
   replaceTargetPlaceholders,
@@ -240,9 +248,17 @@ class TaskManager {
    * Creates tasks for new targets, removes tasks for inactive targets,
    * and updates interval for existing tasks if template interval changed
    * @param templateId - ID of the template to synchronize
+   * @param preFetchedTemplate - Optional pre-fetched template to avoid DB query
+   * @param preFetchedTargets - Optional pre-fetched active targets to avoid DB query
+   * @param preFetchedOverrides - Optional pre-fetched overrides to avoid DB query
    */
-  async syncTasksForTemplate(templateId: number): Promise<void> {
-    const template = await this.templateService.getTemplate(templateId);
+  async syncTasksForTemplate(
+    templateId: number,
+    preFetchedTemplate?: TaskTemplate,
+    preFetchedTargets?: Array<{ id: number; domain: string }>,
+    preFetchedOverrides?: TargetTaskOverride[]
+  ): Promise<void> {
+    const template = preFetchedTemplate || (await this.templateService.getTemplate(templateId));
     if (!template) return;
 
     // Get existing scheduled tasks for this template
@@ -252,7 +268,18 @@ class TaskManager {
     switch (template.schedulingType) {
       case "TARGET_BASED": {
         // Get all targets where this task should run
-        const targets = await this.templateService.getTargetsForTask(templateId);
+        let targets: Array<{ id: number; domain: string }>;
+
+        if (preFetchedTargets && preFetchedOverrides) {
+          const disabledTargetIds = new Set(
+            preFetchedOverrides
+              .filter((o: TargetTaskOverride) => o.taskTemplateId === templateId && !o.active)
+              .map((o: TargetTaskOverride) => o.targetId)
+          );
+          targets = preFetchedTargets.filter((t) => !disabledTargetIds.has(t.id));
+        } else {
+          targets = await this.templateService.getTargetsForTask(templateId);
+        }
         const existingTargetIds = new Set(
           existingTasks.filter((t) => t.targetId !== undefined).map((t) => t.targetId!)
         );
@@ -562,8 +589,11 @@ class TaskManager {
    */
   async syncAllTasks(): Promise<void> {
     const templates = await this.templateService.getAllTemplates();
+    const activeTargets = await this.templateService.getActiveTargets();
+    const allOverrides = await this.templateService.getAllOverrides();
+
     for (const template of templates) {
-      await this.syncTasksForTemplate(template.id);
+      await this.syncTasksForTemplate(template.id, template, activeTargets, allOverrides);
     }
   }
 
