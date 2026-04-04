@@ -269,6 +269,21 @@ export class TaskTemplateService {
   }
 
   /**
+   * Get all task template overrides across all targets
+   */
+  async getAllOverrides(): Promise<TargetTaskOverride[]> {
+    const result = await query<TargetTaskOverride>(sql`
+      SELECT * FROM target_task_overrides
+    `);
+    return result.map((override: any) => ({
+      id: override.id,
+      targetId: override.targetId,
+      taskTemplateId: override.taskTemplateId,
+      active: override.active,
+    }));
+  }
+
+  /**
    * Set or update a target-specific override
    */
   async setTargetOverride(
