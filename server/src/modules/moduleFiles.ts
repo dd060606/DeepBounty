@@ -33,7 +33,8 @@ export class ScopedDirectory {
     const fullPath = path.join(this.basePath, normalized);
 
     // Ensure the resolved path is still within the base directory
-    if (!fullPath.startsWith(this.basePath)) {
+    const resolvedBase = this.basePath.endsWith(path.sep) ? this.basePath : this.basePath + path.sep;
+    if (fullPath !== this.basePath && !fullPath.startsWith(resolvedBase)) {
       throw new Error(`Path escapes base directory: ${relativePath}`);
     }
 
@@ -211,7 +212,10 @@ export class ModuleFiles {
       const fullPath = path.join(this.filesBasePath, normalized);
 
       // Ensure the path doesn't escape the files base directory
-      if (!fullPath.startsWith(this.filesBasePath)) {
+      const resolvedBase = this.filesBasePath.endsWith(path.sep)
+        ? this.filesBasePath
+        : this.filesBasePath + path.sep;
+      if (fullPath !== this.filesBasePath && !fullPath.startsWith(resolvedBase)) {
         throw new Error(`Path escapes module directory: ${directoryPath}`);
       }
 
