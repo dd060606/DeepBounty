@@ -1,13 +1,14 @@
 import { WebSocket } from "ws";
 import { createMessageHandler } from "./taskHandler.js";
 import { getInstalledTools } from "./tools.js";
+import { logger } from "./logger.js";
 
 const MAX_CONCURRENCY = Number(process.env.MAX_CONCURRENCY ?? 5);
 const ENABLE_AGGRESSIVE_TASKS =
   (process.env.ENABLE_AGGRESSIVE_TASKS ?? "true").toLowerCase() === "true";
 
-console.log(`Worker starting with max concurrency: ${MAX_CONCURRENCY}`);
-console.log(`Aggressive tasks are ${ENABLE_AGGRESSIVE_TASKS ? "enabled" : "disabled"}`);
+logger.info(`Worker starting with max concurrency: ${MAX_CONCURRENCY}`);
+logger.info(`Aggressive tasks are ${ENABLE_AGGRESSIVE_TASKS ? "enabled" : "disabled"}`);
 
 // Check for required environment variables
 const wsUrl = process.env.SERVER_WS_URL;
@@ -37,7 +38,7 @@ const scheduleReconnect = (reason: string) => {
     return;
   }
 
-  console.warn(`Connection lost (${reason}).`);
+  logger.warn(`Connection lost (${reason}).`);
 
   reconnectTimer = setTimeout(() => {
     reconnectTimer = undefined;
@@ -55,7 +56,7 @@ const attachEventHandlers = (socket: WebSocket) => {
   const handleMessage = createMessageHandler({ sendMessage, maxConcurrency: MAX_CONCURRENCY });
 
   socket.on("open", () => {
-    console.log("Connected to server");
+    logger.info("Connected to server");
     // Send installed tools to server upon connection
     const installedTools = getInstalledTools();
     if (installedTools.length !== 0) {
@@ -78,7 +79,7 @@ const attachEventHandlers = (socket: WebSocket) => {
 
     // Auth failed
     if (code === 3000) {
-      console.error("Secret key rejected by server!");
+      logger.error("Secret key rejected by server!");
       return;
     }
 
