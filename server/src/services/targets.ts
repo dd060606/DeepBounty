@@ -23,45 +23,76 @@ export async function getTargetsWithDetails(): Promise<Target[]> {
     return await allTargetsInFlight;
   }
 
-  allTargetsInFlight = query<Target>(
-    sql`
-      SELECT
-        t.*,
-        -- Subdomains array (In-Scope)
-        COALESCE(sd.subdomains, '{}'::text[]) AS subdomains,
-        -- Out of Scope Subdomains array
-        COALESCE(sd.out_of_scope_subdomains, '{}'::text[]) AS "outOfScopeSubdomains",
-        -- Package names array
-        COALESCE(pkg.packages, '{}'::text[]) AS "packageNames",
-        -- Settings object
-        ts.settings
-      FROM targets t
-      -- Join with subdomains
-      LEFT JOIN LATERAL (
-        SELECT 
-          array_agg(s.subdomain ORDER BY s.subdomain) FILTER (WHERE s."isOutOfScope" = false) AS subdomains,
-          array_agg(s.subdomain ORDER BY s.subdomain) FILTER (WHERE s."isOutOfScope" = true) AS out_of_scope_subdomains
-        FROM targets_subdomains s
-        WHERE s."targetId" = t.id
-      ) sd ON true
-      -- Join with packages
-      LEFT JOIN LATERAL (
-        SELECT
-          array_agg(p."packageName" ORDER BY p."packageName") AS packages
-        FROM targets_packages p
-        WHERE p."targetId" = t.id
-      ) pkg ON true
-      -- Join with settings
-      LEFT JOIN LATERAL (
-        SELECT s.settings
-        FROM targets_settings s
-        WHERE s."targetId" = t.id
-        ORDER BY s."targetId" DESC
-        LIMIT 1
-      ) ts ON true
-      ORDER BY t.id
-    `
-  );
+  allTargetsInFlight = (async () => {
+    // 1. Fetch all targets without lateral joins
+    const rawTargets = await query<any>(
+      sql`SELECT * FROM targets ORDER BY id`
+    );
+
+    if (!rawTargets.length) return [];
+
+    const targetIds = rawTargets.map(t => t.id);
+
+    // 2. Fetch related data using IN clauses
+    const [subdomains, packages, settings] = await Promise.all([
+      query<any>(
+        sql`SELECT "targetId", subdomain, "isOutOfScope" FROM targets_subdomains`
+      ),
+      query<any>(
+        sql`SELECT "targetId", "packageName" FROM targets_packages`
+      ),
+      query<any>(
+        sql`SELECT DISTINCT ON ("targetId") "targetId", settings FROM targets_settings ORDER BY "targetId", id DESC`
+      )
+    ]);
+
+    // 3. Assemble data in memory
+    const targetsMap = new Map<number, Target>();
+
+    for (const t of rawTargets) {
+      targetsMap.set(t.id, {
+        ...t,
+        subdomains: [],
+        outOfScopeSubdomains: [],
+        packageNames: [],
+        settings: null
+      });
+    }
+
+    for (const sub of subdomains) {
+      const target = targetsMap.get(sub.targetId);
+      if (target) {
+        if (sub.isOutOfScope) {
+          target.outOfScopeSubdomains!.push(sub.subdomain);
+        } else {
+          target.subdomains.push(sub.subdomain);
+        }
+      }
+    }
+
+    for (const pkg of packages) {
+      const target = targetsMap.get(pkg.targetId);
+      if (target) {
+        target.packageNames!.push(pkg.packageName);
+      }
+    }
+
+    for (const set of settings) {
+      const target = targetsMap.get(set.targetId);
+      if (target) {
+        target.settings = set.settings;
+      }
+    }
+
+    // Sort arrays to match previous behavior
+    for (const t of targetsMap.values()) {
+      t.subdomains.sort();
+      if (t.outOfScopeSubdomains) t.outOfScopeSubdomains.sort();
+      if (t.packageNames) t.packageNames.sort();
+    }
+
+    return Array.from(targetsMap.values());
+  })();
 
   try {
     const rows = await allTargetsInFlight;
@@ -91,53 +122,38 @@ export async function getTargetsForTask(taskTemplateId: number): Promise<Target[
     return await inFlight;
   }
 
-  const request = query<Target>(
-    sql`
-      SELECT
-        t.*,
-        -- Subdomains array (In-Scope)
-        COALESCE(sd.subdomains, '{}'::text[]) AS subdomains,
-        -- Out of Scope Subdomains array
-        COALESCE(sd.out_of_scope_subdomains, '{}'::text[]) AS "outOfScopeSubdomains",
-        -- Package names array
-        COALESCE(pkg.packages, '{}'::text[]) AS "packageNames",
-        -- Settings object
-        ts.settings
-      FROM task_templates tt
-      JOIN targets t ON true
-      LEFT JOIN target_task_overrides tto
-        ON tto."targetId" = t.id
-       AND tto."taskTemplateId" = tt.id
-      -- Join with subdomains
-      LEFT JOIN LATERAL (
-        SELECT 
-          array_agg(s.subdomain ORDER BY s.subdomain) FILTER (WHERE s."isOutOfScope" = false) AS subdomains,
-          array_agg(s.subdomain ORDER BY s.subdomain) FILTER (WHERE s."isOutOfScope" = true) AS out_of_scope_subdomains
-        FROM targets_subdomains s
-        WHERE s."targetId" = t.id
-      ) sd ON true
-      -- Join with packages
-      LEFT JOIN LATERAL (
-        SELECT
-          array_agg(p."packageName" ORDER BY p."packageName") AS packages
-        FROM targets_packages p
-        WHERE p."targetId" = t.id
-      ) pkg ON true
-      -- Join with settings
-      LEFT JOIN LATERAL (
-        SELECT s.settings
-        FROM targets_settings s
-        WHERE s."targetId" = t.id
-        ORDER BY s."targetId" DESC
-        LIMIT 1
-      ) ts ON true
-      WHERE tt.id = ${taskTemplateId}
-        AND tt.active = true
-        AND t."activeScan" = true
-        AND COALESCE(tto.active, true) = true
-      ORDER BY t.id
-    `
-  );
+  const request = (async () => {
+    // 1. Get all base targets (cached, avoids heavy JOIN LATERALs)
+    const allTargets = await getTargetsWithDetails();
+
+    // 2. Filter out non-active ones
+    const activeTargets = allTargets.filter(t => t.activeScan);
+
+    // 3. Fetch template activation and overrides
+    const templateInfo = await query<{ active: boolean }>(
+      sql`SELECT active FROM task_templates WHERE id = ${taskTemplateId}`
+    );
+
+    // If template is disabled or doesn't exist, return empty
+    if (!templateInfo.length || !templateInfo[0].active) {
+      return [];
+    }
+
+    const overrides = await query<{ targetId: number, active: boolean }>(
+      sql`SELECT "targetId", active FROM target_task_overrides WHERE "taskTemplateId" = ${taskTemplateId}`
+    );
+
+    const overrideMap = new Map<number, boolean>();
+    for (const override of overrides) {
+      overrideMap.set(override.targetId, override.active);
+    }
+
+    // 4. Return targets that are not explicitly disabled by an override
+    return activeTargets.filter(target => {
+      const isExplicitlyDisabled = overrideMap.get(target.id) === false;
+      return !isExplicitlyDisabled;
+    });
+  })();
 
   targetsForTaskInFlight.set(taskTemplateId, request);
 
