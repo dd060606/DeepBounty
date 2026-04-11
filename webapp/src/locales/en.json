@@ -143,8 +143,11 @@
         "domainRequired": "A primary domain is required.",
         "domainInvalid": "Please enter a valid domain (e.g., example.com).",
         "subdomainInvalid": "Invalid subdomain format. Use example.com, api.example.com or *.example.com.",
-        "packageInvalid": "Invalid package name format. Use com.example.app"
-      }
+        "packageInvalid": "Invalid package name format. Use com.example.app",
+        "asnInvalid": "Invalid ASN format. Use AS+number (e.g., AS12345)."
+      },
+      "asns": "ASNs",
+      "asnsHint": "Comma-separated ASNs (e.g. AS64269,AS63265)"
     },
     "success": {
       "newTarget": "Successfully added new target",

@@ -22,6 +22,7 @@ export const targets = pgTable("targets", {
   name: text().notNull(),
   domain: text().notNull(),
   activeScan: boolean().default(true).notNull(),
+  asns: jsonb().default([]).notNull(),
   createdAt: timestamp({ mode: "string" })
     .default(sql`CURRENT_TIMESTAMP`)
     .notNull(),

@@ -86,6 +86,7 @@ export default function Targets() {
         name: data.name,
         domain: data.domain,
         activeScan: data.activeScan,
+        asns: data.asns,
       });
     } catch {
       success = false;
