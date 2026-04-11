@@ -142,8 +142,11 @@
         "domainRequired": "Un domaine principal est requis.",
         "domainInvalid": "Veuillez saisir un domaine valide (ex. : example.com).",
         "subdomainInvalid": "Format de sous-domaine invalide. Utilisez example.com, api.example.com ou *.example.com.",
-        "packageInvalid": "Format de package invalide. Utilisez com.example.app"
-      }
+        "packageInvalid": "Format de package invalide. Utilisez com.example.app",
+        "asnInvalid": "Format ASN invalide. Utilisez AS+nombre (ex. : AS12345)."
+      },
+      "asns": "ASNs",
+      "asnsHint": "ASNs séparés par des virgules (ex. AS64269,AS63265)"
     },
     "success": {
       "newTarget": "Nouvelle cible ajoutée avec succès",
