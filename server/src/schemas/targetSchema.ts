@@ -7,6 +7,7 @@ export const addTargetSchema = z.object({
     message: "Invalid domain format",
   }),
   activeScan: z.boolean().optional(),
+  asns: z.array(z.string().regex(/^AS\d+$/i, { message: "Invalid ASN format. Must start with AS followed by numbers." })).optional(),
 });
 
 export const addSubdomainsSchema = z.array(

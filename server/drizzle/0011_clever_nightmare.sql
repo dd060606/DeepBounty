@@ -1,0 +1,1 @@
+ALTER TABLE "targets" ADD COLUMN "asns" jsonb DEFAULT '[]'::jsonb NOT NULL;

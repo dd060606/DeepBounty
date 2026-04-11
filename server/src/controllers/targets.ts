@@ -35,10 +35,10 @@ export async function getTargetsFull(req: Request, res: Response) {
 
 // POST /targets - add a new target
 export function addTarget(req: Request, res: Response) {
-  const { name, domain, activeScan } = req.body;
+  const { name, domain, activeScan, asns = [] } = req.body;
 
   queryOne(
-    sql`INSERT INTO targets (name, domain, "activeScan") VALUES (${name}, ${domain}, ${activeScan}) RETURNING *`
+    sql`INSERT INTO targets (name, domain, "activeScan", asns) VALUES (${name}, ${domain}, ${activeScan}, ${JSON.stringify(asns)}) RETURNING *`
   )
     .then((result) => {
       logger.info(`Added new target: ${name} (${domain})`);
@@ -58,10 +58,10 @@ export function addTarget(req: Request, res: Response) {
 // PATCH /targets/:id - Edit an existing target
 export function editTarget(req: Request, res: Response) {
   const { id } = req.params;
-  const { name, domain, activeScan } = req.body;
+  const { name, domain, activeScan, asns = [] } = req.body;
 
   queryOne(
-    sql`UPDATE targets SET name = ${name}, domain = ${domain}, "activeScan" = ${activeScan} WHERE id = ${id} RETURNING *`
+    sql`UPDATE targets SET name = ${name}, domain = ${domain}, "activeScan" = ${activeScan}, asns = ${JSON.stringify(asns)} WHERE id = ${id} RETURNING *`
   )
     .then((result) => {
       if (!result) {

@@ -100,6 +100,7 @@ export default function TargetDialog({
   const [headerValue, setHeaderValue] = useState<string>(
     initial?.settings?.customHeader?.split(":")[1] ?? ""
   );
+  const [asnsInput, setAsnsInput] = useState<string>(initial?.asns?.join(",") ?? "");
 
   // Tasks state
   const [tasks, setTasks] = useState<TaskWithOverride[]>([]);
@@ -212,9 +213,19 @@ export default function TargetDialog({
     }
   });
 
+  // ASN validation
+  const asnsList = asnsInput
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const asnError = asnsList.some((asn) => !/^AS\d+$/i.test(asn))
+    ? t("targets.form.errors.asnInvalid")
+    : null;
+
   const hasErrors = Boolean(
     nameError ||
       domainError ||
+      asnError ||
       Object.keys(subdomainErrors).length > 0 ||
       Object.keys(oosErrors).length > 0 ||
       Object.keys(packageErrors).length > 0
@@ -289,6 +300,7 @@ export default function TargetDialog({
         subdomains: cleanedSubdomains,
         outOfScopeSubdomains: cleanedOos,
         packageNames: cleanedPackages,
+        asns: asnsList,
         activeScan,
         settings: {
           userAgent: userAgent.trim() || undefined,
@@ -360,6 +372,7 @@ export default function TargetDialog({
     setUserAgent(initial?.settings?.userAgent ?? "");
     setHeaderName(initial?.settings?.customHeader?.split(":")[0] ?? "");
     setHeaderValue(initial?.settings?.customHeader?.split(":")[1] ?? "");
+    setAsnsInput(initial?.asns?.join(",") ?? "");
 
     setSubdomains(initial?.subdomains && initial.subdomains.length > 0 ? initial.subdomains : [""]);
     setOosSubdomains(
@@ -383,6 +396,7 @@ export default function TargetDialog({
     setUserAgent("");
     setHeaderName("");
     setHeaderValue("");
+    setAsnsInput("");
     setSubdomains([]);
     setOosSubdomains([]);
     setPackageNames([]);
@@ -632,6 +646,21 @@ export default function TargetDialog({
 
               <TabsContent value="advanced">
                 <div className="grid grid-cols-1 gap-5 pt-2">
+                  <div className="grid gap-2">
+                    <Label htmlFor="asns">{t("targets.form.asns")}</Label>
+                    <Input
+                      id="asns"
+                      placeholder="AS12345, AS67890"
+                      value={asnsInput}
+                      onChange={(e) => setAsnsInput(e.target.value)}
+                    />
+                    <p className="text-muted-foreground text-xs">
+                      {t("targets.form.asnsHint")}
+                    </p>
+                    {asnError && (
+                      <p className="text-destructive text-xs font-medium">{asnError}</p>
+                    )}
+                  </div>
                   <div className="grid gap-2">
                     <Label htmlFor="user-agent">User-Agent</Label>
                     <Input

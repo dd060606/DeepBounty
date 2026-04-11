@@ -539,6 +539,10 @@ const targetId = await api.targets.getTargetIdByHostname("api.example.com");
 
 // Iterate through targets
 for (const target of targets) {
+  // Access ASNs for the target
+  if (target.asns && target.asns.length > 0) {
+    console.log(`Target ${target.name} has ASNs: ${target.asns.join(", ")}`);
+  }
 	api.logger.info(`Target: ${target.name} (${target.domain})`);
 	api.logger.info(`Active scan: ${target.activeScan}`);
 	api.logger.info(`Subdomains: ${target.subdomains.join(", ")}`);
