@@ -17,6 +17,7 @@ import {
   Boxes,
   CircleAlert,
   Crosshair,
+  ChartColumn,
   Moon,
   Sun,
 } from "lucide-react";
@@ -65,6 +66,11 @@ export function AppSidebar() {
       title: t("nav.modules"),
       url: "/modules",
       icon: Boxes,
+    },
+    {
+      title: t("nav.analytics"),
+      url: "/metrics",
+      icon: ChartColumn,
     },
     {
       title: t("nav.settings"),

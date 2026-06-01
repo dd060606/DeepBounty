@@ -12,6 +12,7 @@ import Login from "./pages/auth/Login.tsx";
 import AuthSetup from "./pages/auth/AuthSetup.tsx";
 import LostPassword from "./pages/auth/LostPassword.tsx";
 import Targets from "./pages/Targets.tsx";
+import Metrics from "./pages/Metrics.tsx";
 import Settings from "./pages/Settings.tsx";
 
 createRoot(document.getElementById("root")!).render(
@@ -29,6 +30,7 @@ createRoot(document.getElementById("root")!).render(
             <Route path="/alerts" element={<Alerts />} />
             <Route path="/modules" element={<Modules />} />
             <Route path="/targets" element={<Targets />} />
+            <Route path="/metrics" element={<Metrics />} />
             <Route path="/settings" element={<Settings />} />
           </Route>
         </Routes>

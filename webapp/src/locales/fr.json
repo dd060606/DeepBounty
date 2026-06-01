@@ -22,6 +22,7 @@
     "alerts": "Alertes",
     "targets": "Cibles",
     "modules": "Modules",
+    "analytics": "Analytique",
     "settings": "Paramètres",
     "logout": "Déconnexion",
     "lightMode": "Mode clair",
@@ -239,6 +240,59 @@
     "errors": {
       "loadTasks": "Impossible de charger les tâches",
       "updateTask": "Impossible de mettre à jour le statut de la tâche"
+    }
+  },
+  "analytics": {
+    "title": "Analytique",
+    "subtitle": "Mesures de performance des tâches et du pipeline d'événements",
+    "tabs": {
+      "tasks": "Tâches",
+      "events": "Événements"
+    },
+    "range": {
+      "label": "Période",
+      "last24h": "Dernières 24 heures",
+      "last7d": "7 derniers jours",
+      "last30d": "30 derniers jours",
+      "last90d": "90 derniers jours"
+    },
+    "tasks": {
+      "chartTitle": "Temps d'exécution moyen par tâche",
+      "chartHint": "Durée d'exécution mesurée sur le worker, les plus lentes d'abord",
+      "tableTitle": "Détail des temps par tâche",
+      "template": "Tâche",
+      "module": "Module",
+      "runs": "Exécutions",
+      "successRate": "Taux de réussite",
+      "avg": "Moy",
+      "min": "Min",
+      "max": "Max",
+      "p95": "P95",
+      "avgQueue": "Attente file moy.",
+      "noTemplate": "Tâche inconnue",
+      "empty": {
+        "title": "Aucune exécution de tâche",
+        "hint": "Lancez des tâches planifiées et leurs temps apparaîtront ici."
+      }
+    },
+    "events": {
+      "throughputTitle": "Débit d'événements",
+      "throughputHint": "Événements traités par fenêtre d'agrégation, par type",
+      "handlerTitle": "Temps de traitement des handlers",
+      "handlerHint": "Temps moyen et maximum par type",
+      "type": "Type d'événement",
+      "total": "Total d'événements",
+      "avgHandler": "Handler moy.",
+      "maxHandler": "Handler max.",
+      "errors": "Erreurs",
+      "empty": {
+        "title": "Aucune métrique d'événement",
+        "hint": "Le débit d'événements est enregistré chaque minute et apparaîtra ici."
+      }
+    },
+    "errors": {
+      "loadTasks": "Échec du chargement des analytics de tâches",
+      "loadEvents": "Échec du chargement des analytics d'événements"
     }
   },
   "settings": {

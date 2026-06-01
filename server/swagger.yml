@@ -1556,6 +1556,158 @@ paths:
           description: Worker not found
         "401":
           description: Unauthorized
+  # Analytics
+  /metrics/tasks:
+    get:
+      summary: Per-template task execution timing statistics
+      description: |
+        Aggregated performance analytics for task executions over the given time
+        window, grouped by task template. Durations are in milliseconds.
+      tags:
+        - Analytics
+      security:
+        - sessionCookie: []
+      parameters:
+        - name: days
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 365
+            default: 7
+          description: Time window in days to aggregate over
+      responses:
+        "200":
+          description: Per-template timing statistics
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    templateId:
+                      type: integer
+                      nullable: true
+                      example: 1
+                    name:
+                      type: string
+                      nullable: true
+                      example: "Subdomain Discovery"
+                    moduleId:
+                      type: string
+                      nullable: true
+                      example: "subfinder-module"
+                    runs:
+                      type: integer
+                      example: 42
+                    successes:
+                      type: integer
+                      example: 40
+                    failures:
+                      type: integer
+                      example: 2
+                    avgMs:
+                      type: integer
+                      nullable: true
+                      description: Average pure command runtime (ms)
+                      example: 12500
+                    minMs:
+                      type: integer
+                      nullable: true
+                      example: 8000
+                    maxMs:
+                      type: integer
+                      nullable: true
+                      example: 30000
+                    p95Ms:
+                      type: integer
+                      nullable: true
+                      description: 95th percentile command runtime (ms)
+                      example: 28000
+                    avgQueueMs:
+                      type: integer
+                      nullable: true
+                      description: Average time spent waiting in the queue before a worker picked up the task (ms)
+                      example: 350
+        "400":
+          description: Invalid query parameters
+        "401":
+          description: Unauthorized
+  /metrics/events:
+    get:
+      summary: Event throughput and handler timing statistics
+      description: |
+        Aggregated event-bus throughput and per-handler processing time over the
+        given time window, grouped by event type, with a per-window time series
+        for charting. Useful to identify high-volume events that saturate the
+        event loop.
+      tags:
+        - Analytics
+      security:
+        - sessionCookie: []
+      parameters:
+        - name: days
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 365
+            default: 1
+          description: Time window in days to aggregate over
+      responses:
+        "200":
+          description: Per-event-type throughput statistics
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    eventType:
+                      type: string
+                      example: "http:traffic"
+                    totalCount:
+                      type: integer
+                      description: Total events emitted in the window
+                      example: 15234
+                    avgHandlerMs:
+                      type: integer
+                      nullable: true
+                      description: Count-weighted average handler processing time (ms)
+                      example: 12
+                    maxHandlerMs:
+                      type: integer
+                      nullable: true
+                      example: 240
+                    errors:
+                      type: integer
+                      example: 3
+                    series:
+                      type: array
+                      description: Per-flush-window time series (oldest first)
+                      items:
+                        type: object
+                        properties:
+                          windowEnd:
+                            type: string
+                            format: date-time
+                          count:
+                            type: integer
+                            example: 254
+                          avgHandlerMs:
+                            type: integer
+                            example: 11
+                          maxHandlerMs:
+                            type: integer
+                            example: 90
+        "400":
+          description: Invalid query parameters
+        "401":
+          description: Unauthorized
   # Callbacks
   /cb/{uuid}:
     parameters:

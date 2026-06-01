@@ -18,6 +18,7 @@ import { getMissingTools } from "@/utils/taskUtils.js";
 import { getTaskTemplateService } from "./taskTemplateService.js";
 import Logger from "@/utils/logger.js";
 import { detectTargetId, extractDomainsFromCommands } from "@/utils/domains.js";
+import { recordExecution } from "@/services/analytics.js";
 
 const logger = new Logger("Tasks-Manager");
 const toolKey = (tool: Tool) => `${tool.name}@${tool.version}`;
@@ -914,6 +915,7 @@ class TaskManager {
           this.registry.updateTaskExecution(execution.executionId, {
             workerId: chosen.id,
             status: "running",
+            startedAt: new Date(),
           });
           // Get template name for logging
           const templateName = execution.templateId
@@ -984,8 +986,10 @@ class TaskManager {
     }
 
     // Update execution status
+    const completedAt = new Date();
     this.registry.updateTaskExecution(execution.executionId, {
       status: result.success ? "completed" : "failed",
+      completedAt,
     });
 
     // Get updated execution for listeners
@@ -994,6 +998,27 @@ class TaskManager {
 
     const targetId = execution.targetId ?? result.targetId;
     const templateId = execution.templateId ?? updatedExecution.templateId;
+
+    // Persist performance analytics (fire-and-forget; never blocks completion)
+    const startedAt = updatedExecution.startedAt;
+    const queuedAt = updatedExecution.createdAt;
+    const moduleId =
+      this.registry.getScheduledTask(execution.scheduledTaskId)?.moduleId ?? null;
+    void recordExecution({
+      templateId: templateId ?? null,
+      moduleId,
+      targetId: targetId ?? null,
+      workerId,
+      status: result.success ? "completed" : "failed",
+      success: result.success,
+      queuedAt,
+      startedAt,
+      completedAt,
+      queueWaitMs:
+        startedAt && queuedAt ? startedAt.getTime() - queuedAt.getTime() : null,
+      totalMs: startedAt ? completedAt.getTime() - startedAt.getTime() : null,
+      durationMs: result.durationMs ?? null,
+    });
 
     if (result.success) {
       logger.info(

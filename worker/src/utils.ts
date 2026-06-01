@@ -34,7 +34,8 @@ export function createTaskResult(
   taskExecution: TaskExecution,
   success: boolean,
   output?: string,
-  error?: string
+  error?: string,
+  durationMs?: number
 ) {
   return {
     executionId: taskExecution.executionId,
@@ -43,5 +44,6 @@ export function createTaskResult(
     success,
     output,
     error,
+    durationMs,
   };
 }

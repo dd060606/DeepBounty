@@ -8,6 +8,8 @@ import config, { generateRandomKey } from "./utils/config.js";
 import { requireAuth } from "./middlewares/auth.js";
 import { initDatabase } from "@/db/database.js";
 import { initModules } from "./modules/loader.js";
+import { startAnalyticsCleanup } from "./services/analytics.js";
+import { getEventMetrics } from "./events/eventMetrics.js";
 import Setup from "./routes/setup.js";
 import Auth from "./routes/auth.js";
 import Targets from "./routes/targets.js";
@@ -20,6 +22,7 @@ import Notifications from "./routes/notifications.js";
 import Scope from "./routes/scope.js";
 import Ingest from "./routes/ingest.js";
 import Callbacks from "./routes/callbacks.js";
+import Analytics from "./routes/analytics.js";
 
 // Initialize the app
 function initApp() {
@@ -28,6 +31,10 @@ function initApp() {
   initDatabase().then(() => {
     // Once the DB is ready, initialize modules
     initModules();
+    // Start the periodic retention sweep for performance analytics
+    startAnalyticsCleanup();
+    // Start the periodic flush of in-memory event-throughput metrics
+    getEventMetrics().start();
   });
 }
 initApp();
@@ -100,6 +107,7 @@ app.use("/tasks", requireAuth, Tasks);
 app.use("/settings", requireAuth, Settings);
 app.use("/workers", requireAuth, Workers);
 app.use("/notifications", requireAuth, Notifications);
+app.use("/metrics", requireAuth, Analytics);
 app.use("/scope", Scope);
 app.use("/ingest", Ingest);
 app.use("/cb", Callbacks); // Public callback endpoint (no auth required)

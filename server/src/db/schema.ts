@@ -10,6 +10,7 @@ import {
   smallint,
   unique,
   pgEnum,
+  index,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 
@@ -194,3 +195,69 @@ export const moduleCallbacks = pgTable("module_callbacks", {
   // When the callback expires (null = never)
   expiresAt: timestamp({ mode: "string" }),
 });
+
+// Task execution history (performance analytics)
+// One row per completed/failed task execution. No hard FK to task_templates
+// so history survives template deletion. Pruned by a retention sweep.
+export const taskExecutions = pgTable(
+  "task_executions",
+  {
+    id: serial().primaryKey().notNull(),
+    // Reference to the task template (nullable; kept even if template is deleted)
+    templateId: integer(),
+    // Module that owns the template
+    moduleId: text(),
+    // Target this execution ran for (if any)
+    targetId: integer(),
+    // Worker that executed the task
+    workerId: integer(),
+    // Final status: "completed" or "failed"
+    status: text().notNull(),
+    success: boolean().notNull(),
+    // When the execution was created (queued)
+    queuedAt: timestamp({ mode: "string" }),
+    // When the execution was sent to a worker (started)
+    startedAt: timestamp({ mode: "string" }),
+    // When the result was received (completed/failed)
+    completedAt: timestamp({ mode: "string" })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    // Queue wait = startedAt - queuedAt (ms)
+    queueWaitMs: integer(),
+    // End-to-end on worker = completedAt - startedAt (ms)
+    totalMs: integer(),
+    // Pure command runtime measured on the worker (ms)
+    durationMs: integer(),
+  },
+  (table) => [
+    index("task_executions_templateId_idx").on(table.templateId),
+    index("task_executions_completedAt_idx").on(table.completedAt),
+  ]
+);
+
+// Aggregated event throughput metrics (performance analytics)
+// One row per event type per flush window. Written by a periodic flush of
+// in-memory counters so write volume stays bounded regardless of event rate.
+export const eventMetrics = pgTable(
+  "event_metrics",
+  {
+    id: serial().primaryKey().notNull(),
+    // Event type (e.g. "http:traffic", "http:js")
+    eventType: text().notNull(),
+    // Start of the aggregation window
+    windowStart: timestamp({ mode: "string" }).notNull(),
+    // End of the aggregation window
+    windowEnd: timestamp({ mode: "string" })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    // Number of events emitted during the window
+    count: integer().default(0).notNull(),
+    // Average handler processing time during the window (ms)
+    avgHandlerMs: integer().default(0).notNull(),
+    // Max handler processing time during the window (ms)
+    maxHandlerMs: integer().default(0).notNull(),
+    // Number of handler errors during the window
+    errors: integer().default(0).notNull(),
+  },
+  (table) => [index("event_metrics_windowEnd_idx").on(table.windowEnd)]
+);

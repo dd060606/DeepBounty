@@ -6,6 +6,7 @@ import {
   IEventBus,
   EventMetadata,
 } from "@deepbounty/sdk";
+import { getEventMetrics } from "./eventMetrics.js";
 
 const logger = new Logger("EventBus");
 
@@ -61,26 +62,12 @@ export class EventBus implements IEventBus {
   emit<K extends keyof CoreEvents>(event: K, data: CoreEvents[K]): void;
   emit<T = any>(event: string, data: T): void;
   emit(event: string, data: any): void {
-    const handlers = this.listeners.get(event);
-    if (!handlers || handlers.size === 0) return;
-
     // Wrap event data with metadata (origin="server" for global bus)
     const eventMetadata: EventMetadata<any> = {
       origin: "server",
       data,
     };
-
-    // Process each handler with error isolation
-    handlers.forEach((handler) => {
-      Promise.resolve().then(async () => {
-        try {
-          await handler(eventMetadata);
-        } catch (error) {
-          // Error isolation - log but don't throw to prevent cascading failures
-          logger.error(`Error in handler for event '${event}':`, error);
-        }
-      });
-    });
+    this.dispatch(event, eventMetadata);
   }
 
   /**
@@ -89,17 +76,34 @@ export class EventBus implements IEventBus {
    * @internal
    */
   emitRaw(event: string, eventMetadata: EventMetadata<any>): void {
+    this.dispatch(event, eventMetadata);
+  }
+
+  /**
+   * Dispatch an event to all handlers with error isolation and metrics.
+   * Always counts the emit (even with no listeners) so throughput reflects
+   * real event volume; handler timing is recorded per invocation.
+   */
+  private dispatch(event: string, eventMetadata: EventMetadata<any>): void {
+    const metrics = getEventMetrics();
+    metrics.recordEmit(event);
+
     const handlers = this.listeners.get(event);
     if (!handlers || handlers.size === 0) return;
 
-    // Process each handler with rate limiting and error isolation
+    // Process each handler with error isolation
     handlers.forEach((handler) => {
       Promise.resolve().then(async () => {
+        const start = Date.now();
+        let errored = false;
         try {
           await handler(eventMetadata);
         } catch (error) {
+          errored = true;
           // Error isolation - log but don't throw to prevent cascading failures
           logger.error(`Error in handler for event '${event}':`, error);
+        } finally {
+          metrics.recordHandler(event, Date.now() - start, errored);
         }
       });
     });

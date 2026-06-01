@@ -37,16 +37,20 @@ export class ModuleEventBus implements IEventBus {
   ): EventSubscription;
   subscribe<T = any>(event: string, handler: EventHandler<T>): EventSubscription;
   subscribe(event: string, handler: EventHandler): EventSubscription {
-    // Wrap handler to use module-specific rate limit
+    // Wrap handler to use module-specific rate limit.
+    // Return the limited promise so the global bus awaits real completion. This
+    // applies genuine backpressure: while a module is at its concurrency limit,
+    // the bus dispatch awaits, preventing the p-limit queue from growing
+    // unbounded under high event volume (the cause of event-loop starvation).
+    // Events are throttled, never dropped.
     const safeHandler = async (data: any) => {
-      this.limit(async () => {
+      return this.limit(async () => {
         try {
           await handler(data);
         } catch (error) {
           this.logger.error(`Error in handler for event '${event}':`, error);
         }
       });
-      return Promise.resolve();
     };
 
     // Subscribe to global bus with the wrapped handler

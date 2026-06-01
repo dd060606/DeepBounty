@@ -75,8 +75,12 @@ export interface TaskExecution {
 	workerId?: number;
 	// Execution status
 	status: "pending" | "running" | "completed" | "failed";
-	// When this execution was created
+	// When this execution was created (queued)
 	createdAt: Date;
+	// When this execution was sent to a worker (started running)
+	startedAt?: Date;
+	// When the worker result was received (completed/failed)
+	completedAt?: Date;
 	// Task content (snapshot from scheduled task)
 	content: TaskContent;
 	// Target ID (if this execution is for a specific target)
@@ -95,6 +99,8 @@ export interface TaskResult {
 	error?: string;
 	// Target ID (if this execution was for a specific target)
 	targetId?: number;
+	// Pure command execution time measured on the worker, in milliseconds
+	durationMs?: number;
 	// Custom data from the execution
 	customData?: Record<string, any>;
 }

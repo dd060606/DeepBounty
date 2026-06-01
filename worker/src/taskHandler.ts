@@ -24,6 +24,7 @@ export const executeTask = async (task: TaskExecution): Promise<TaskResult> => {
     logger.info(`Running combined commands: ${combinedScript}`);
   }
 
+  const startedAt = Date.now();
   try {
     const { stdout, stderr } = await execAsync(combinedScript, {
       cwd: "/tools",
@@ -36,7 +37,7 @@ export const executeTask = async (task: TaskExecution): Promise<TaskResult> => {
     // Extract result if needed
     const output = extractResult(stdout, task.content.extractResult || false);
     logger.info(`Task ${task.executionId} completed successfully`);
-    return createTaskResult(task, true, output);
+    return createTaskResult(task, true, output, undefined, Date.now() - startedAt);
   } catch (error: any) {
     logger.error(`Commands failed`, error);
     const combinedOutput = `${error?.stdout ?? ""}${error?.stderr ?? ""}`.trim() || undefined;
@@ -44,7 +45,8 @@ export const executeTask = async (task: TaskExecution): Promise<TaskResult> => {
       task,
       false,
       combinedOutput,
-      error?.message || "Command execution failed"
+      error?.message || "Command execution failed",
+      Date.now() - startedAt
     );
   }
 };
