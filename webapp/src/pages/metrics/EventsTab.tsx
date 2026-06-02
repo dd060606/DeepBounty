@@ -57,7 +57,7 @@ export default function EventsTab({ days }: { days: number }) {
   useEffect(() => {
     let cancelled = false;
     setStats(null);
-    ApiClient.get<EventStat[]>("/metrics/events", { params: { days } })
+    ApiClient.get<EventStat[]>("/metrics/evts", { params: { days } })
       .then((res) => {
         if (!cancelled) setStats(res.data);
       })

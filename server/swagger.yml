@@ -1635,7 +1635,7 @@ paths:
           description: Invalid query parameters
         "401":
           description: Unauthorized
-  /metrics/events:
+  /metrics/evts:
     get:
       summary: Event throughput and handler timing statistics
       description: |

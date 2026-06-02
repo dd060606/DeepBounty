@@ -16,7 +16,7 @@ export async function getTaskAnalytics(req: Request, res: Response) {
   }
 }
 
-// GET /metrics/events?days=1 - Event throughput and handler timing statistics
+// GET /metrics/evts?days=1 - Event throughput and handler timing statistics
 export async function getEventAnalytics(req: Request, res: Response) {
   try {
     const days = (req.query.days as unknown as number) ?? 1;
