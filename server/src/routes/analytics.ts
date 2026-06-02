@@ -8,6 +8,6 @@ const router = Router();
 // GET /metrics/tasks - Per-template task execution timing statistics
 router.get("/tasks", validateQuery(analyticsRangeSchema), getTaskAnalytics);
 // GET /metrics/evts - Event throughput and handler timing statistics
-router.get("/events", validateQuery(analyticsRangeSchema), getEventAnalytics);
+router.get("/evts", validateQuery(analyticsRangeSchema), getEventAnalytics);
 
 export default router;
