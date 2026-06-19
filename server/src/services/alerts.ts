@@ -4,8 +4,25 @@ import Logger from "../utils/logger.js";
 import { sql } from "drizzle-orm";
 import { sendAlertNotification } from "./notifications/notifier.js";
 import { detectTargetId } from "@/utils/domains.js";
+import { enqueueFailedAlert, type PendingAlertRow } from "./alertQueue.js";
 
 const logger = new Logger("Alerts");
+
+/**
+ * Commit a fully-resolved alert row to the database.
+ * Marked as a write so it gets the durable retry budget; throws if it still
+ * fails so callers know the row was not committed.
+ */
+export async function insertAlertRow(
+  row: Omit<PendingAlertRow, "enqueuedAt">
+): Promise<Alert & { targetId: number | null }> {
+  return queryOne<Alert & { targetId: number | null }>(
+    sql`INSERT INTO alerts ("targetId", name, subdomain, score, confirmed, description, endpoint)
+     VALUES (${row.targetId}, ${row.name}, ${row.subdomain}, ${row.score}, ${row.confirmed}, ${row.description}, ${row.endpoint})
+     RETURNING id, "targetId", name, subdomain, score, confirmed, description, endpoint, "createdAt"`,
+    { write: true, label: "insert-alert" }
+  );
+}
 
 interface CreateAlertBaseParams {
   name: string;
@@ -81,12 +98,25 @@ export async function createAlert(alertToCreate: CreateAlertParams): Promise<Ale
       );
     }
 
-    // Insert the alert
-    const alert = await queryOne<Alert & { targetId: number | null }>(
-      sql`INSERT INTO alerts ("targetId", name, subdomain, score, confirmed, description, endpoint)
-       VALUES (${targetId}, ${name}, ${subdomainValue}, ${score}, ${confirmed}, ${description}, ${endpoint})
-       RETURNING id, "targetId", name, subdomain, score, confirmed, description, endpoint, "createdAt"`
-    );
+    // Insert the alert. If it cannot be committed, persist it to the durable queue so
+    // the finding is retried in the background.
+    const rowToInsert = {
+      targetId,
+      name,
+      subdomain: subdomainValue,
+      score,
+      confirmed,
+      description,
+      endpoint,
+    };
+    let alert: Alert & { targetId: number | null };
+    try {
+      alert = await insertAlertRow(rowToInsert);
+    } catch (insertError) {
+      logger.error(`Failed to commit alert "${name}"; queued for durable retry:`, insertError);
+      enqueueFailedAlert(rowToInsert);
+      return null;
+    }
 
     // Enrich with target details for response
     const target =

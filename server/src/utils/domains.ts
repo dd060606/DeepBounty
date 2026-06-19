@@ -1,16 +1,6 @@
-import { query, queryOne } from "@/db/database.js";
-import { sql } from "drizzle-orm";
 import config from "./config.js";
-
-const CACHE_TTL_MS = 60000;
-
-// Simple in-memory Maps to hold our cached database answers
-const targetIdCache = new Map<string, { value: number | null; timestamp: number }>();
-const scopeCache = new Map<string, { value: boolean; timestamp: number }>();
-
-// In-flight promises to prevent cache stampedes / thundering herd during mass ingestion
-const targetIdInFlight = new Map<string, Promise<number | null>>();
-const scopeInFlight = new Map<string, Promise<boolean>>();
+import { getTargetsWithDetails } from "@/services/targets.js";
+import type { Target } from "@deepbounty/sdk/types";
 
 export function normalizeDomain(input: string): string {
   const trimmed = input.trim();
@@ -93,141 +83,107 @@ export function extractDomainsFromCommands(commands: string[]): string[] {
   return Array.from(domains);
 }
 
-// Detect target ID from subdomain
-export async function detectTargetId(subdomain: string): Promise<number | null> {
-  const now = Date.now();
-  const cached = targetIdCache.get(subdomain);
-
-  // If we have a fresh cached value, return it instantly!
-  if (cached && now - cached.timestamp < CACHE_TTL_MS) {
-    return cached.value;
-  }
-
-  // If already querying this subdomain, wait for that promise to resolve
-  const inFlight = targetIdInFlight.get(subdomain);
-  if (inFlight) {
-    return await inFlight;
-  }
-
-  // Otherwise, ask the database and store the result
-  const promise = _detectTargetId(subdomain).then((result) => {
-    targetIdCache.set(subdomain, { value: result, timestamp: Date.now() });
-    targetIdInFlight.delete(subdomain);
-    return result;
-  }).catch((err) => {
-    targetIdInFlight.delete(subdomain);
-    throw err;
-  });
-
-  targetIdInFlight.set(subdomain, promise);
-  return await promise;
+interface ScopeIndex {
+  // Identity of the targets array the index was built from.
+  source: Target[];
+  // Target detection
+  domainToId: Map<string, number>;
+  subToId: Map<string, number>;
+  wildcards: { base: string; id: number; domain: string }[];
+  domainsByLenDesc: { id: number; domain: string }[];
+  // Scope checking
+  activeDomains: Set<string>;
+  activeSubScope: Map<string, boolean>;
 }
 
-// Check if a hostname is in scope with caching
-export async function isHostnameInScope(hostname: string): Promise<boolean> {
-  const normalized = normalizeDomain(hostname);
-  if (!isValidDomain(normalized)) return false;
+let scopeIndex: ScopeIndex | null = null;
 
-  const now = Date.now();
-  const cached = scopeCache.get(normalized);
+function buildScopeIndex(targets: Target[]): ScopeIndex {
+  const domainToId = new Map<string, number>();
+  const subToId = new Map<string, number>();
+  const wildcards: { base: string; id: number; domain: string }[] = [];
+  const domainsByLenDesc: { id: number; domain: string }[] = [];
+  const activeDomains = new Set<string>();
+  const activeSubScope = new Map<string, boolean>();
 
-  // Return instantly if cached
-  if (cached && now - cached.timestamp < CACHE_TTL_MS) {
-    return cached.value;
-  }
+  for (const t of targets) {
+    if (!domainToId.has(t.domain)) domainToId.set(t.domain, t.id);
+    domainsByLenDesc.push({ id: t.id, domain: t.domain });
+    if (t.activeScan) activeDomains.add(t.domain);
 
-  // If already querying this hostname, wait for that promise to resolve
-  const inFlight = scopeInFlight.get(normalized);
-  if (inFlight) {
-    return await inFlight;
-  }
+    const subs: { s: string; oos: boolean }[] = [
+      ...(t.subdomains ?? []).map((s) => ({ s, oos: false })),
+      ...(t.outOfScopeSubdomains ?? []).map((s) => ({ s, oos: true })),
+    ];
 
-  // Ask database and store the result
-  const promise = _isHostnameInScope(normalized).then((result) => {
-    scopeCache.set(normalized, { value: result, timestamp: Date.now() });
-    scopeInFlight.delete(normalized);
-    return result;
-  }).catch((err) => {
-    scopeInFlight.delete(normalized);
-    throw err;
-  });
-
-  scopeInFlight.set(normalized, promise);
-  return await promise;
-}
-
-/**
- * Detect target ID from subdomain by checking:
- * 1. Exact match with target's main domain
- * 2. Exact match with registered subdomains
- * 3. Wildcard match with registered subdomain patterns (*.example.com)
- * 4. Parent domain match (check if subdomain ends with any target domain)
- */
-export async function _detectTargetId(subdomain: string): Promise<number | null> {
-  // 1. Check if subdomain matches a target's main domain exactly
-  // Combine 1 & 2 into a single fast query to reduce database roundtrips, keeping priority
-  const directMatch = await queryOne<{ id: number }>(
-    sql`
-      SELECT id, 1 as priority FROM targets WHERE domain = ${subdomain}
-      UNION ALL
-      SELECT "targetId" as id, 2 as priority FROM targets_subdomains WHERE subdomain = ${subdomain}
-      ORDER BY priority ASC
-      LIMIT 1
-    `
-  );
-
-  if (directMatch) {
-    return directMatch.id;
-  }
-
-  // 3. Combine Wildcards and Fallback Checks into a single memory pass
-  // This fetches only the necessary rules to evaluate wildcard domains locally
-  const allTargetsAndWildcards = await query<{ id: number; domain: string; subdomain: string | null }>(
-    sql`
-      SELECT id, domain, NULL as subdomain FROM targets
-      UNION ALL
-      SELECT t.id, t.domain, ts.subdomain
-      FROM targets_subdomains ts
-      JOIN targets t ON t.id = ts."targetId"
-      WHERE ts.subdomain LIKE '*%'
-    `
-  );
-
-  // We sort by length descending to match the most specific domain first.
-  allTargetsAndWildcards.sort((a, b) => b.domain.length - a.domain.length);
-
-  // First pass: Wildcards only (Priority 3)
-  for (const entry of allTargetsAndWildcards) {
-    if (entry.subdomain && entry.subdomain.startsWith("*.")) {
-      const baseDomain = entry.subdomain.substring(2);
-
-      // Skip if wildcard matches target's main domain (fallback will handle this)
-      if (baseDomain === entry.domain) {
-        continue;
+    for (const { s, oos } of subs) {
+      if (!subToId.has(s)) subToId.set(s, t.id);
+      if (s.startsWith("*.")) {
+        wildcards.push({ base: s.substring(2), id: t.id, domain: t.domain });
       }
-
-      if (subdomain.endsWith(`.${baseDomain}`)) {
-        const prefix = subdomain.substring(0, subdomain.length - baseDomain.length - 1);
-        if (prefix.length > 0 && !prefix.includes("*")) {
-          return entry.id;
-        }
-      }
-
-      if (subdomain === baseDomain) {
-        return entry.id;
+      if (t.activeScan) {
+        // On conflict prefer in-scope so we never accidentally exclude a real finding.
+        const prev = activeSubScope.get(s);
+        if (prev === undefined || prev === true) activeSubScope.set(s, oos);
       }
     }
   }
 
-  // Second pass: Fallback main domains only (Priority 4)
-  for (const entry of allTargetsAndWildcards) {
-    if (!entry.subdomain) {
-      // 4. Fallback: Check if the subdomain belongs to ANY target's main domain
-      // This handles cases like "cdn.domain.com" where "domain.com" is a target
-      // but "cdn.domain.com" is not explicitly in targets_subdomains.
-      if (subdomain === entry.domain || subdomain.endsWith(`.${entry.domain}`)) {
-        return entry.id;
-      }
+  // Most-specific-first ordering.
+  wildcards.sort((a, b) => b.domain.length - a.domain.length);
+  domainsByLenDesc.sort((a, b) => b.domain.length - a.domain.length);
+
+  return {
+    source: targets,
+    domainToId,
+    subToId,
+    wildcards,
+    domainsByLenDesc,
+    activeDomains,
+    activeSubScope,
+  };
+}
+
+async function getScopeIndex(): Promise<ScopeIndex> {
+  const targets = await getTargetsWithDetails();
+  if (scopeIndex && scopeIndex.source === targets) return scopeIndex;
+  scopeIndex = buildScopeIndex(targets);
+  return scopeIndex;
+}
+
+/**
+ * Detect target ID from a subdomain/hostname by checking, in priority order:
+ * 1. Exact match with a target's main domain
+ * 2. Exact match with a registered subdomain
+ * 3. Wildcard match with a registered subdomain pattern (*.example.com)
+ * 4. Parent-domain match (hostname ends with any target's main domain)
+ */
+export async function detectTargetId(subdomain: string): Promise<number | null> {
+  const idx = await getScopeIndex();
+
+  // 1 & 2: exact domain match wins over exact subdomain match.
+  const domainId = idx.domainToId.get(subdomain);
+  if (domainId !== undefined) return domainId;
+  const subId = idx.subToId.get(subdomain);
+  if (subId !== undefined) return subId;
+
+  // 3: wildcard patterns (most specific first).
+  for (const entry of idx.wildcards) {
+    const baseDomain = entry.base;
+    // The main-domain case is handled by the fallback pass below.
+    if (baseDomain === entry.domain) continue;
+
+    if (subdomain.endsWith(`.${baseDomain}`)) {
+      const prefix = subdomain.substring(0, subdomain.length - baseDomain.length - 1);
+      if (prefix.length > 0 && !prefix.includes("*")) return entry.id;
+    }
+    if (subdomain === baseDomain) return entry.id;
+  }
+
+  // 4: fallback: hostname belongs to any target's main domain.
+  for (const entry of idx.domainsByLenDesc) {
+    if (subdomain === entry.domain || subdomain.endsWith(`.${entry.domain}`)) {
+      return entry.id;
     }
   }
 
@@ -235,57 +191,39 @@ export async function _detectTargetId(subdomain: string): Promise<number | null>
 }
 
 /**
- * Check if a hostname is in scope
+ * Check if a hostname is within scope of an active target,
+ * honoring out-of-scope rules with most-specific-match-wins semantics.
  */
-export async function _isHostnameInScope(hostname: string): Promise<boolean> {
+export async function isHostnameInScope(hostname: string): Promise<boolean> {
   const normalized = normalizeDomain(hostname);
   if (!isValidDomain(normalized)) return false;
 
+  const idx = await getScopeIndex();
+
+  // Exact match with an active target's main domain.
+  if (idx.activeDomains.has(normalized)) return true;
+
+  // Build candidate rules: the hostname itself plus wildcards for it and all parents.
   const parts = normalized.split(".");
-  const checks: string[] = [];
-
-  // Exact match of the hostname itself
-  checks.push(normalized);
-
-  // Wildcards for hostname and all parents
+  const checks: string[] = [normalized];
   for (let i = 0; i < parts.length; i++) {
     const domain = parts.slice(i).join(".");
     if (!isValidDomain(domain)) continue;
     checks.push(`*.${domain}`);
   }
 
-  if (checks.length === 0) return false;
-
-  // Fetch target match and all matching rules in a single query
-  const results = await query<{ isTargetMatch: boolean; isOutOfScope: boolean; subdomain: string }>(
-    sql`
-    SELECT true as "isTargetMatch", false as "isOutOfScope", domain as "subdomain"
-    FROM targets WHERE domain = ${normalized} AND "activeScan" = true
-    UNION ALL
-    SELECT false as "isTargetMatch", ts."isOutOfScope", ts.subdomain
-    FROM targets_subdomains ts
-    JOIN targets t ON t.id = ts."targetId"
-    WHERE ts.subdomain IN ${checks}
-      AND t."activeScan" = true
-  `
-  );
-
-  const targetMatch = results.find(r => r.isTargetMatch);
-  if (targetMatch) return true;
-
-  const matches = results.filter(r => !r.isTargetMatch);
+  // Collect matching subdomain rules from active targets.
+  const matches: { subdomain: string; isOutOfScope: boolean }[] = [];
+  for (const c of checks) {
+    const oos = idx.activeSubScope.get(c);
+    if (oos !== undefined) matches.push({ subdomain: c, isOutOfScope: oos });
+  }
 
   if (matches.length === 0) return false;
 
-  // Determine "Most Specific Match"
-  // We sort by length descending.
-  // "*.cdn.domain.com" (length 16) is more specific than "*.domain.com" (length 12)
+  // Most specific rule wins (e.g. "*.cdn.domain.com" over "*.domain.com").
   matches.sort((a, b) => b.subdomain.length - a.subdomain.length);
-
-  const bestMatch = matches[0];
-
-  // Return true only if the most specific rule is NOT out of scope
-  return !bestMatch.isOutOfScope;
+  return !matches[0].isOutOfScope;
 }
 
 /*

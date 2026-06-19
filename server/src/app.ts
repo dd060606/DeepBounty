@@ -6,10 +6,14 @@ import session from "express-session";
 import cors from "cors";
 import config, { generateRandomKey } from "./utils/config.js";
 import { requireAuth } from "./middlewares/auth.js";
-import { initDatabase } from "@/db/database.js";
+import { initDatabase, startPoolMonitor } from "@/db/database.js";
 import { initModules } from "./modules/loader.js";
 import { startAnalyticsCleanup } from "./services/analytics.js";
 import { getEventMetrics } from "./events/eventMetrics.js";
+import { startAlertQueue } from "./services/alertQueue.js";
+import { insertAlertRow } from "./services/alerts.js";
+import { startEventLoopMonitor } from "./utils/eventLoopMonitor.js";
+import type { NextFunction, Request, Response } from "express";
 import Setup from "./routes/setup.js";
 import Auth from "./routes/auth.js";
 import Targets from "./routes/targets.js";
@@ -27,6 +31,9 @@ import Analytics from "./routes/analytics.js";
 // Initialize the app
 function initApp() {
   initLogger();
+  // Start runtime-health monitors (independent of the DB).
+  startPoolMonitor();
+  startEventLoopMonitor();
   // Initialize the database
   initDatabase().then(() => {
     // Once the DB is ready, initialize modules
@@ -35,6 +42,11 @@ function initApp() {
     startAnalyticsCleanup();
     // Start the periodic flush of in-memory event-throughput metrics
     getEventMetrics().start();
+    // Start the durable alert queue: retries any alerts that could not be
+    // committed so security findings are never lost.
+    startAlertQueue(async (row) => {
+      await insertAlertRow(row);
+    });
   });
 }
 initApp();
@@ -111,5 +123,33 @@ app.use("/metrics", requireAuth, Analytics);
 app.use("/scope", Scope);
 app.use("/ingest", Ingest);
 app.use("/cb", Callbacks); // Public callback endpoint (no auth required)
+
+// Global error handler.
+app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+  const errLogger = new Logger("HTTP");
+
+  // Client aborted the request before the body was fully received.
+  if (
+    err?.type === "request.aborted" ||
+    err?.code === "ECONNABORTED" ||
+    err?.message === "request aborted"
+  ) {
+    errLogger.warn("Request aborted by client before body was fully received.");
+    return;
+  }
+
+  // Malformed JSON / payload-too-large from body-parser.
+  if (
+    err?.type === "entity.parse.failed" ||
+    err?.type === "entity.too.large" ||
+    err?.status === 400
+  ) {
+    if (!res.headersSent) res.status(400).json({ error: "Invalid request body" });
+    return;
+  }
+
+  errLogger.error("Unhandled request error:", err);
+  if (!res.headersSent) res.status(500).json({ error: "Internal server error" });
+});
 
 export default app;

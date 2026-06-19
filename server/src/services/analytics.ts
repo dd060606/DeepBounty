@@ -78,7 +78,7 @@ export async function recordExecution(record: ExecutionRecord): Promise<void> {
         ${record.totalMs ?? null},
         ${record.durationMs ?? null}
       )
-    `);
+    `, { label: "record-execution" });
   } catch (error) {
     logger.error("Failed to record task execution analytics:", error);
   }

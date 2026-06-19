@@ -90,7 +90,7 @@ class EventMetricsCollector {
             ${Math.round(c.maxHandlerMs)},
             ${c.errors}
           )
-        `);
+        `, { label: "event-metrics-flush" });
       }
     } catch (error) {
       logger.error("Failed to flush event metrics:", error);

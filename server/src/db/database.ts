@@ -19,6 +19,9 @@ const pool = new Pool({
   // Close idle clients after 30 seconds
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 10000,
+  // Server-side ceiling so a single runaway query can never pin a pooled
+  // connection indefinitely and cascade into pool exhaustion.
+  statement_timeout: 30000,
 });
 
 // This prevents the unhandled promise rejection that crashes the server when the database connection is lost
@@ -28,6 +31,48 @@ pool.on("error", (err) => {
 
 // Pass the pool into Drizzle
 const db = drizzle(pool);
+
+// Threshold above which a query is logged as slow (helps pinpoint lag sources).
+const SLOW_QUERY_MS = Number(process.env.DB_SLOW_QUERY_MS) || 1000;
+
+/** Live pool saturation snapshot. waitingCount > 0 means requests are queued for a connection. */
+export function getPoolStats(): { total: number; idle: number; waiting: number; max: number } {
+  return {
+    total: pool.totalCount,
+    idle: pool.idleCount,
+    waiting: pool.waitingCount,
+    max: 50,
+  };
+}
+
+let poolMonitorTimer: NodeJS.Timeout | null = null;
+
+/**
+ * Periodically log pool saturation. Logs at WARN whenever requests are waiting for a connection.
+ */
+export function startPoolMonitor(intervalMs = 15000): void {
+  if (poolMonitorTimer) return;
+  poolMonitorTimer = setInterval(() => {
+    const { total, idle, waiting, max } = getPoolStats();
+    if (waiting > 0) {
+      logger.warn(
+        `Pool saturated: ${waiting} request(s) waiting for a connection (in-use=${total - idle}/${max}, idle=${idle}).`
+      );
+    }
+  }, intervalMs);
+  poolMonitorTimer.unref?.();
+}
+
+//  SQL object to text for slow-query diagnostics.
+function renderSql(q: SQL): string {
+  try {
+    const text = (db as any).dialect?.sqlToQuery?.(q)?.sql as string | undefined;
+    if (!text) return "<unknown>";
+    return text.length > 300 ? `${text.slice(0, 300)}…` : text;
+  } catch {
+    return "<unrenderable>";
+  }
+}
 
 // Wait for the database to be ready (with retry)
 async function waitForDatabaseReady() {
@@ -56,8 +101,16 @@ export async function initDatabase() {
   }
 }
 
-const MAX_RETRIES = 3;
+const READ_MAX_RETRIES = 3;
+const WRITE_MAX_RETRIES = 8;
 const RETRY_DELAY_MS = 500;
+
+interface QueryOptions {
+  // Marks the statement as a write so it gets the durable retry budget.
+  write?: boolean;
+  // Optional label surfaced in slow-query logs.
+  label?: string;
+}
 
 function collectErrorDetails(error: any): {
   code?: string;
@@ -131,21 +184,22 @@ function isRetryableDbError(error: any): { retryable: boolean; reason: string } 
 }
 
 // Handle execution with retries
-async function withRetry<T>(operation: () => Promise<T>): Promise<T> {
-  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+async function withRetry<T>(operation: () => Promise<T>, isWrite: boolean): Promise<T> {
+  const maxRetries = isWrite ? WRITE_MAX_RETRIES : READ_MAX_RETRIES;
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       return await operation();
     } catch (error: any) {
       const details = collectErrorDetails(error);
       const retry = isRetryableDbError(error);
 
-      if (retry.retryable && attempt < MAX_RETRIES) {
-        // Calculate Exponential Backoff with Jitter (e.g., 500ms, 1000ms, 1500ms + random 0-200ms)
+      if (retry.retryable && attempt < maxRetries) {
+        // Exponential backoff with jitter.
         const jitter = Math.floor(Math.random() * 200);
         const delayMs = RETRY_DELAY_MS * attempt + jitter;
 
         logger.warn(
-          `Database query failed (attempt ${attempt}/${MAX_RETRIES}, reason=${retry.reason}, code=${details.code || "n/a"}). Retrying in ${delayMs}ms...`
+          `Database ${isWrite ? "write" : "query"} failed (attempt ${attempt}/${maxRetries}, reason=${retry.reason}, code=${details.code || "n/a"}). Retrying in ${delayMs}ms...`
         );
 
         await new Promise((res) => setTimeout(res, delayMs));
@@ -162,18 +216,45 @@ async function withRetry<T>(operation: () => Promise<T>): Promise<T> {
   throw new Error("Unreachable code reached in withRetry");
 }
 
+// Time an execution and warn if it crosses the slow-query threshold.
+async function runTimed<T>(
+  q: SQL,
+  opts: QueryOptions | undefined,
+  run: () => Promise<T>
+): Promise<T> {
+  const start = Date.now();
+  try {
+    return await run();
+  } finally {
+    const elapsed = Date.now() - start;
+    if (elapsed >= SLOW_QUERY_MS) {
+      logger.warn(
+        `Slow query (${elapsed}ms${opts?.label ? `, ${opts.label}` : ""}): ${renderSql(q)}`
+      );
+    }
+  }
+}
+
 // Send a SQL query
-export async function query<T = unknown>(q: SQL): Promise<T[]> {
-  return withRetry(async () => {
-    const result = await db.execute(q);
-    return result.rows as T[];
-  });
+export async function query<T = unknown>(q: SQL, opts?: QueryOptions): Promise<T[]> {
+  return withRetry(
+    () =>
+      runTimed(q, opts, async () => {
+        const result = await db.execute(q);
+        return result.rows as T[];
+      }),
+    opts?.write ?? false
+  );
 }
 
 // Send a SQL query for one result
-export async function queryOne<T = unknown>(q: SQL): Promise<T> {
-  return withRetry(async () => {
-    const result = await db.execute(q);
-    return result.rows[0] as T;
-  });
+export async function queryOne<T = unknown>(q: SQL, opts?: QueryOptions): Promise<T> {
+  return withRetry(
+    () =>
+      runTimed(q, opts, async () => {
+        const result = await db.execute(q);
+        return result.rows[0] as T;
+      }),
+    opts?.write ?? false
+  );
 }

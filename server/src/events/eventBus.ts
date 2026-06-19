@@ -19,7 +19,28 @@ let eventBusInstance: EventBus | null = null;
 export class EventBus implements IEventBus {
   private listeners: Map<string, Set<EventHandler>> = new Map();
 
+  // Bounded-concurrency runner.
+  private readonly maxConcurrency: number = Number(process.env.EVENT_HANDLER_CONCURRENCY) || 20;
+  private activeHandlers = 0;
+  private handlerQueue: Array<() => Promise<void>> = [];
+
   constructor() {}
+
+  private enqueueHandler(task: () => Promise<void>): void {
+    this.handlerQueue.push(task);
+    this.drainHandlers();
+  }
+
+  private drainHandlers(): void {
+    while (this.activeHandlers < this.maxConcurrency && this.handlerQueue.length > 0) {
+      const task = this.handlerQueue.shift()!;
+      this.activeHandlers++;
+      task().finally(() => {
+        this.activeHandlers--;
+        this.drainHandlers();
+      });
+    }
+  }
 
   /**
    * Subscribe to an event
@@ -91,9 +112,9 @@ export class EventBus implements IEventBus {
     const handlers = this.listeners.get(event);
     if (!handlers || handlers.size === 0) return;
 
-    // Process each handler with error isolation
+    // Process each handler with error isolation, under the concurrency cap.
     handlers.forEach((handler) => {
-      Promise.resolve().then(async () => {
+      this.enqueueHandler(async () => {
         const start = Date.now();
         let errored = false;
         try {

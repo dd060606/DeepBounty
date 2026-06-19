@@ -18,16 +18,20 @@ import { sql } from "drizzle-orm";
 export const schedulingTypeEnum = pgEnum("scheduling_type", ["TARGET_BASED", "GLOBAL", "CUSTOM"]);
 
 // Targets table
-export const targets = pgTable("targets", {
-  id: serial().primaryKey().notNull(),
-  name: text().notNull(),
-  domain: text().notNull(),
-  activeScan: boolean().default(true).notNull(),
-  asns: jsonb().default([]).notNull(),
-  createdAt: timestamp({ mode: "string" })
-    .default(sql`CURRENT_TIMESTAMP`)
-    .notNull(),
-});
+export const targets = pgTable(
+  "targets",
+  {
+    id: serial().primaryKey().notNull(),
+    name: text().notNull(),
+    domain: text().notNull(),
+    activeScan: boolean().default(true).notNull(),
+    asns: jsonb().default([]).notNull(),
+    createdAt: timestamp({ mode: "string" })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+  },
+  (table) => [index("targets_domain_idx").on(table.domain)]
+);
 
 // Subdomains table
 export const targetsSubdomains = pgTable(
@@ -44,6 +48,8 @@ export const targetsSubdomains = pgTable(
       foreignColumns: [targets.id],
       name: "targets_subdomains_targetId_fkey",
     }).onDelete("cascade"),
+    index("targets_subdomains_subdomain_idx").on(table.subdomain),
+    index("targets_subdomains_targetId_idx").on(table.targetId),
   ]
 );
 
@@ -103,6 +109,8 @@ export const alerts = pgTable(
       foreignColumns: [targets.id],
       name: "alerts_targetId_fkey",
     }).onDelete("set null"),
+    index("alerts_createdAt_id_idx").on(table.createdAt.desc(), table.id.desc()),
+    index("alerts_targetId_idx").on(table.targetId),
   ]
 );
 
@@ -164,6 +172,7 @@ export const targetTaskOverrides = pgTable(
       name: "target_task_overrides_taskTemplateId_fkey",
     }).onDelete("cascade"),
     unique("target_task_overrides_unique").on(table.targetId, table.taskTemplateId),
+    index("target_task_overrides_taskTemplateId_idx").on(table.taskTemplateId),
   ]
 );
 
