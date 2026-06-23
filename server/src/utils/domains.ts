@@ -151,16 +151,11 @@ async function getScopeIndex(): Promise<ScopeIndex> {
   return scopeIndex;
 }
 
-/**
- * Detect target ID from a subdomain/hostname by checking, in priority order:
- * 1. Exact match with a target's main domain
- * 2. Exact match with a registered subdomain
- * 3. Wildcard match with a registered subdomain pattern (*.example.com)
- * 4. Parent-domain match (hostname ends with any target's main domain)
- */
-export async function detectTargetId(subdomain: string): Promise<number | null> {
-  const idx = await getScopeIndex();
-
+// Synchronous core of detectTargetId, operating on a prebuilt index.
+function detectTargetIdFromIndex(
+  idx: ScopeIndex,
+  subdomain: string
+): number | null {
   // 1 & 2: exact domain match wins over exact subdomain match.
   const domainId = idx.domainToId.get(subdomain);
   if (domainId !== undefined) return domainId;
@@ -190,15 +185,10 @@ export async function detectTargetId(subdomain: string): Promise<number | null> 
   return null;
 }
 
-/**
- * Check if a hostname is within scope of an active target,
- * honoring out-of-scope rules with most-specific-match-wins semantics.
- */
-export async function isHostnameInScope(hostname: string): Promise<boolean> {
+// Synchronous core of isHostnameInScope, operating on a prebuilt index.
+function isHostnameInScopeFromIndex(idx: ScopeIndex, hostname: string): boolean {
   const normalized = normalizeDomain(hostname);
   if (!isValidDomain(normalized)) return false;
-
-  const idx = await getScopeIndex();
 
   // Exact match with an active target's main domain.
   if (idx.activeDomains.has(normalized)) return true;
@@ -224,6 +214,51 @@ export async function isHostnameInScope(hostname: string): Promise<boolean> {
   // Most specific rule wins (e.g. "*.cdn.domain.com" over "*.domain.com").
   matches.sort((a, b) => b.subdomain.length - a.subdomain.length);
   return !matches[0].isOutOfScope;
+}
+
+/**
+ * A reusable, synchronous scope checker bound to a snapshot of the scope index.
+ *
+ * Hot loops (e.g. processing thousands of discovered subdomains) should call
+ * getScopeChecker() ONCE and then use these synchronous methods per item, instead
+ * of awaiting isHostnameInScope()/detectTargetId() per item.
+ */
+export interface ScopeChecker {
+  isInScope(hostname: string): boolean;
+  detectTargetId(hostname: string): number | null;
+}
+
+/**
+ * Build a synchronous scope checker from the current scope index.
+ * Await this once before a loop, then call its methods synchronously.
+ */
+export async function getScopeChecker(): Promise<ScopeChecker> {
+  const idx = await getScopeIndex();
+  return {
+    isInScope: (hostname: string) => isHostnameInScopeFromIndex(idx, hostname),
+    detectTargetId: (hostname: string) => detectTargetIdFromIndex(idx, hostname),
+  };
+}
+
+/**
+ * Detect target ID from a subdomain/hostname by checking, in priority order:
+ * 1. Exact match with a target's main domain
+ * 2. Exact match with a registered subdomain
+ * 3. Wildcard match with a registered subdomain pattern (*.example.com)
+ * 4. Parent-domain match (hostname ends with any target's main domain)
+ */
+export async function detectTargetId(subdomain: string): Promise<number | null> {
+  const idx = await getScopeIndex();
+  return detectTargetIdFromIndex(idx, subdomain);
+}
+
+/**
+ * Check if a hostname is within scope of an active target,
+ * honoring out-of-scope rules with most-specific-match-wins semantics.
+ */
+export async function isHostnameInScope(hostname: string): Promise<boolean> {
+  const idx = await getScopeIndex();
+  return isHostnameInScopeFromIndex(idx, hostname);
 }
 
 /*

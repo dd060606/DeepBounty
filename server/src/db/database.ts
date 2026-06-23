@@ -32,6 +32,33 @@ pool.on("error", (err) => {
 // Pass the pool into Drizzle
 const db = drizzle(pool);
 
+// Dedicated, small pool reserved for high-volume, low-priority analytics writes
+// (task-execution + event metrics). Isolating these on their own connections
+// means a burst of analytics inserts can never starve the main pool that serves
+// alerts, scope checks and the UI API. Analytics row loss is acceptable, so this
+// path is fail-fast and lossy by design (see analyticsQuery).
+const ANALYTICS_POOL_MAX = Number(process.env.DB_ANALYTICS_POOL_MAX) || 3;
+const analyticsPool = new Pool({
+  host: process.env.DB_HOST,
+  port: Number(process.env.DB_PORT),
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_NAME,
+  max: ANALYTICS_POOL_MAX,
+  keepAlive: true,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 5000,
+  statement_timeout: 15000,
+});
+analyticsPool.on("error", (err) => {
+  logger.error("Unexpected analytics database error on idle client", err);
+});
+const analyticsDb = drizzle(analyticsPool);
+
+// If more than this many analytics writes are already queued for a connection,
+// new ones are dropped rather than queued (load shedding).
+const ANALYTICS_MAX_WAITING = Number(process.env.DB_ANALYTICS_MAX_WAITING) || 5;
+
 // Threshold above which a query is logged as slow (helps pinpoint lag sources).
 const SLOW_QUERY_MS = Number(process.env.DB_SLOW_QUERY_MS) || 1000;
 
@@ -57,6 +84,11 @@ export function startPoolMonitor(intervalMs = 15000): void {
     if (waiting > 0) {
       logger.warn(
         `Pool saturated: ${waiting} request(s) waiting for a connection (in-use=${total - idle}/${max}, idle=${idle}).`
+      );
+    }
+    if (analyticsPool.waitingCount > 0) {
+      logger.warn(
+        `Analytics pool saturated: ${analyticsPool.waitingCount} write(s) waiting (in-use=${analyticsPool.totalCount - analyticsPool.idleCount}/${ANALYTICS_POOL_MAX}). Excess analytics writes are being dropped.`
       );
     }
   }, intervalMs);
@@ -257,4 +289,31 @@ export async function queryOne<T = unknown>(q: SQL, opts?: QueryOptions): Promis
       }),
     opts?.write ?? false
   );
+}
+
+/**
+ * Execute a best-effort analytics write on the dedicated analytics pool.
+ *
+ * Isolated from the main pool so analytics load can never starve alert/scope/UI
+ * queries. Fail-fast and lossy by design: under saturation the write is dropped
+ * (acceptable for analytics) and never retried or blocked. Security data must
+ * never use this path.
+ *
+ * @returns true if the statement ran, false if it was dropped or failed.
+ */
+export async function analyticsQuery(q: SQL, opts?: QueryOptions): Promise<boolean> {
+  // Load shedding: if analytics connections are already backed up, drop this
+  // write instead of queueing it (never block, never grow unbounded).
+  if (analyticsPool.waitingCount > ANALYTICS_MAX_WAITING) {
+    return false;
+  }
+  try {
+    await runTimed(q, opts, async () => {
+      await analyticsDb.execute(q);
+    });
+    return true;
+  } catch {
+    // Analytics is best-effort; swallow errors (they are logged by the caller if needed).
+    return false;
+  }
 }

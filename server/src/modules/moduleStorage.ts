@@ -17,6 +17,9 @@ const dbConnections = new Map<string, DatabaseSync>();
 export class ModuleStorage {
   private db: DatabaseSync;
   private moduleId: string;
+  // Tracks whether a transaction is currently open so nested transaction()/
+  // executeMany() calls run inline instead of issuing an illegal nested BEGIN.
+  private inTransaction = false;
 
   constructor(moduleId: string) {
     this.moduleId = moduleId;
@@ -97,6 +100,52 @@ export class ModuleStorage {
       logger.error(`Execute error in module "${this.moduleId}":`, err);
       throw err;
     }
+  }
+
+  /**
+   * Run a function inside a single transaction (BEGIN/COMMIT, ROLLBACK on throw).
+   * Reuses an already-open transaction when called nested (runs the function inline).
+   */
+  transaction<T>(fn: () => T): T {
+    // Already inside a transaction: run inline so we never issue a nested BEGIN.
+    if (this.inTransaction) {
+      return fn();
+    }
+
+    this.inTransaction = true;
+    this.db.exec("BEGIN");
+    try {
+      const result = fn();
+      this.db.exec("COMMIT");
+      return result;
+    } catch (err) {
+      try {
+        this.db.exec("ROLLBACK");
+      } catch (rollbackErr) {
+        logger.error(
+          `Rollback failed in module "${this.moduleId}":`,
+          rollbackErr
+        );
+      }
+      logger.error(`Transaction error in module "${this.moduleId}":`, err);
+      throw err;
+    } finally {
+      this.inTransaction = false;
+    }
+  }
+
+  /**
+   * Execute the same statement for many parameter rows inside a single transaction.
+   * Prepares the statement once and reuses it for every row.
+   */
+  executeMany(sql: string, rows: any[][]): void {
+    if (rows.length === 0) return;
+    this.transaction(() => {
+      const stmt = this.db.prepare(sql);
+      for (const row of rows) {
+        stmt.run(...row);
+      }
+    });
   }
 
   /**

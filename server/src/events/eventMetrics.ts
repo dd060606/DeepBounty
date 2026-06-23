@@ -1,4 +1,4 @@
-import { query } from "@/db/database.js";
+import { analyticsQuery } from "@/db/database.js";
 import Logger from "@/utils/logger.js";
 import { sql } from "drizzle-orm";
 
@@ -78,7 +78,7 @@ class EventMetricsCollector {
         // Average per handler invocation (not per emit) so it never exceeds the max
         const avgHandlerMs =
           c.handlerCount > 0 ? Math.round(c.totalHandlerMs / c.handlerCount) : 0;
-        await query(sql`
+        await analyticsQuery(sql`
           INSERT INTO event_metrics
             ("eventType", "windowStart", "windowEnd", count, "avgHandlerMs", "maxHandlerMs", errors)
           VALUES (

@@ -89,6 +89,28 @@ export interface StorageAPI {
 	): { changes: number | bigint; lastInsertRowid: number | bigint };
 
 	/**
+	 * Run a function inside a single database transaction (BEGIN/COMMIT, with
+	 * automatic ROLLBACK if the function throws).
+	 *
+	 * SQLite writes are synchronous and each autocommitted statement is slow;
+	 * wrapping bulk work in one transaction is dramatically faster (thousands of
+	 * inserts in tens of ms) and atomic. Nested calls run inline within the
+	 * outer transaction.
+	 * @param fn The work to run inside the transaction
+	 * @returns Whatever the function returns
+	 */
+	transaction<T>(fn: () => T): T;
+
+	/**
+	 * Execute the same SQL statement for many parameter rows inside a single
+	 * transaction. The statement is prepared once and reused for every row.
+	 * Use this for bulk INSERT/UPDATE/DELETE instead of calling execute() in a loop.
+	 * @param sql The SQL statement to execute for each row
+	 * @param rows An array of parameter arrays, one per execution
+	 */
+	executeMany(sql: string, rows: any[][]): void;
+
+	/**
 	 * Helper method to create a table if it doesn't exist
 	 * @param tableName The name of the table to create
 	 * @param schema The schema definition for the table
@@ -265,6 +287,21 @@ export interface TargetAPI {
 	getTargetsForTask(taskTemplateId: number): Promise<Target[]>;
 }
 
+/**
+ * A synchronous scope checker bound to a snapshot of the current scope.
+ *
+ * Hot loops that process many hostnames (e.g. thousands of discovered subdomains)
+ * should call `api.getScopeChecker()` ONCE before the loop and then use these
+ * synchronous methods per item, instead of awaiting `api.isHostnameInScope()`
+ * per item (which adds async overhead and prevents the loop from being batched).
+ */
+export interface ScopeChecker {
+	/** Whether the hostname is within scope of an active target. */
+	isInScope(hostname: string): boolean;
+	/** The owning target ID for the hostname, or null if none matches. */
+	detectTargetId(hostname: string): number | null;
+}
+
 export interface ServerAPI {
 	version: string; // SDK version
 	logger: Logger;
@@ -276,6 +313,12 @@ export interface ServerAPI {
 	targets: TargetAPI;
 	/** Check if a hostname is in scope based on targets_subdomains */
 	isHostnameInScope(hostname: string): Promise<boolean>;
+	/**
+	 * Get a synchronous scope checker bound to a snapshot of the current scope.
+	 * Await this once before a hot loop, then call its methods synchronously per
+	 * item instead of awaiting isHostnameInScope() per item.
+	 */
+	getScopeChecker(): Promise<ScopeChecker>;
 	/**
 	 * Register a task template that can be scheduled for all targets
 	 * @param uniqueKey Unique identifier for this task within the module (e.g., "subdomain-scan")

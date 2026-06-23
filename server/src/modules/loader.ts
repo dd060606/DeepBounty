@@ -14,7 +14,7 @@ import { validateModule } from "./validateModule.js";
 import { createAlert } from "@/services/alerts.js";
 import { getEventBus } from "@/events/eventBus.js";
 import { ModuleEventBus } from "@/events/moduleEventBus.js";
-import { detectTargetId, isHostnameInScope } from "@/utils/domains.js";
+import { detectTargetId, isHostnameInScope, getScopeChecker } from "@/utils/domains.js";
 import { getTargetsForTask, getTargetsWithDetails } from "@/services/targets.js";
 import {
   createCallback,
@@ -53,6 +53,8 @@ function buildModuleSDK(moduleId: string, moduleName: string): ServerAPI {
       query: storage.query.bind(storage),
       queryOne: storage.queryOne.bind(storage),
       execute: storage.execute.bind(storage),
+      transaction: storage.transaction.bind(storage),
+      executeMany: storage.executeMany.bind(storage),
       createTable: storage.createTable.bind(storage),
       dropTable: storage.dropTable.bind(storage),
     },
@@ -71,6 +73,9 @@ function buildModuleSDK(moduleId: string, moduleName: string): ServerAPI {
     },
     isHostnameInScope: async (hostname) => {
       return await isHostnameInScope(hostname);
+    },
+    getScopeChecker: async () => {
+      return await getScopeChecker();
     },
     registerTaskTemplate: async (
       uniqueKey,

@@ -6,7 +6,7 @@ import { sql } from "drizzle-orm";
 import { Request, Response } from "express";
 import { incrementScopeVersion } from "@/controllers/scope.js";
 import { getEventBus } from "@/events/eventBus.js";
-import { getTargetsWithDetails } from "@/services/targets.js";
+import { getTargetsWithDetails, invalidateTargetsCache } from "@/services/targets.js";
 
 const logger = new Logger("Targets");
 
@@ -42,6 +42,7 @@ export function addTarget(req: Request, res: Response) {
   )
     .then((result) => {
       logger.info(`Added new target: ${name} (${domain})`);
+      invalidateTargetsCache();
       //Sync tasks for the new target
       getTaskManager()
         .syncAllTasks()
@@ -68,6 +69,7 @@ export function editTarget(req: Request, res: Response) {
         return res.status(404).json({ error: "Target not found" });
       }
       logger.info(`Updated target: ${name} (${domain})`);
+      invalidateTargetsCache();
       if (activeScan) {
         //Sync tasks if activeScan is enabled
         getTaskManager()
@@ -94,6 +96,7 @@ export function deleteTarget(req: Request, res: Response) {
         return res.status(404).json({ error: "Target not found" });
       }
       logger.info(`Deleted target: ${result.name} (${result.domain})`);
+      invalidateTargetsCache();
       incrementScopeVersion();
       getTaskManager()
         .syncAllTasks()
@@ -140,6 +143,7 @@ export function setTargetSubdomains(req: Request, res: Response) {
       return Promise.all(promises);
     })
     .then(() => {
+      invalidateTargetsCache();
       // Send target:scopeChanged event to alert modules of the change
       getEventBus().emit("target:scopeChanged", {
         subdomains: newSubdomains.filter((sd) => !sd.isOutOfScope).map((sd) => sd.subdomain),
@@ -188,6 +192,7 @@ export function setTargetPackages(req: Request, res: Response) {
       return Promise.all(promises);
     })
     .then(() => {
+      invalidateTargetsCache();
       getEventBus().emit("target:packagesChanged", {
         packageNames: newPackages.map((pkg) => pkg.packageName),
         targetId: Number(id),
@@ -231,6 +236,7 @@ export function setTargetSettings(req: Request, res: Response) {
       );
     })
     .then(() => {
+      invalidateTargetsCache();
       res.sendStatus(200);
     })
     .catch((error) => {

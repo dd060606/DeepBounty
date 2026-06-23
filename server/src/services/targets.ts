@@ -2,12 +2,28 @@ import { sql } from "drizzle-orm";
 import { query } from "@/db/database.js";
 import { Target } from "@deepbounty/sdk/types";
 
-const TARGETS_CACHE_TTL_MS = 5000;
+// The cache is primarily invalidated explicitly when targets change (see
+// invalidateTargetsCache, called from the targets controller on
+// create/update/delete/scope-change). This TTL is only a safety net in case a
+// mutation path is ever missed; it can be long because correctness on edits is
+// handled by the explicit invalidation. A long TTL avoids rebuilding the scope
+// index every few seconds under heavy scope-check load.
+const TARGETS_CACHE_TTL_MS = 60000;
 
 let allTargetsCache: { expiresAt: number; value: Target[] } | null = null;
 let allTargetsInFlight: Promise<Target[]> | null = null;
 const targetsForTaskCache = new Map<number, { expiresAt: number; value: Target[] }>();
 const targetsForTaskInFlight = new Map<number, Promise<Target[]>>();
+
+/**
+ * Invalidate all cached target data. Call this whenever targets, subdomains,
+ * scope, settings or task overrides change so the next read (and the scope
+ * index derived from it) reflects the change immediately.
+ */
+export function invalidateTargetsCache(): void {
+  allTargetsCache = null;
+  targetsForTaskCache.clear();
+}
 
 /**
  * Fetch all targets with their subdomains, packages, and settings.

@@ -1,4 +1,4 @@
-import { query } from "@/db/database.js";
+import { query, analyticsQuery } from "@/db/database.js";
 import Logger from "../utils/logger.js";
 import { sql } from "drizzle-orm";
 
@@ -60,7 +60,9 @@ const toIso = (d?: Date | null): string | null =>
  */
 export async function recordExecution(record: ExecutionRecord): Promise<void> {
   try {
-    await query(sql`
+    // Best-effort write on the dedicated analytics pool. Dropped under saturation
+    // so analytics volume can never starve alert/scope/UI queries.
+    await analyticsQuery(sql`
       INSERT INTO task_executions
         ("templateId", "moduleId", "targetId", "workerId", status, success,
          "queuedAt", "startedAt", "completedAt", "queueWaitMs", "totalMs", "durationMs")

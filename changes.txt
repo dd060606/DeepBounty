@@ -1,0 +1,33 @@
+What changed
+
+Server / SDK (DeepBounty)
+- Bulk storage API — storage.transaction() + storage.executeMany() added to the SDK and implemented in moduleStorage.ts (SDK bumped to 1.2.11).
+- Sync scope checker — getScopeChecker() returns a snapshot { isInScope, detectTargetId } for hot loops; the targets cache is now invalidated on every target edit (TTL raised 5s→60s as a safety net only).
+- Dedicated analytics DB pool — recordExecution + event-metrics flush run on their own 3-connection pool that load-sheds under saturation and can never starve alert/scope/UI queries.
+- WebSocket — worker messages >256 KB yield before the synchronous JSON.parse (never dropped).
+
+Modules (DeepBounty-Modules)
+- common — new shared yieldToEventLoop, processInChunks, limitConcurrency, hashContent.
+- subdomains (the 142s freeze) — 1 snapshot query + 1 transactional batch upsert + sync scope check + chunked yielding. The subdomains:discovered contract is unchanged (waf/discovery untouched).
+- endpoints-monitor (the 69k churn) — fetches 25 URLs per task instead of 1, and skips re-processing unchanged JS via a content hash (only changed files re-emit http:js). Also fixed the broken targetId filter.
+- secret-finder — 30+ regexes precompiled once (was rebuilt every event) + yields on large JS.
+- discovery — nuclei "seen" writes batched into one transaction.
+- Left as-is (verified safe): dependency-confusion (already throttled), github/takeover (loops already yield).
+
+No data loss: large inputs are never truncated, dead URLs are only dropped on 404/410, alerts stay on the durable path, and only analytics rows can be shed under load.
+
+Manual test checklist
+
+1. Subdomains spike (the main freeze) — trigger a subdomain scan on your largest target (the github.com / snapchat.com class). Watch [EventLoop-WARN]: the block must stay small (~ms, was 142,000ms), and the webapp/API must stay responsive during processing. Confirm all discovered subdomains land in the module DB and the "New Subdomains Discovered" alert still fires.
+
+2. Endpoints churn — let the hourly "Scan URLs for Endpoints" cycle run. Verify in [Tasks-Manager] logs that it now creates far fewer task instances (batches of 25), and that a JS file which hasn't changed produces no http:js re-emit / no new endpoint processing, while a changed file still does (edit a monitored JS file and confirm it's re-scanned).
+
+3. Steady-state load — under normal Burp/Caido ingestion + task completions, confirm [EventLoop-WARN] and Slow query warnings drop to near zero, and there are no Database query failed lines. If analytics gets shed under a burst you'll see "Analytics pool saturated" — that's expected and harmless.
+
+4. No false negatives — feed an http:js event (or a page) containing a known secret and a known endpoint; confirm secret-finder still alerts and endpoints-monitor still records the endpoint.
+
+5. Scope edits apply immediately — add/remove a target or change its scope, then confirm new in-scope hosts are picked up right away (no 60s wait) and out-of-scope ones are excluded.
+
+6. Deploy note — rebuild order is sdk → server, and node build-all.js for modules (already done here); deploy the rebuilt DeepBounty-Modules/dist/* into server/modules/. Keep EVENT_LOOP_LAG_MS / DB_SLOW_QUERY_MS monitors on during rollout — they're your regression alarm. New optional env knobs: DB_ANALYTICS_POOL_MAX (default 3), DB_ANALYTICS_MAX_WAITING (default 5).
+
+One thing I couldn't auto-verify: I can't reproduce your prod traffic/data locally, so the numbers above (especially #1 and #3) need your real targets to confirm. Everything compiles and type-checks, but it has not been runtime-tested against production load yet.

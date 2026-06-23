@@ -160,7 +160,9 @@ class WebSocketHandler {
     );
 
     // Setup message handlers
-    ws.on("message", (data: Buffer) => this.handleWorkerMessage(workerId, data.toString()));
+    ws.on("message", (data: Buffer) => {
+      void this.handleWorkerMessage(workerId, data);
+    });
     ws.on("close", () => this.handleWorkerClose(workerId));
     ws.on("error", (err) => {
       logger.error(`Worker ${workerId} socket error: ${(err as Error).message}`);
@@ -188,11 +190,31 @@ class WebSocketHandler {
     }
   }
 
+  // Payloads above this size are parsed off the hot path so a single large task
+  // result (e.g. a big subdomain/JS scan output) doesn't stall the event loop in
+  // the same tick as freshly arrived HTTP/WS work.
+  private static readonly LARGE_MESSAGE_BYTES = 256 * 1024;
+
   // Parse and handle incoming worker messages
-  private handleWorkerMessage(workerId: number, raw: string) {
+  private async handleWorkerMessage(workerId: number, data: Buffer) {
+    const size = data.length;
+
+    // Large message: yield once before the (synchronous) JSON.parse so already
+    // queued I/O — including pending API requests — gets serviced first. The
+    // message is always parsed and processed (never dropped): losing a worker
+    // result would mean losing security findings.
+    if (size > WebSocketHandler.LARGE_MESSAGE_BYTES) {
+      logger.warn(
+        `Worker ${workerId} sent a large message (${(size / (1024 * 1024)).toFixed(
+          1
+        )}MB); deferring parse off the hot path.`
+      );
+      await new Promise<void>((resolve) => setImmediate(resolve));
+    }
+
     let msg: any;
     try {
-      msg = JSON.parse(raw);
+      msg = JSON.parse(data.toString());
     } catch (e) {
       logger.warn(`Worker ${workerId} sent invalid JSON`);
       return;
