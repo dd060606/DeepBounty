@@ -92,10 +92,8 @@ export interface StorageAPI {
 	 * Run a function inside a single database transaction (BEGIN/COMMIT, with
 	 * automatic ROLLBACK if the function throws).
 	 *
-	 * SQLite writes are synchronous and each autocommitted statement is slow;
-	 * wrapping bulk work in one transaction is dramatically faster (thousands of
-	 * inserts in tens of ms) and atomic. Nested calls run inline within the
-	 * outer transaction.
+	 * Wrapping bulk work in one transaction is fast (thousands of
+	 * inserts in tens of ms).
 	 * @param fn The work to run inside the transaction
 	 * @returns Whatever the function returns
 	 */
@@ -293,7 +291,7 @@ export interface TargetAPI {
  * Hot loops that process many hostnames (e.g. thousands of discovered subdomains)
  * should call `api.getScopeChecker()` ONCE before the loop and then use these
  * synchronous methods per item, instead of awaiting `api.isHostnameInScope()`
- * per item (which adds async overhead and prevents the loop from being batched).
+ * per item.
  */
 export interface ScopeChecker {
 	/** Whether the hostname is within scope of an active target. */

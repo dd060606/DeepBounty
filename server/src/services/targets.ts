@@ -2,12 +2,8 @@ import { sql } from "drizzle-orm";
 import { query } from "@/db/database.js";
 import { Target } from "@deepbounty/sdk/types";
 
-// The cache is primarily invalidated explicitly when targets change (see
-// invalidateTargetsCache, called from the targets controller on
-// create/update/delete/scope-change). This TTL is only a safety net in case a
-// mutation path is ever missed; it can be long because correctness on edits is
-// handled by the explicit invalidation. A long TTL avoids rebuilding the scope
-// index every few seconds under heavy scope-check load.
+// The cache is primarily invalidated explicitly when targets change.
+// A long TTL avoids rebuilding the scope index every few seconds under heavy scope-check load.
 const TARGETS_CACHE_TTL_MS = 60000;
 
 let allTargetsCache: { expiresAt: number; value: Target[] } | null = null;
@@ -17,8 +13,7 @@ const targetsForTaskInFlight = new Map<number, Promise<Target[]>>();
 
 /**
  * Invalidate all cached target data. Call this whenever targets, subdomains,
- * scope, settings or task overrides change so the next read (and the scope
- * index derived from it) reflects the change immediately.
+ * scope, settings or task overrides change so the next read reflects the change immediately.
  */
 export function invalidateTargetsCache(): void {
   allTargetsCache = null;
@@ -41,25 +36,19 @@ export async function getTargetsWithDetails(): Promise<Target[]> {
 
   allTargetsInFlight = (async () => {
     // 1. Fetch all targets without lateral joins
-    const rawTargets = await query<any>(
-      sql`SELECT * FROM targets ORDER BY id`
-    );
+    const rawTargets = await query<any>(sql`SELECT * FROM targets ORDER BY id`);
 
     if (!rawTargets.length) return [];
 
-    const targetIds = rawTargets.map(t => t.id);
+    const targetIds = rawTargets.map((t) => t.id);
 
     // 2. Fetch related data using IN clauses
     const [subdomains, packages, settings] = await Promise.all([
-      query<any>(
-        sql`SELECT "targetId", subdomain, "isOutOfScope" FROM targets_subdomains`
-      ),
-      query<any>(
-        sql`SELECT "targetId", "packageName" FROM targets_packages`
-      ),
+      query<any>(sql`SELECT "targetId", subdomain, "isOutOfScope" FROM targets_subdomains`),
+      query<any>(sql`SELECT "targetId", "packageName" FROM targets_packages`),
       query<any>(
         sql`SELECT DISTINCT ON ("targetId") "targetId", settings FROM targets_settings ORDER BY "targetId", id DESC`
-      )
+      ),
     ]);
 
     // 3. Assemble data in memory
@@ -71,7 +60,7 @@ export async function getTargetsWithDetails(): Promise<Target[]> {
         subdomains: [],
         outOfScopeSubdomains: [],
         packageNames: [],
-        settings: null
+        settings: null,
       });
     }
 
@@ -143,7 +132,7 @@ export async function getTargetsForTask(taskTemplateId: number): Promise<Target[
     const allTargets = await getTargetsWithDetails();
 
     // 2. Filter out non-active ones
-    const activeTargets = allTargets.filter(t => t.activeScan);
+    const activeTargets = allTargets.filter((t) => t.activeScan);
 
     // 3. Fetch template activation and overrides
     const templateInfo = await query<{ active: boolean }>(
@@ -155,7 +144,7 @@ export async function getTargetsForTask(taskTemplateId: number): Promise<Target[
       return [];
     }
 
-    const overrides = await query<{ targetId: number, active: boolean }>(
+    const overrides = await query<{ targetId: number; active: boolean }>(
       sql`SELECT "targetId", active FROM target_task_overrides WHERE "taskTemplateId" = ${taskTemplateId}`
     );
 
@@ -165,7 +154,7 @@ export async function getTargetsForTask(taskTemplateId: number): Promise<Target[
     }
 
     // 4. Return targets that are not explicitly disabled by an override
-    return activeTargets.filter(target => {
+    return activeTargets.filter((target) => {
       const isExplicitlyDisabled = overrideMap.get(target.id) === false;
       return !isExplicitlyDisabled;
     });

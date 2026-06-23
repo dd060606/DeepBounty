@@ -33,10 +33,8 @@ pool.on("error", (err) => {
 const db = drizzle(pool);
 
 // Dedicated, small pool reserved for high-volume, low-priority analytics writes
-// (task-execution + event metrics). Isolating these on their own connections
-// means a burst of analytics inserts can never starve the main pool that serves
-// alerts, scope checks and the UI API. Analytics row loss is acceptable, so this
-// path is fail-fast and lossy by design (see analyticsQuery).
+// (task-execution + event metrics). Analytics row loss is acceptable, so this
+// path is fail-fast and lossy by design.
 const ANALYTICS_POOL_MAX = Number(process.env.DB_ANALYTICS_POOL_MAX) || 3;
 const analyticsPool = new Pool({
   host: process.env.DB_HOST,
@@ -293,9 +291,7 @@ export async function queryOne<T = unknown>(q: SQL, opts?: QueryOptions): Promis
 
 /**
  * Execute a best-effort analytics write on the dedicated analytics pool.
- *
- * Isolated from the main pool so analytics load can never starve alert/scope/UI
- * queries. Fail-fast and lossy by design: under saturation the write is dropped
+ * Fail-fast and lossy by design: under saturation the write is dropped
  * (acceptable for analytics) and never retried or blocked. Security data must
  * never use this path.
  *

@@ -51,8 +51,7 @@ export interface EventStat {
   }[];
 }
 
-const toIso = (d?: Date | null): string | null =>
-  d ? new Date(d).toISOString() : null;
+const toIso = (d?: Date | null): string | null => (d ? new Date(d).toISOString() : null);
 
 /**
  * Persist a single task execution record.
@@ -60,9 +59,9 @@ const toIso = (d?: Date | null): string | null =>
  */
 export async function recordExecution(record: ExecutionRecord): Promise<void> {
   try {
-    // Best-effort write on the dedicated analytics pool. Dropped under saturation
-    // so analytics volume can never starve alert/scope/UI queries.
-    await analyticsQuery(sql`
+    // Best-effort write on the dedicated analytics pool. Dropped under saturation.
+    await analyticsQuery(
+      sql`
       INSERT INTO task_executions
         ("templateId", "moduleId", "targetId", "workerId", status, success,
          "queuedAt", "startedAt", "completedAt", "queueWaitMs", "totalMs", "durationMs")
@@ -80,7 +79,9 @@ export async function recordExecution(record: ExecutionRecord): Promise<void> {
         ${record.totalMs ?? null},
         ${record.durationMs ?? null}
       )
-    `, { label: "record-execution" });
+    `,
+      { label: "record-execution" }
+    );
   } catch (error) {
     logger.error("Failed to record task execution analytics:", error);
   }
@@ -226,10 +227,7 @@ export function startAnalyticsCleanup(retentionDays: number = DEFAULT_RETENTION_
   if (cleanupTimer) return;
   // Run once shortly after boot, then daily
   void cleanupOldAnalytics(retentionDays);
-  cleanupTimer = setInterval(
-    () => void cleanupOldAnalytics(retentionDays),
-    24 * 60 * 60 * 1000
-  );
+  cleanupTimer = setInterval(() => void cleanupOldAnalytics(retentionDays), 24 * 60 * 60 * 1000);
   // Don't keep the process alive solely for this timer
   cleanupTimer.unref?.();
 }

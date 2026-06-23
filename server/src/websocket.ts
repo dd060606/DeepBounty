@@ -191,8 +191,7 @@ class WebSocketHandler {
   }
 
   // Payloads above this size are parsed off the hot path so a single large task
-  // result (e.g. a big subdomain/JS scan output) doesn't stall the event loop in
-  // the same tick as freshly arrived HTTP/WS work.
+  // result doesn't stall the event loop.
   private static readonly LARGE_MESSAGE_BYTES = 256 * 1024;
 
   // Parse and handle incoming worker messages

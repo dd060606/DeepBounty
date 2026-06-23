@@ -152,10 +152,7 @@ async function getScopeIndex(): Promise<ScopeIndex> {
 }
 
 // Synchronous core of detectTargetId, operating on a prebuilt index.
-function detectTargetIdFromIndex(
-  idx: ScopeIndex,
-  subdomain: string
-): number | null {
+function detectTargetIdFromIndex(idx: ScopeIndex, subdomain: string): number | null {
   // 1 & 2: exact domain match wins over exact subdomain match.
   const domainId = idx.domainToId.get(subdomain);
   if (domainId !== undefined) return domainId;
@@ -219,8 +216,7 @@ function isHostnameInScopeFromIndex(idx: ScopeIndex, hostname: string): boolean 
 /**
  * A reusable, synchronous scope checker bound to a snapshot of the scope index.
  *
- * Hot loops (e.g. processing thousands of discovered subdomains) should call
- * getScopeChecker() ONCE and then use these synchronous methods per item, instead
+ * Hot loops should call getScopeChecker() ONCE and then use these synchronous methods per item, instead
  * of awaiting isHostnameInScope()/detectTargetId() per item.
  */
 export interface ScopeChecker {
