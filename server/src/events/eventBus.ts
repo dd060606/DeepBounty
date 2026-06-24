@@ -23,11 +23,23 @@ export class EventBus implements IEventBus {
   private readonly maxConcurrency: number = Number(process.env.EVENT_HANDLER_CONCURRENCY) || 20;
   private activeHandlers = 0;
   private handlerQueue: Array<() => Promise<void>> = [];
+  // Observability: warn (once per burst) when producers outpace handlers and the
+  // queue grows large. We never drop events (that would be a lost finding), so
+  // the real backpressure lives in the producers (module loops yield between
+  // emits).
+  private readonly queueWarnThreshold = Number(process.env.EVENT_QUEUE_WARN) || 1000;
+  private queueDepthWarned = false;
 
   constructor() {}
 
   private enqueueHandler(task: () => Promise<void>): void {
     this.handlerQueue.push(task);
+    if (this.handlerQueue.length >= this.queueWarnThreshold && !this.queueDepthWarned) {
+      this.queueDepthWarned = true;
+      logger.warn(
+        `Event handler queue depth high (${this.handlerQueue.length}); a producer is outpacing handlers (concurrency=${this.maxConcurrency}).`
+      );
+    }
     this.drainHandlers();
   }
 
@@ -40,6 +52,7 @@ export class EventBus implements IEventBus {
         this.drainHandlers();
       });
     }
+    if (this.handlerQueue.length === 0) this.queueDepthWarned = false;
   }
 
   /**

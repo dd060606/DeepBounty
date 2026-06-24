@@ -52,6 +52,9 @@ function cleanupOldLogs() {
 export default class Logger {
   name: string;
 
+  private static readonly debugEnabled =
+    process.env.DEEPBOUNTY_DEBUG_LOGS === "true" || process.env.LOG_LEVEL === "debug";
+
   constructor(name: string) {
     this.name = name;
   }
@@ -81,6 +84,11 @@ export default class Logger {
 
   info(message: string) {
     this.write("INFO", message);
+  }
+
+  debug(message: string) {
+    if (!Logger.debugEnabled) return;
+    this.write("DEBUG", message);
   }
 
   error(message: string, error?: any) {

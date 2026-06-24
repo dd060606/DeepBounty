@@ -1,6 +1,5 @@
-import { queryOne } from "@/db/database.js";
+import { getTargetsWithDetails } from "@/services/targets.js";
 import { Target, TaskContent, Tool } from "@deepbounty/sdk/types";
-import { sql } from "drizzle-orm";
 
 // Get the tool directory path
 function getToolDir(tool: Tool): string {
@@ -40,19 +39,13 @@ export async function replaceTargetPlaceholders(
   let target: Target | undefined;
 
   if (targetId) {
-    // Fetch target from database
-    target = await queryOne<Target>(sql`SELECT * FROM targets WHERE id = ${targetId}`);
+    // Resolve target + settings from the shared, cached targets snapshot.
+    const targets = await getTargetsWithDetails();
+    target = targets.find((t) => t.id === targetId);
 
-    if (target) {
-      // Fetch target settings
-      const targetSettings = await queryOne<{ settings: Record<string, any> } | undefined>(
-        sql`SELECT settings FROM targets_settings WHERE "targetId" = ${targetId}`
-      );
-
-      const settings = targetSettings?.settings || {};
-      if (settings.userAgent) userAgent = settings.userAgent;
-      if (settings.customHeader) customHeader = settings.customHeader;
-    }
+    const settings = (target?.settings as Record<string, any> | null) || {};
+    if (settings.userAgent) userAgent = settings.userAgent;
+    if (settings.customHeader) customHeader = settings.customHeader;
   }
 
   return commands.map((cmd) => {

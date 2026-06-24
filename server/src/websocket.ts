@@ -32,7 +32,20 @@ class WebSocketHandler {
 
   constructor(server: Server) {
     WebSocketHandler.instance = this;
-    this.websocketServer = new WebSocketServer({ server, maxPayload: 50 * 1024 * 1024 });
+    this.websocketServer = new WebSocketServer({
+      server,
+      maxPayload: Number(process.env.WS_MAX_PAYLOAD_BYTES) || 100 * 1024 * 1024,
+      // Compress large frames to cut wire size + socket-buffer pressure.
+      perMessageDeflate: {
+        threshold: 64 * 1024,
+        concurrencyLimit: 10,
+        serverNoContextTakeover: true,
+        clientNoContextTakeover: true,
+        serverMaxWindowBits: 11,
+        zlibDeflateOptions: { level: 6, memLevel: 7 },
+        zlibInflateOptions: { chunkSize: 64 * 1024 },
+      },
+    });
     this.taskManager.registerTransport({
       // List connected workers
       listWorkers: () =>

@@ -922,7 +922,7 @@ class TaskManager {
             ? (await getTemplateCached(execution.templateId))?.name
             : "unknown";
 
-          logger.info(
+          logger.debug(
             `Sending task execution ${execution.executionId} (${templateName}) to worker ${chosen.id}`
           );
         }
@@ -1021,7 +1021,7 @@ class TaskManager {
     });
 
     if (result.success) {
-      logger.info(
+      logger.debug(
         `Task execution ${execution.executionId} completed: templateId=${templateId ?? "n/a"} scheduledTaskId=${result.scheduledTaskId} targetId=${targetId ?? "n/a"} workerId=${workerId}`
       );
     } else {

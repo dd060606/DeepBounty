@@ -1,6 +1,19 @@
 services:
     db:
         image: postgres:15
+        command:
+            - "postgres"
+            - "-c"
+            - "shared_buffers=384MB"
+            - "-c"
+            - "effective_cache_size=1GB"
+            - "-c"
+            - "work_mem=8MB"
+            - "-c"
+            - "maintenance_work_mem=96MB"
+        shm_size: "256mb"
+        mem_limit: "2560m"
+        mem_reservation: "1g"
         environment:
             POSTGRES_USER: ${DB_USER:-deepbounty}
             POSTGRES_PASSWORD: ${DB_PASSWORD:-deepbounty}
@@ -31,6 +44,7 @@ services:
             DB_NAME: ${DB_NAME:-deepbounty}
             EXTERNAL_URL: ${EXTERNAL_URL:-http://localhost}
             WORKER_KEY: ${WORKER_KEY}
+            NODE_OPTIONS: ${NODE_OPTIONS:---max-old-space-size=2048}
         ports:
             # DNS callbacks
             - "0.0.0.0:53:5300/udp"
@@ -41,6 +55,8 @@ services:
             - deepbounty-server-config:/app/server/config
             - deepbounty-server-modules:/app/server/modules
             - deepbounty-server-logs:/app/server/logs
+        mem_limit: "3g"
+        mem_reservation: "1g"
         restart: unless-stopped
 
     webapp:
@@ -57,6 +73,7 @@ services:
             - "${WEBAPP_PORT:-8080}:80"
         depends_on:
             - server
+        mem_limit: "256m"
         restart: unless-stopped
 
 volumes:

@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import Logger from "@/utils/logger.js";
 import getRegistry from "@/utils/registry.js";
 import { query, queryOne } from "@/db/database.js";
+import { ModuleConfig } from "@/modules/moduleConfig.js";
 import { sql } from "drizzle-orm";
 
 const logger = new Logger("Modules");
@@ -42,6 +43,9 @@ export const updateModuleSettings = async (req: Request, res: Response) => {
        ON CONFLICT ("moduleId", "key")
        DO UPDATE SET "value" = EXCLUDED."value"`
     );
+
+    // Drop the cached config so the module picks up the new settings immediately.
+    ModuleConfig.invalidate(moduleId, "settings");
 
     res.status(204).send();
   } catch (error) {
