@@ -1,6 +1,16 @@
 import { sql } from "drizzle-orm";
 import { TaskContent, TargetTaskOverride, TaskTemplate } from "@deepbounty/sdk/types";
 import { query, queryOne } from "@/db/database.js";
+
+// In-memory cache for task templates keyed by id. Templates change rarely (module
+// (re)load, interval/active edits) but getTemplate(id) runs in the hot task path on
+// every execution. Every write below invalidates the affected entry.
+const templateCache = new Map<number, TaskTemplate>();
+function invalidateTemplateCache(id?: number): void {
+  if (id === undefined) templateCache.clear();
+  else templateCache.delete(id);
+}
+
 /**
  * Service for managing task templates in the database
  */
@@ -52,6 +62,7 @@ export class TaskTemplateService {
           WHERE id = ${existing.id}
         `);
       }
+      invalidateTemplateCache(existing.id);
       return existing.id;
     }
 
@@ -96,12 +107,15 @@ export class TaskTemplateService {
    * Get a task template by ID
    */
   async getTemplate(id: number): Promise<TaskTemplate | undefined> {
+    const cached = templateCache.get(id);
+    if (cached) return cached;
+
     const template = await queryOne<TaskTemplate>(
       sql`SELECT * FROM task_templates WHERE id = ${id}`
     );
 
     if (!template) return undefined;
-    return {
+    const mapped: TaskTemplate = {
       id: template.id,
       moduleId: template.moduleId,
       uniqueKey: template.uniqueKey,
@@ -113,6 +127,8 @@ export class TaskTemplateService {
       active: template.active,
       aggressive: template.aggressive,
     };
+    templateCache.set(id, mapped);
+    return mapped;
   }
 
   /**
@@ -165,6 +181,7 @@ export class TaskTemplateService {
       sql`UPDATE task_templates SET active = ${active} WHERE id = ${id} RETURNING id`
     );
 
+    invalidateTemplateCache(id);
     return !!result;
   }
 
@@ -176,6 +193,7 @@ export class TaskTemplateService {
       sql`UPDATE task_templates SET interval = ${interval} WHERE id = ${id} RETURNING id`
     );
 
+    invalidateTemplateCache(id);
     return !!result;
   }
 
@@ -189,6 +207,8 @@ export class TaskTemplateService {
     if (updates.active === undefined && updates.interval === undefined) {
       return false; // No updates provided
     }
+
+    invalidateTemplateCache(id);
 
     // Build query dynamically based on what needs updating
     if (updates.active !== undefined && updates.interval !== undefined) {
@@ -219,6 +239,7 @@ export class TaskTemplateService {
       sql`DELETE FROM task_templates WHERE id = ${id} RETURNING id`
     );
 
+    invalidateTemplateCache(id);
     return !!result;
   }
 
@@ -230,6 +251,7 @@ export class TaskTemplateService {
       sql`DELETE FROM task_templates WHERE "moduleId" = ${moduleId} RETURNING id`
     );
 
+    invalidateTemplateCache(); // ids unknown here; drop the whole cache
     return result.length;
   }
 
@@ -387,6 +409,7 @@ export class TaskTemplateService {
   async clearAllTemplatesAndOverrides(): Promise<void> {
     await query(sql`DELETE FROM target_task_overrides`);
     await query(sql`DELETE FROM task_templates`);
+    invalidateTemplateCache();
   }
 }
 
