@@ -25,7 +25,9 @@ export const handleCallback = async (req: Request, res: Response) => {
     triggeredAt: new Date().toISOString(),
   };
 
-  logger.info(`Callback triggered: ${uuid} from ${triggerData.remoteIp}`);
+  logger.info(
+    `Callback triggered: ${uuid} from ${triggerData.remoteIp} ; Body: ${JSON.stringify(triggerData.body)}`
+  );
 
   const result = await triggerCallback(uuid, triggerData);
 
