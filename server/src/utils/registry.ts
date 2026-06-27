@@ -224,6 +224,18 @@ class ServerRegistry {
     });
   }
 
+  // Clear orphaned one-time scheduled tasks whose worker result never arrived.
+  // A normal one-time task is deleted within seconds in handleWorkerResult; any
+  // one-time task still present after the retention window means its result was
+  // lost, so it is safe to drop.
+  public clearOldOneTimeTasks(olderThan: Date) {
+    this.scheduledTasks.forEach((task, id) => {
+      if (task.oneTime && task.lastExecutedAt && task.lastExecutedAt < olderThan) {
+        this.scheduledTasks.delete(id);
+      }
+    });
+  }
+
   // ==================== WORKERS ====================
 
   // Register a worker

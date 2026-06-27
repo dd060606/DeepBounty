@@ -23,6 +23,12 @@ import { recordExecution } from "@/services/analytics.js";
 const logger = new Logger("Tasks-Manager");
 const toolKey = (tool: Tool) => `${tool.name}@${tool.version}`;
 
+// How long completed/failed executions are retained in memory before being pruned.
+const TASK_EXECUTION_RETENTION_MS =
+  Number(process.env.TASK_EXECUTION_RETENTION_MS) || 15 * 60 * 1000;
+// How often the prune sweep runs.
+const PRUNE_INTERVAL_MS = 60 * 1000;
+
 // Transport interface for TaskManager to interact with workers
 interface TaskTransport {
   listWorkers(): Array<{
@@ -61,12 +67,40 @@ class TaskManager {
   private pendingInstallations: Map<number, Set<string>> = new Map();
   // Scheduler interval handle
   private schedulerInterval?: NodeJS.Timeout;
+  // Memory-prune interval handle
+  private pruneInterval?: NodeJS.Timeout;
   // In-memory cache to avoid repeated DB lookups in createTaskInstance bursts
   private taskInstanceTemplateCache: Map<number, any> = new Map();
 
   private constructor() {
     // Start the scheduler (check every 5 seconds)
     this.startScheduler(5000);
+    // Start the memory-prune sweep
+    this.startPruner();
+  }
+
+  /**
+   * Periodically drop completed/failed executions and orphaned one-time
+   * scheduled tasks from the in-memory registry. Only entries older than
+   * TASK_EXECUTION_RETENTION_MS are removed, and only completed/failed
+   * executions (never running/pending), so in-flight result processing is
+   * never affected.
+   */
+  private startPruner() {
+    if (this.pruneInterval) {
+      clearInterval(this.pruneInterval);
+    }
+    this.pruneInterval = setInterval(() => {
+      try {
+        const cutoff = new Date(Date.now() - TASK_EXECUTION_RETENTION_MS);
+        this.registry.clearOldExecutions(cutoff);
+        this.registry.clearOldOneTimeTasks(cutoff);
+      } catch (err) {
+        logger.error(`Error pruning task registry: ${(err as Error).message}`);
+      }
+    }, PRUNE_INTERVAL_MS);
+    // Don't keep the process alive solely for this timer
+    this.pruneInterval.unref?.();
   }
 
   /**
@@ -1002,8 +1036,7 @@ class TaskManager {
     // Persist performance analytics (fire-and-forget; never blocks completion)
     const startedAt = updatedExecution.startedAt;
     const queuedAt = updatedExecution.createdAt;
-    const moduleId =
-      this.registry.getScheduledTask(execution.scheduledTaskId)?.moduleId ?? null;
+    const moduleId = this.registry.getScheduledTask(execution.scheduledTaskId)?.moduleId ?? null;
     void recordExecution({
       templateId: templateId ?? null,
       moduleId,
@@ -1014,8 +1047,7 @@ class TaskManager {
       queuedAt,
       startedAt,
       completedAt,
-      queueWaitMs:
-        startedAt && queuedAt ? startedAt.getTime() - queuedAt.getTime() : null,
+      queueWaitMs: startedAt && queuedAt ? startedAt.getTime() - queuedAt.getTime() : null,
       totalMs: startedAt ? completedAt.getTime() - startedAt.getTime() : null,
       durationMs: result.durationMs ?? null,
     });

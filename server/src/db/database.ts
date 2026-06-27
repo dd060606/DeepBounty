@@ -313,3 +313,17 @@ export async function analyticsQuery(q: SQL, opts?: QueryOptions): Promise<boole
     return false;
   }
 }
+
+/**
+ * Run a READ query on the dedicated analytics pool. Reads use the normal read-retry budget.
+ */
+export async function analyticsReadQuery<T = unknown>(q: SQL, opts?: QueryOptions): Promise<T[]> {
+  return withRetry(
+    () =>
+      runTimed(q, opts, async () => {
+        const result = await analyticsDb.execute(q);
+        return result.rows as T[];
+      }),
+    false
+  );
+}

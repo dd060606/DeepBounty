@@ -1,11 +1,32 @@
-import { query, analyticsQuery } from "@/db/database.js";
+import { query, analyticsQuery, analyticsReadQuery } from "@/db/database.js";
 import Logger from "../utils/logger.js";
 import { sql } from "drizzle-orm";
 
 const logger = new Logger("Analytics");
 
-// Default retention window for raw execution rows / event metrics (days)
-const DEFAULT_RETENTION_DAYS = 30;
+// Default retention window for raw execution rows / event metrics (days).
+const DEFAULT_RETENTION_DAYS = 7;
+
+// Per-execution recording sampler. Records 1 row every N executions; 0 disables
+// recording entirely. Default off: the per-execution analytics feed is high
+// volume and is not relied upon. Set EXECUTION_ANALYTICS_SAMPLE_N=1 to record every execution again.
+const EXECUTION_ANALYTICS_SAMPLE_N = Number(process.env.EXECUTION_ANALYTICS_SAMPLE_N) || 0;
+let executionSampleCounter = 0;
+
+// Short in-memory cache for the read-heavy dashboard aggregations so repeated
+// page loads don't re-run the same multi-second GROUP BY.
+const STATS_CACHE_TTL_MS = 30_000;
+const statsCache = new Map<string, { at: number; value: unknown }>();
+
+async function cached<T>(key: string, producer: () => Promise<T>): Promise<T> {
+  const hit = statsCache.get(key);
+  if (hit && Date.now() - hit.at < STATS_CACHE_TTL_MS) {
+    return hit.value as T;
+  }
+  const value = await producer();
+  statsCache.set(key, { at: Date.now(), value });
+  return value;
+}
 
 export interface ExecutionRecord {
   templateId?: number | null;
@@ -58,6 +79,9 @@ const toIso = (d?: Date | null): string | null => (d ? new Date(d).toISOString()
  * Fire-and-forget safe: never throws so task completion is never blocked or broken.
  */
 export async function recordExecution(record: ExecutionRecord): Promise<void> {
+  if (EXECUTION_ANALYTICS_SAMPLE_N <= 0) return;
+  if (++executionSampleCounter % EXECUTION_ANALYTICS_SAMPLE_N !== 0) return;
+
   try {
     // Best-effort write on the dedicated analytics pool. Dropped under saturation.
     await analyticsQuery(
@@ -91,19 +115,20 @@ export async function recordExecution(record: ExecutionRecord): Promise<void> {
  * Per-template timing statistics over the last `days` days.
  */
 export async function getTaskTimingStats(days: number = 7): Promise<TaskTimingStat[]> {
-  const rows = await query<{
-    templateId: number | null;
-    name: string | null;
-    moduleId: string | null;
-    runs: string | number;
-    successes: string | number;
-    failures: string | number;
-    avg_ms: string | number | null;
-    min_ms: string | number | null;
-    max_ms: string | number | null;
-    p95_ms: string | number | null;
-    avg_queue_ms: string | number | null;
-  }>(sql`
+  return cached(`timing:${days}`, async () => {
+    const rows = await analyticsReadQuery<{
+      templateId: number | null;
+      name: string | null;
+      moduleId: string | null;
+      runs: string | number;
+      successes: string | number;
+      failures: string | number;
+      avg_ms: string | number | null;
+      min_ms: string | number | null;
+      max_ms: string | number | null;
+      p95_ms: string | number | null;
+      avg_queue_ms: string | number | null;
+    }>(sql`
     SELECT te."templateId",
            tt.name,
            COALESCE(tt."moduleId", te."moduleId") AS "moduleId",
@@ -122,22 +147,23 @@ export async function getTaskTimingStats(days: number = 7): Promise<TaskTimingSt
     ORDER BY avg_ms DESC NULLS LAST
   `);
 
-  const num = (v: string | number | null): number | null =>
-    v === null || v === undefined ? null : Math.round(Number(v));
+    const num = (v: string | number | null): number | null =>
+      v === null || v === undefined ? null : Math.round(Number(v));
 
-  return rows.map((r) => ({
-    templateId: r.templateId,
-    name: r.name,
-    moduleId: r.moduleId,
-    runs: Number(r.runs),
-    successes: Number(r.successes),
-    failures: Number(r.failures),
-    avgMs: num(r.avg_ms),
-    minMs: num(r.min_ms),
-    maxMs: num(r.max_ms),
-    p95Ms: num(r.p95_ms),
-    avgQueueMs: num(r.avg_queue_ms),
-  }));
+    return rows.map((r) => ({
+      templateId: r.templateId,
+      name: r.name,
+      moduleId: r.moduleId,
+      runs: Number(r.runs),
+      successes: Number(r.successes),
+      failures: Number(r.failures),
+      avgMs: num(r.avg_ms),
+      minMs: num(r.min_ms),
+      maxMs: num(r.max_ms),
+      p95Ms: num(r.p95_ms),
+      avgQueueMs: num(r.avg_queue_ms),
+    }));
+  });
 }
 
 /**
@@ -145,57 +171,59 @@ export async function getTaskTimingStats(days: number = 7): Promise<TaskTimingSt
  * each with a per-window time series for charting.
  */
 export async function getEventStats(days: number = 1): Promise<EventStat[]> {
-  const rows = await query<{
-    eventType: string;
-    windowEnd: string;
-    count: string | number;
-    avgHandlerMs: string | number;
-    maxHandlerMs: string | number;
-    errors: string | number;
-  }>(sql`
+  return cached(`events:${days}`, async () => {
+    const rows = await analyticsReadQuery<{
+      eventType: string;
+      windowEnd: string;
+      count: string | number;
+      avgHandlerMs: string | number;
+      maxHandlerMs: string | number;
+      errors: string | number;
+    }>(sql`
     SELECT "eventType", "windowEnd", count, "avgHandlerMs", "maxHandlerMs", errors
     FROM event_metrics
     WHERE "windowEnd" > NOW() - (${days}::int * INTERVAL '1 day')
     ORDER BY "eventType" ASC, "windowEnd" ASC
   `);
 
-  const byType = new Map<string, EventStat>();
-  for (const r of rows) {
-    const count = Number(r.count);
-    const avgHandlerMs = Number(r.avgHandlerMs);
-    const maxHandlerMs = Number(r.maxHandlerMs);
-    const errors = Number(r.errors);
+    const byType = new Map<string, EventStat>();
+    for (const r of rows) {
+      const count = Number(r.count);
+      const avgHandlerMs = Number(r.avgHandlerMs);
+      const maxHandlerMs = Number(r.maxHandlerMs);
+      const errors = Number(r.errors);
 
-    let stat = byType.get(r.eventType);
-    if (!stat) {
-      stat = {
-        eventType: r.eventType,
-        totalCount: 0,
-        avgHandlerMs: null,
-        maxHandlerMs: null,
-        errors: 0,
-        series: [],
-      };
-      byType.set(r.eventType, stat);
+      let stat = byType.get(r.eventType);
+      if (!stat) {
+        stat = {
+          eventType: r.eventType,
+          totalCount: 0,
+          avgHandlerMs: null,
+          maxHandlerMs: null,
+          errors: 0,
+          series: [],
+        };
+        byType.set(r.eventType, stat);
+      }
+      stat.totalCount += count;
+      stat.errors += errors;
+      stat.maxHandlerMs = Math.max(stat.maxHandlerMs ?? 0, maxHandlerMs);
+      stat.series.push({
+        windowEnd: new Date(r.windowEnd).toISOString(),
+        count,
+        avgHandlerMs,
+        maxHandlerMs,
+      });
     }
-    stat.totalCount += count;
-    stat.errors += errors;
-    stat.maxHandlerMs = Math.max(stat.maxHandlerMs ?? 0, maxHandlerMs);
-    stat.series.push({
-      windowEnd: new Date(r.windowEnd).toISOString(),
-      count,
-      avgHandlerMs,
-      maxHandlerMs,
-    });
-  }
 
-  // Compute count-weighted average handler time across windows
-  for (const stat of byType.values()) {
-    const weighted = stat.series.reduce((acc, w) => acc + w.avgHandlerMs * w.count, 0);
-    stat.avgHandlerMs = stat.totalCount > 0 ? Math.round(weighted / stat.totalCount) : 0;
-  }
+    // Compute count-weighted average handler time across windows
+    for (const stat of byType.values()) {
+      const weighted = stat.series.reduce((acc, w) => acc + w.avgHandlerMs * w.count, 0);
+      stat.avgHandlerMs = stat.totalCount > 0 ? Math.round(weighted / stat.totalCount) : 0;
+    }
 
-  return Array.from(byType.values());
+    return Array.from(byType.values());
+  });
 }
 
 /**
