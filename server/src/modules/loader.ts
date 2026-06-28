@@ -14,6 +14,7 @@ import { validateModule } from "./validateModule.js";
 import { createAlert } from "@/services/alerts.js";
 import { getEventBus } from "@/events/eventBus.js";
 import { ModuleEventBus } from "@/events/moduleEventBus.js";
+import { getCpuPool, shutdownCpuPool } from "@/cpu/pool.js";
 import { detectTargetId, isHostnameInScope, getScopeChecker } from "@/utils/domains.js";
 import { getTargetsForTask, getTargetsWithDetails } from "@/services/targets.js";
 import {
@@ -36,7 +37,11 @@ function readFirstExistingFile(files: string[]): string | null {
 }
 
 // Build the SDK object passed to modules
-function buildModuleSDK(moduleId: string, moduleName: string): ServerAPI {
+function buildModuleSDK(
+  moduleId: string,
+  moduleName: string,
+  moduleDir: string,
+): ServerAPI {
   const taskAPI = getTaskAPI(moduleId);
   const storage = new ModuleStorage(moduleId);
   const files = new ModuleFiles(moduleId);
@@ -44,6 +49,11 @@ function buildModuleSDK(moduleId: string, moduleName: string): ServerAPI {
   // Create a secure, isolated event bus for this module
   const moduleBus = new ModuleEventBus(getEventBus(), moduleId);
   moduleEventBuses.set(moduleId, moduleBus);
+
+  // Pure CPU-bound work is offloaded to a worker-thread pool that requires the
+  // module's side-effect-free `cpu.js` (sibling of the entry). Keeps heavy
+  // regex/scan work off the shared event loop.
+  const cpuFile = path.join(moduleDir, "cpu.js");
 
   return Object.freeze({
     version: "1.0.0",
@@ -60,6 +70,10 @@ function buildModuleSDK(moduleId: string, moduleName: string): ServerAPI {
     },
     files: files,
     events: moduleBus,
+    cpu: {
+      run: (exportName: string, input: any) =>
+        getCpuPool().runCpuTask(cpuFile, exportName, input),
+    },
     targets: {
       getTargets: async () => {
         return await getTargetsWithDetails();
@@ -200,7 +214,7 @@ async function loadModules(baseDir: string): Promise<void> {
       const mod = require(entry);
       const exported = mod?.default ?? mod;
 
-      const api = buildModuleSDK(parsed.id, parsed.name);
+      const api = buildModuleSDK(parsed.id, parsed.name, moduleDir);
       let instance = new exported(api);
 
       // Normalize run() method
@@ -286,6 +300,7 @@ export async function shutdownModules(): Promise<void> {
     await Promise.all(shutdownPromises);
 
     closeAllDatabases();
+    await shutdownCpuPool();
   } catch (e) {
     logger.error("Critical error while shutting down modules", e);
   }

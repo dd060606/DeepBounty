@@ -30,6 +30,9 @@ export class EventBus implements IEventBus {
   private readonly queueWarnThreshold = Number(process.env.EVENT_QUEUE_WARN) || 1000;
   private queueDepthWarned = false;
 
+  // Warn when a single handler takes longer than this (wall time).
+  private readonly handlerWarnMs = Number(process.env.EVENT_HANDLER_WARN_MS ?? 5000);
+
   constructor() {}
 
   private enqueueHandler(task: () => Promise<void>): void {
@@ -47,9 +50,13 @@ export class EventBus implements IEventBus {
     while (this.activeHandlers < this.maxConcurrency && this.handlerQueue.length > 0) {
       const task = this.handlerQueue.shift()!;
       this.activeHandlers++;
-      task().finally(() => {
-        this.activeHandlers--;
-        this.drainHandlers();
+      // Start each handler on its own macrotask turn (setImmediate) instead of
+      // synchronously in this loop.
+      setImmediate(() => {
+        task().finally(() => {
+          this.activeHandlers--;
+          this.drainHandlers();
+        });
       });
     }
     if (this.handlerQueue.length === 0) this.queueDepthWarned = false;
@@ -137,7 +144,11 @@ export class EventBus implements IEventBus {
           // Error isolation - log but don't throw to prevent cascading failures
           logger.error(`Error in handler for event '${event}':`, error);
         } finally {
-          metrics.recordHandler(event, Date.now() - start, errored);
+          const elapsed = Date.now() - start;
+          metrics.recordHandler(event, elapsed, errored);
+          if (this.handlerWarnMs > 0 && elapsed >= this.handlerWarnMs) {
+            logger.warn(`Slow handler for event '${event}': ${elapsed}ms.`);
+          }
         }
       });
     });

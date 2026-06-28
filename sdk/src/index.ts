@@ -261,6 +261,28 @@ export interface CallbackAPI {
 }
 
 /**
+ * CpuAPI offloads pure, CPU-bound work (regex/scan/parse over a string) to a
+ * worker-thread pool so it never blocks the server's main event loop.
+ *
+ * The named export must live in a side-effect-free `cpu.js` shipped alongside the
+ * module's entry (i.e. `src/cpu.ts` built to the module root). It must be a PURE
+ * function: `input -> serializable output`, with no access to the SDK, DB, files
+ * or events (those stay on the main thread).
+ *
+ * Input and output are passed by structured clone, so both must be serializable
+ * (strings, numbers, plain objects/arrays).
+ */
+export interface CpuAPI {
+	/**
+	 * Run a registered pure CPU function off the main event loop.
+	 * @param exportName Name of the exported function in the module's cpu.js
+	 * @param input Serializable input passed to the function
+	 * @returns The function's serializable result
+	 */
+	run<I = any, O = any>(exportName: string, input: I): Promise<O>;
+}
+
+/**
  * TargetAPI provides access to target information for modules.
  */
 export interface TargetAPI {
@@ -310,6 +332,11 @@ export interface ServerAPI {
 	events: IEventBus;
 	callbacks: CallbackAPI;
 	targets: TargetAPI;
+	/**
+	 * Offload pure CPU-bound work to a worker-thread pool, keeping the server's
+	 * main event loop free. See {@link CpuAPI}.
+	 */
+	cpu: CpuAPI;
 	/** Check if a hostname is in scope based on targets_subdomains */
 	isHostnameInScope(hostname: string): Promise<boolean>;
 	/**
