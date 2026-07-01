@@ -6,6 +6,19 @@ import { MODULES_DIR } from "@/utils/constants.js";
 
 const logger = new Logger("ModuleStorage");
 
+// Warn when a single synchronous statement blocks the event loop longer than this.
+const SLOW_QUERY_MS = Number(process.env.MODULE_STORAGE_SLOW_MS) || 500;
+
+function warnIfSlow(moduleId: string, sql: string, startedAt: number): void {
+  const elapsed = Date.now() - startedAt;
+  if (elapsed < SLOW_QUERY_MS) return;
+  const oneLine = sql.replace(/\s+/g, " ").trim();
+  const preview = oneLine.length > 200 ? `${oneLine.slice(0, 200)}…` : oneLine;
+  logger.warn(
+    `Slow module query in "${moduleId}" took ${elapsed}ms (blocks event loop): ${preview}`
+  );
+}
+
 // Store active database connections
 const dbConnections = new Map<string, DatabaseSync>();
 
@@ -53,6 +66,7 @@ export class ModuleStorage {
    * Returns all matching rows
    */
   query<T = any>(sql: string, params?: any[]): T[] {
+    const startedAt = Date.now();
     try {
       const stmt = this.db.prepare(sql);
       // Use spread operator to convert parameters or pass undefined if empty
@@ -61,6 +75,8 @@ export class ModuleStorage {
     } catch (err) {
       logger.error(`Query error in module "${this.moduleId}":`, err);
       throw err;
+    } finally {
+      warnIfSlow(this.moduleId, sql, startedAt);
     }
   }
 
@@ -68,6 +84,7 @@ export class ModuleStorage {
    * Execute a raw SQL query and return the first row
    */
   queryOne<T = any>(sql: string, params?: any[]): T | undefined {
+    const startedAt = Date.now();
     try {
       const stmt = this.db.prepare(sql);
       // Use spread operator to convert parameters or pass undefined if empty
@@ -76,6 +93,8 @@ export class ModuleStorage {
     } catch (err) {
       logger.error(`QueryOne error in module "${this.moduleId}":`, err);
       throw err;
+    } finally {
+      warnIfSlow(this.moduleId, sql, startedAt);
     }
   }
 
@@ -87,6 +106,7 @@ export class ModuleStorage {
     sql: string,
     params?: any[]
   ): { changes: number | bigint; lastInsertRowid: number | bigint } {
+    const startedAt = Date.now();
     try {
       const stmt = this.db.prepare(sql);
       // Use spread operator to convert parameters or pass undefined if empty
@@ -99,6 +119,8 @@ export class ModuleStorage {
     } catch (err) {
       logger.error(`Execute error in module "${this.moduleId}":`, err);
       throw err;
+    } finally {
+      warnIfSlow(this.moduleId, sql, startedAt);
     }
   }
 
@@ -122,10 +144,7 @@ export class ModuleStorage {
       try {
         this.db.exec("ROLLBACK");
       } catch (rollbackErr) {
-        logger.error(
-          `Rollback failed in module "${this.moduleId}":`,
-          rollbackErr
-        );
+        logger.error(`Rollback failed in module "${this.moduleId}":`, rollbackErr);
       }
       logger.error(`Transaction error in module "${this.moduleId}":`, err);
       throw err;
@@ -140,12 +159,14 @@ export class ModuleStorage {
    */
   executeMany(sql: string, rows: any[][]): void {
     if (rows.length === 0) return;
+    const startedAt = Date.now();
     this.transaction(() => {
       const stmt = this.db.prepare(sql);
       for (const row of rows) {
         stmt.run(...row);
       }
     });
+    warnIfSlow(this.moduleId, `[executeMany x${rows.length}] ${sql}`, startedAt);
   }
 
   /**
