@@ -76,9 +76,12 @@ export class CpuPool {
     const worker = new Worker(this.workerPath, { execArgv: this.execArgv });
     const pw: PoolWorker = { worker, busy: false, current: null };
 
-    worker.on("message", (msg: { id: number; ok: boolean; out?: unknown; error?: string }) => {
-      this.onResult(pw, msg);
-    });
+    worker.on(
+      "message",
+      (msg: { id: number; ok: boolean; out?: unknown; error?: string; ms?: number }) => {
+        this.onResult(pw, msg);
+      }
+    );
     worker.on("error", (err) => {
       // A worker crashed mid-task: settle the in-flight task (caller falls
       // back to in-process compute — lossless) and replace the worker.
@@ -120,17 +123,18 @@ export class CpuPool {
 
   private onResult(
     pw: PoolWorker,
-    msg: { id: number; ok: boolean; out?: unknown; error?: string }
+    msg: { id: number; ok: boolean; out?: unknown; error?: string; ms?: number }
   ): void {
     const task = pw.current;
     pw.current = null;
     pw.busy = false;
 
     if (task && task.id === msg.id) {
-      const elapsed = Date.now() - (task.startedAt ?? task.enqueuedAt);
-      if (elapsed >= SLOW_TASK_MS) {
+      // Use the execution time measured INSIDE the worker.
+      const workerMs = typeof msg.ms === "number" ? Math.round(msg.ms) : undefined;
+      if (workerMs !== undefined && workerMs >= SLOW_TASK_MS) {
         logger.warn(
-          `Slow CPU task '${task.fn}' took ${elapsed}ms (input ${task.inputBytes} bytes)`
+          `Slow CPU task '${task.fn}' took ${workerMs}ms (input ${task.inputBytes} bytes)`
         );
       }
       if (msg.ok) task.resolve(msg.out);
